@@ -1,0 +1,100 @@
+/* Page-specific styles */
+
+/* Home page specific */
+.hero-card { 
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius); 
+  padding: 20px; 
+  box-shadow: var(--shadow); 
+}
+
+.stat { 
+  background: var(--card); 
+  border: 1px solid var(--border); 
+  border-radius: 14px; 
+  padding: 14px; 
+  text-align: center; 
+}
+
+.feature { 
+  background: var(--card); 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius); 
+  padding: 16px; 
+  box-shadow: var(--shadow); 
+}
+
+.cta { 
+  display: grid; 
+  grid-template-columns: 1.3fr .7fr; 
+  gap: 18px; 
+  align-items: center; 
+  background: linear-gradient(160deg, rgba(96,165,250,.15), rgba(52,211,153,.12)); 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius); 
+  padding: 22px; 
+  box-shadow: var(--shadow); 
+}
+
+.cta p { 
+  margin: 8px 0 0; 
+  color: var(--muted); 
+}
+
+/* Events page specific */
+.hero { 
+  padding: 70px 0 28px; 
+}
+
+.events { 
+  display: grid; 
+  gap: 16px; 
+  margin: 28px 0 0; 
+}
+
+.event { 
+  background: var(--card); 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius); 
+  padding: 18px; 
+  box-shadow: var(--shadow); 
+  display: grid; 
+  gap: 6px; 
+}
+
+.event h3 { 
+  margin: 0; 
+  font-size: 22px; 
+}
+
+.event time { 
+  color: var(--muted); 
+  font-size: 14px; 
+}
+
+.event .meta { 
+  color: var(--muted); 
+  font-size: 14px; 
+}
+
+.event .actions { 
+  display: flex; 
+  gap: 10px; 
+  margin-top: 10px; 
+  flex-wrap: wrap; 
+}
+
+.filters { 
+  display: flex; 
+  gap: 8px; 
+  flex-wrap: wrap; 
+  margin-top: 16px; 
+}
+
+/* Responsive adjustments for pages */
+@media (max-width: 960px) {
+  .cta { 
+    grid-template-columns: 1fr; 
+  }
+}

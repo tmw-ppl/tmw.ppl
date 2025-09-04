@@ -1,0 +1,38 @@
+/* CSS Custom Properties (Variables) */
+:root {
+  /* Colors */
+  --bg: #0b1220;
+  --bg-2: #0e1626;
+  --text: #e6f0ff;
+  --muted: #b3c1d1;
+  --primary: #34d399; /* teal */
+  --accent: #60a5fa;  /* blue */
+  --hot: #f59e0b;     /* amber */
+  --card: #121a2b;
+  --border: #1f2a44;
+  
+  /* Effects */
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+  --radius: 18px;
+  
+  /* Layout */
+  --maxw: 1100px;
+  
+  /* Gradients */
+  --grad: radial-gradient(1200px 600px at 10% -10%, rgba(96,165,250,.20), transparent 50%),
+           radial-gradient(900px 500px at 90% 10%, rgba(52,211,153,.18), transparent 55%),
+           radial-gradient(800px 400px at 50% 120%, rgba(245,158,11,.14), transparent 50%);
+}
+
+/* Light theme overrides */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7fafc;
+    --bg-2: #ffffff;
+    --text: #0b1220;
+    --muted: #334155;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --shadow: 0 10px 30px rgba(2,6,23,.08);
+  }
+}

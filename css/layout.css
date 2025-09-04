@@ -1,0 +1,143 @@
+/* Layout components */
+
+/* Header */
+header {
+  position: sticky; 
+  top: 0; 
+  z-index: 40;
+  background: linear-gradient(180deg, rgba(11,18,32,.9), rgba(11,18,32,.75));
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.nav {
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 12px;
+  min-height: 64px;
+}
+
+.brand { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  font-weight: 800; 
+  letter-spacing: .3px; 
+}
+
+.navlinks { 
+  display: flex; 
+  gap: 18px; 
+  align-items: center; 
+}
+
+.navlinks a { 
+  color: var(--muted); 
+  font-weight: 600; 
+}
+
+.navlinks a:hover, 
+.navlinks a[aria-current="page"] { 
+  color: var(--text); 
+}
+
+/* Mobile menu toggle */
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Sections */
+section { 
+  padding: 56px 0; 
+}
+
+.hero { 
+  padding: 84px 0 72px; 
+  position: relative; 
+  overflow: hidden; 
+}
+
+/* Grid layouts */
+.hero-grid { 
+  display: grid; 
+  grid-template-columns: 1.1fr .9fr; 
+  gap: 34px; 
+  align-items: center; 
+}
+
+.feature-grid { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 18px; 
+}
+
+.statgrid { 
+  display: grid; 
+  grid-template-columns: repeat(3,1fr); 
+  gap: 16px; 
+  margin-top: 18px; 
+}
+
+/* Footer */
+footer { 
+  padding: 36px 0; 
+  color: var(--muted); 
+  border-top: 1px solid var(--border); 
+  margin-top: 40px; 
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+  .hero-grid { 
+    grid-template-columns: 1fr; 
+  }
+  .statgrid { 
+    grid-template-columns: repeat(3, minmax(0,1fr)); 
+  }
+  .feature-grid { 
+    grid-template-columns: 1fr 1fr; 
+  }
+}
+
+@media (max-width: 640px) {
+  .navlinks { 
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 20px;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: var(--shadow);
+    transform: translateY(-100%);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .navlinks.open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  .menu-toggle {
+    display: block;
+  }
+  .feature-grid { 
+    grid-template-columns: 1fr; 
+  }
+  .btn { 
+    width: 100%; 
+  }
+}
