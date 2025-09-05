@@ -192,19 +192,8 @@
     async function loadUserProfile() {
       const user = window.authManager.user;
       
-      // Update basic info
-      document.getElementById('user-name').textContent = user.user_metadata?.full_name || 'User';
-      document.getElementById('user-email').textContent = user.email;
-      document.getElementById('user-initials').textContent = getInitials(user.user_metadata?.full_name || user.email);
-      
-      // Format member since date
-      const memberSince = new Date(user.created_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long'
-      });
-      document.getElementById('member-since').textContent = memberSince;
-      
-      // Load profile data from database
+      // Load profile data from database first
+      let profileData = null;
       try {
         const { data: profile, error } = await window.supabaseClient
           .from('profiles')
@@ -213,13 +202,34 @@
           .single();
           
         if (profile) {
-          document.getElementById('edit-name').value = profile.full_name || '';
-          document.getElementById('edit-bio').value = profile.bio || '';
-          document.getElementById('edit-interests').value = profile.interests || '';
+          profileData = profile;
+          console.log('Profile loaded from database:', profile);
         }
       } catch (error) {
-        console.log('No profile found, using defaults');
+        console.log('No profile found in database, using auth data');
       }
+      
+      // Use profile data if available, otherwise fall back to auth metadata
+      const displayName = profileData?.full_name || user.user_metadata?.full_name || 'User';
+      const displayBio = profileData?.bio || '';
+      const displayInterests = profileData?.interests || '';
+      
+      // Update display
+      document.getElementById('user-name').textContent = displayName;
+      document.getElementById('user-email').textContent = user.email;
+      document.getElementById('user-initials').textContent = getInitials(displayName);
+      
+      // Update edit form
+      document.getElementById('edit-name').value = displayName;
+      document.getElementById('edit-bio').value = displayBio;
+      document.getElementById('edit-interests').value = displayInterests;
+      
+      // Format member since date
+      const memberSince = new Date(user.created_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long'
+      });
+      document.getElementById('member-since').textContent = memberSince;
     }
     
     function getInitials(name) {
@@ -248,7 +258,9 @@
       }
       
       try {
-        const { error } = await window.supabaseClient
+        console.log('Saving profile data:', { name, bio, interests });
+        
+        const { data, error } = await window.supabaseClient
           .from('profiles')
           .upsert({
             id: window.authManager.user.id,
@@ -258,7 +270,12 @@
             updated_at: new Date().toISOString()
           });
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error saving profile:', error);
+          throw error;
+        }
+        
+        console.log('Profile saved successfully:', data);
         
         // Update display
         document.getElementById('user-name').textContent = name;
