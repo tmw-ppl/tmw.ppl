@@ -31,6 +31,7 @@
         <a href="index.html#pillars">Pillars</a>
         <a href="events.html" aria-current="page">Events</a>
         <a href="index.html#join">Join</a>
+        <a class="btn secondary" href="auth.html" id="auth-nav-btn">Sign In</a>
         <a class="btn primary" href="index.html#join">Get Involved</a>
       </nav>
       <button class="menu-toggle" aria-label="Toggle navigation menu">☰</button>
@@ -80,7 +81,12 @@
     </div>
   </footer>
 
+  <!-- Supabase CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  
   <!-- JavaScript Files -->
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/main.js"></script>
   <script src="js/google-sheets.js"></script>
   <script src="js/static-events.js"></script>
@@ -89,6 +95,11 @@
   <script>
     // Load events when page loads
     document.addEventListener('DOMContentLoaded', async function() {
+      // Update auth button
+      if (window.authManager) {
+        window.authManager.updateAuthButton();
+      }
+      
       try {
         // Try Google Sheets first
         console.log('Loading events from Google Sheets...');

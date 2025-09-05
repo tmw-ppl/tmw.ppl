@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign In - Tomorrow People</title>
+  <meta name="description" content="Sign in to Tomorrow People to access exclusive events and connect with the community." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS Files -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/typography.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="Tomorrow People home">
+        <span class="logo" aria-hidden="true">
+          <img src="assets/tmw.ppl.logo.png" alt="Tomorrow People Logo" width="20" height="20">
+        </span>
+        <span>Tomorrow People</span>
+      </a>
+        <nav class="navlinks">
+        <a href="index.html#about">About</a>
+        <a href="index.html#pillars">Pillars</a>
+        <a href="events.html">Events</a>
+        <a href="index.html#join">Join</a>
+        <a class="btn secondary" href="auth.html" id="auth-nav-btn">Sign In</a>
+        <a class="btn primary" href="index.html#join">Get Involved</a>
+        </nav>
+        <button class="menu-toggle" aria-label="Toggle navigation menu">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="auth-section">
+      <div class="container">
+        <div class="auth-container">
+          <div class="auth-header">
+            <h1>Welcome back</h1>
+            <p>Sign in to access exclusive events and connect with the community</p>
+          </div>
+          
+          <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login">Sign In</button>
+            <button class="auth-tab" data-tab="signup">Sign Up</button>
+          </div>
+          
+          <div id="login-form" class="auth-form">
+            <div class="form-group">
+              <label for="login-email">Email</label>
+              <input type="email" id="login-email" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input type="password" id="login-password" placeholder="Your password" required>
+            </div>
+            <button id="login-btn" class="btn primary full-width">Sign In</button>
+            <div id="login-error" class="error-message" style="display: none;"></div>
+          </div>
+          
+          <div id="signup-form" class="auth-form" style="display: none;">
+            <div class="form-group">
+              <label for="signup-email">Email</label>
+              <input type="email" id="signup-email" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+              <label for="signup-password">Password</label>
+              <input type="password" id="signup-password" placeholder="Create a password" required>
+            </div>
+            <div class="form-group">
+              <label for="signup-name">Full Name</label>
+              <input type="text" id="signup-name" placeholder="Your full name" required>
+            </div>
+            <button id="signup-btn" class="btn primary full-width">Create Account</button>
+            <div id="signup-error" class="error-message" style="display: none;"></div>
+          </div>
+          
+          <div class="auth-footer">
+            <p>By signing up, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="logo" aria-hidden="true">
+          <img src="assets/tmw.ppl.logo.png" alt="Tomorrow People Logo" width="20" height="20">
+        </span>
+        <span>Tomorrow People</span>
+      </div>
+      <div>
+        <a href="index.html#about">About</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="index.html#pillars">Pillars</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="events.html">Events</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="index.html#join">Join</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Supabase CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  
+  <!-- JavaScript Files -->
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    // Auth page specific functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      // Tab switching
+      const tabs = document.querySelectorAll('.auth-tab');
+      const forms = document.querySelectorAll('.auth-form');
+      
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetTab = tab.dataset.tab;
+          
+          // Update active tab
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Show/hide forms
+          forms.forEach(form => {
+            if (form.id === targetTab + '-form') {
+              form.style.display = 'block';
+            } else {
+              form.style.display = 'none';
+            }
+          });
+        });
+      });
+      
+      // Login form submission
+      document.getElementById('login-btn').addEventListener('click', async () => {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const errorDiv = document.getElementById('login-error');
+        
+        if (!email || !password) {
+          showError(errorDiv, 'Please fill in all fields');
+          return;
+        }
+        
+        const { data, error } = await window.authManager.signIn(email, password);
+        
+        if (error) {
+          showError(errorDiv, error.message);
+        } else {
+          console.log('Sign in successful, redirecting to profile...');
+          // Small delay to ensure auth state is updated
+          setTimeout(() => {
+            window.location.href = 'profile.html';
+          }, 500);
+        }
+      });
+      
+      // Signup form submission
+      document.getElementById('signup-btn').addEventListener('click', async () => {
+        console.log('Signup button clicked!');
+        
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        const name = document.getElementById('signup-name').value;
+        const errorDiv = document.getElementById('signup-error');
+        
+        console.log('Form values:', { email, password: '***', name });
+        
+        if (!email || !password || !name) {
+          console.log('Validation failed: missing fields');
+          showError(errorDiv, 'Please fill in all fields');
+          return;
+        }
+        
+        if (password.length < 6) {
+          console.log('Validation failed: password too short');
+          showError(errorDiv, 'Password must be at least 6 characters');
+          return;
+        }
+        
+        console.log('Attempting signup...');
+        
+        try {
+          const { data, error } = await window.authManager.signUp(email, password, name);
+          
+          console.log('Signup result:', { data, error });
+          
+          if (error) {
+            console.error('Signup error:', error);
+            showError(errorDiv, error.message);
+          } else {
+            console.log('Signup successful!');
+            showError(errorDiv, 'Check your email for a confirmation link!', 'success');
+          }
+        } catch (err) {
+          console.error('Unexpected error:', err);
+          showError(errorDiv, 'An unexpected error occurred. Check console for details.');
+        }
+      });
+      
+      // Update auth button (wait for auth manager to be ready)
+      const checkAuthManager = () => {
+        if (window.authManager && window.authManager.supabase) {
+          window.authManager.updateAuthButton();
+        } else {
+          setTimeout(checkAuthManager, 100);
+        }
+      };
+      checkAuthManager();
+    });
+    
+    function showError(element, message, type = 'error') {
+      element.textContent = message;
+      element.style.display = 'block';
+      element.className = `error-message ${type}`;
+      
+      setTimeout(() => {
+        element.style.display = 'none';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

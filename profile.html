@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profile - Tomorrow People</title>
+  <meta name="description" content="Manage your Tomorrow People profile and account settings." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS Files -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/typography.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="Tomorrow People home">
+        <span class="logo" aria-hidden="true">
+          <img src="assets/tmw.ppl.logo.png" alt="Tomorrow People Logo" width="20" height="20">
+        </span>
+        <span>Tomorrow People</span>
+      </a>
+        <nav class="navlinks">
+        <a href="index.html#about">About</a>
+        <a href="index.html#pillars">Pillars</a>
+        <a href="events.html">Events</a>
+        <a href="index.html#join">Join</a>
+        <a class="btn secondary" href="auth.html" id="auth-nav-btn">Sign In</a>
+        <a class="btn primary" href="index.html#join">Get Involved</a>
+        </nav>
+        <button class="menu-toggle" aria-label="Toggle navigation menu">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="profile-section">
+      <div class="container">
+        <div class="profile-container">
+          <div class="profile-header">
+            <h1>Your Profile</h1>
+            <p>Manage your account and preferences</p>
+          </div>
+          
+          <div class="profile-content">
+            <div class="profile-info">
+              <div class="profile-avatar">
+                <div class="avatar-placeholder">
+                  <span id="user-initials">U</span>
+                </div>
+              </div>
+              <div class="profile-details">
+                <h2 id="user-name">Loading...</h2>
+                <p id="user-email">Loading...</p>
+                <p class="member-since">Member since <span id="member-since">Loading...</span></p>
+              </div>
+            </div>
+            
+            <div class="profile-actions">
+              <button id="edit-profile-btn" class="btn secondary">Edit Profile</button>
+              <button id="logout-btn" class="btn secondary">Sign Out</button>
+            </div>
+          </div>
+          
+          <div class="profile-form" id="profile-form" style="display: none;">
+            <h3>Edit Profile</h3>
+            <div class="form-group">
+              <label for="edit-name">Full Name</label>
+              <input type="text" id="edit-name" placeholder="Your full name" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-bio">Bio</label>
+              <textarea id="edit-bio" placeholder="Tell us about yourself..." rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="edit-interests">Interests</label>
+              <input type="text" id="edit-interests" placeholder="Technology, Art, Design..." />
+              <small>Separate interests with commas</small>
+            </div>
+            <div class="form-actions">
+              <button id="save-profile-btn" class="btn primary">Save Changes</button>
+              <button id="cancel-edit-btn" class="btn secondary">Cancel</button>
+            </div>
+            <div id="profile-error" class="error-message" style="display: none;"></div>
+          </div>
+          
+          <div class="profile-stats">
+            <h3>Your Activity</h3>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Events Attended</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Projects Shared</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Connections Made</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="logo" aria-hidden="true">
+          <img src="assets/tmw.ppl.logo.png" alt="Tomorrow People Logo" width="20" height="20">
+        </span>
+        <span>Tomorrow People</span>
+      </div>
+      <div>
+        <a href="index.html#about">About</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="index.html#pillars">Pillars</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="events.html">Events</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="index.html#join">Join</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Supabase CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  
+  <!-- JavaScript Files -->
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    // Profile page specific functionality
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Wait for auth manager to be ready
+      const checkAuthReady = () => {
+        if (window.authManager && window.authManager.supabase) {
+          // Check if user is logged in
+          if (!window.authManager.user) {
+            console.log('No user found, redirecting to auth page');
+            window.location.href = 'auth.html';
+            return;
+          }
+          
+          // User is authenticated, proceed
+          initializeProfilePage();
+        } else {
+          setTimeout(checkAuthReady, 100);
+        }
+      };
+      
+      checkAuthReady();
+    });
+    
+    async function initializeProfilePage() {
+      console.log('Initializing profile page for user:', window.authManager.user.email);
+      
+      // Load user profile
+      await loadUserProfile();
+      
+      // Update auth button
+      window.authManager.updateAuthButton();
+      
+      // Event listeners
+      document.getElementById('edit-profile-btn').addEventListener('click', showEditForm);
+      document.getElementById('cancel-edit-btn').addEventListener('click', hideEditForm);
+      document.getElementById('save-profile-btn').addEventListener('click', saveProfile);
+      document.getElementById('logout-btn').addEventListener('click', logout);
+    }
+    
+    async function loadUserProfile() {
+      const user = window.authManager.user;
+      
+      // Update basic info
+      document.getElementById('user-name').textContent = user.user_metadata?.full_name || 'User';
+      document.getElementById('user-email').textContent = user.email;
+      document.getElementById('user-initials').textContent = getInitials(user.user_metadata?.full_name || user.email);
+      
+      // Format member since date
+      const memberSince = new Date(user.created_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long'
+      });
+      document.getElementById('member-since').textContent = memberSince;
+      
+      // Load profile data from database
+      try {
+        const { data: profile, error } = await window.supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (profile) {
+          document.getElementById('edit-name').value = profile.full_name || '';
+          document.getElementById('edit-bio').value = profile.bio || '';
+          document.getElementById('edit-interests').value = profile.interests || '';
+        }
+      } catch (error) {
+        console.log('No profile found, using defaults');
+      }
+    }
+    
+    function getInitials(name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    
+    function showEditForm() {
+      document.getElementById('profile-form').style.display = 'block';
+      document.getElementById('edit-profile-btn').style.display = 'none';
+    }
+    
+    function hideEditForm() {
+      document.getElementById('profile-form').style.display = 'none';
+      document.getElementById('edit-profile-btn').style.display = 'inline-block';
+    }
+    
+    async function saveProfile() {
+      const name = document.getElementById('edit-name').value;
+      const bio = document.getElementById('edit-bio').value;
+      const interests = document.getElementById('edit-interests').value;
+      const errorDiv = document.getElementById('profile-error');
+      
+      if (!name) {
+        showError(errorDiv, 'Name is required');
+        return;
+      }
+      
+      try {
+        const { error } = await window.supabaseClient
+          .from('profiles')
+          .upsert({
+            id: window.authManager.user.id,
+            full_name: name,
+            bio: bio,
+            interests: interests,
+            updated_at: new Date().toISOString()
+          });
+          
+        if (error) throw error;
+        
+        // Update display
+        document.getElementById('user-name').textContent = name;
+        document.getElementById('user-initials').textContent = getInitials(name);
+        
+        hideEditForm();
+        showError(errorDiv, 'Profile updated successfully!', 'success');
+        
+      } catch (error) {
+        showError(errorDiv, error.message);
+      }
+    }
+    
+    async function logout() {
+      await window.authManager.signOut();
+      window.location.href = 'index.html';
+    }
+    
+    function showError(element, message, type = 'error') {
+      element.textContent = message;
+      element.style.display = 'block';
+      element.className = `error-message ${type}`;
+      
+      setTimeout(() => {
+        element.style.display = 'none';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>
