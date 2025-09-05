@@ -3,9 +3,8 @@
 // Event filtering functionality
 function initEventFilters() {
   const chips = document.querySelectorAll('.chip');
-  const eventsList = document.getElementById('events');
   
-  if (!chips.length || !eventsList) return;
+  if (!chips.length) return;
   
   chips.forEach(chip => {
     chip.addEventListener('click', () => {
@@ -17,18 +16,18 @@ function initEventFilters() {
         c.classList.add(c === chip ? 'active' : 'inactive');
       });
       
-      // Filter events
-      Array.from(eventsList.children).forEach(event => {
-        if (filter === 'all') {
-          event.style.display = '';
-          return;
-        }
-        
-        const tags = (event.getAttribute('data-tags') || '').split(/\s+/);
-        event.style.display = tags.includes(filter) ? '' : 'none';
-      });
+      // Filter events (works with both static and dynamic content)
+      filterEvents(filter);
     });
   });
+}
+
+// Filter events function that works with dynamic content
+function filterEvents(filter) {
+  // Use the Google Sheets manager to re-render with the new filter
+  if (typeof googleSheetsEventsManager !== 'undefined') {
+    googleSheetsEventsManager.renderEvents(filter);
+  }
 }
 
 // Initialize events functionality when DOM is loaded

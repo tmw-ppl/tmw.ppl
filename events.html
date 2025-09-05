@@ -43,53 +43,18 @@
         <h1>Upcoming Events</h1>
         <p class="lead">Hands-on nights, rooftop jams, show-and-tells, and pop-up collabs. Add them to your calendar and come say hi.</p>
         <div class="filters" aria-label="Filters">
-          <span class="chip active" data-filter="all">All</span>
+          <span class="chip active" data-filter="upcoming">Upcoming</span>
+          <span class="chip inactive" data-filter="past">Past</span>
+          <span class="chip inactive" data-filter="all">All</span>
           <span class="chip inactive" data-filter="irl">IRL</span>
+          <span class="chip inactive" data-filter="virtual">Virtual</span>
           <span class="chip inactive" data-filter="workshop">Workshop</span>
           <span class="chip inactive" data-filter="social">Social</span>
+          <span class="chip inactive" data-filter="wellness">Wellness</span>
+          <span class="chip inactive" data-filter="rager">Rager</span>
         </div>
         <div class="events" id="events">
-
-          <article class="event" data-tags="social irl">
-            <h3>Friday Floasis</h3>
-            <time datetime="2025-09-12">September 12, 2025 • 7:00 PM • San Diego</time>
-            <div class="meta">Live DJ sets, creator jam session, rooftop vibes.</div>
-            <div class="actions">
-              <a class="btn" href="#" target="_blank" rel="noopener">Details</a>
-              <a class="btn primary" href="#" target="_blank" rel="noopener">RSVP</a>
-            </div>
-          </article>
-
-          <article class="event" data-tags="workshop irl">
-            <h3>Maker Night: Tiny Bets</h3>
-            <time datetime="2025-09-18">September 18, 2025 • 6:30 PM • Mission Valley</time>
-            <div class="meta">Bring a small idea, leave with a shipped prototype. Tools & snacks provided.</div>
-            <div class="actions">
-              <a class="btn" href="#" target="_blank" rel="noopener">Details</a>
-              <a class="btn primary" href="#" target="_blank" rel="noopener">RSVP</a>
-            </div>
-          </article>
-
-          <article class="event" data-tags="social irl">
-            <h3>Meeting of the Minds</h3>
-            <time datetime="2025-09-20">September 20, 2025 • 4:00 PM • North Park</time>
-            <div class="meta">Salon-style conversation night. Philosophy, tech, and what we’re building next.</div>
-            <div class="actions">
-              <a class="btn" href="#" target="_blank" rel="noopener">Details</a>
-              <a class="btn primary" href="#" target="_blank" rel="noopener">RSVP</a>
-            </div>
-          </article>
-
-          <article class="event" data-tags="festival irl">
-            <h3>Into the Horizon Festival</h3>
-            <time datetime="2025-10-05">October 5, 2025 • All Day • Mission Bay</time>
-            <div class="meta">Art, technology, music. A day-long mashup of what makes this community fun.</div>
-            <div class="actions">
-              <a class="btn" href="#" target="_blank" rel="noopener">Details</a>
-              <a class="btn primary" href="#" target="_blank" rel="noopener">RSVP</a>
-            </div>
-          </article>
-
+          <!-- Events will be loaded dynamically from Google Sheets -->
         </div>
       </div>
     </section>
@@ -117,7 +82,24 @@
 
   <!-- JavaScript Files -->
   <script src="js/main.js"></script>
+  <script src="js/google-sheets.js"></script>
+  <script src="js/static-events.js"></script>
   <script src="js/events.js"></script>
+  
+  <script>
+    // Load events when page loads
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        // Try Google Sheets first
+        console.log('Loading events from Google Sheets...');
+        await googleSheetsEventsManager.loadEvents();
+      } catch (error) {
+        console.log('Google Sheets failed, using static events:', error);
+        // Fallback to static events
+        await staticEventsManager.loadEvents();
+      }
+    });
+  </script>
 
 </body>
 </html>

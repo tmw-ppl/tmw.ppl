@@ -43,6 +43,12 @@
   color: #081018; 
 }
 
+.btn.secondary { 
+  background: var(--background); 
+  border: 1px solid var(--accent); 
+  color: var(--accent); 
+}
+
 /* Cards */
 .card {
   background: var(--card); 
