@@ -48,16 +48,21 @@
           </div>
           
           <div class="profile-content">
-            <div class="profile-info">
-              <div class="profile-avatar">
-                <div class="avatar-placeholder">
-                  <span id="user-initials">U</span>
+            <div id="loading-message" style="text-align: center; padding: 40px;">
+              <p>Loading your profile...</p>
+            </div>
+            <div id="profile-info" style="display: none;">
+              <div class="profile-info">
+                <div class="profile-avatar">
+                  <div class="avatar-placeholder">
+                    <span id="user-initials">U</span>
+                  </div>
                 </div>
-              </div>
-              <div class="profile-details">
-                <h2 id="user-name">Loading...</h2>
-                <p id="user-email">Loading...</p>
-                <p class="member-since">Member since <span id="member-since">Loading...</span></p>
+                <div class="profile-details">
+                  <h2 id="user-name">Loading...</h2>
+                  <p id="user-email">Loading...</p>
+                  <p class="member-since">Member since <span id="member-since">Loading...</span></p>
+                </div>
               </div>
             </div>
             
@@ -144,15 +149,18 @@
       // Wait for auth manager to be ready
       const checkAuthReady = () => {
         if (window.authManager && window.authManager.supabase) {
-          // Check if user is logged in
-          if (!window.authManager.user) {
-            console.log('No user found, redirecting to auth page');
-            window.location.href = 'auth.html';
-            return;
-          }
-          
-          // User is authenticated, proceed
-          initializeProfilePage();
+          // Give auth manager a moment to check for existing session
+          setTimeout(() => {
+            if (!window.authManager.user) {
+              console.log('No user found after session check, redirecting to auth page');
+              window.location.href = 'auth.html';
+              return;
+            }
+            
+            // User is authenticated, proceed
+            console.log('User authenticated, initializing profile page');
+            initializeProfilePage();
+          }, 1000); // Wait 1 second for session to load
         } else {
           setTimeout(checkAuthReady, 100);
         }
@@ -163,6 +171,10 @@
     
     async function initializeProfilePage() {
       console.log('Initializing profile page for user:', window.authManager.user.email);
+      
+      // Hide loading, show profile
+      document.getElementById('loading-message').style.display = 'none';
+      document.getElementById('profile-info').style.display = 'block';
       
       // Load user profile
       await loadUserProfile();

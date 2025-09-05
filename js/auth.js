@@ -21,12 +21,17 @@ class AuthManager {
 
   async setupAuth() {
     try {
+      console.log('Setting up auth...')
+      
       // Check for existing session
       const { data: { session } } = await this.supabase.auth.getSession()
       this.user = session?.user || null
       
+      console.log('Session check result:', this.user ? 'User found' : 'No user')
+      
       // Listen for auth changes
       this.supabase.auth.onAuthStateChange((event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email || 'no user')
         this.user = session?.user || null
         this.updateUI()
         this.updateAuthButton()
