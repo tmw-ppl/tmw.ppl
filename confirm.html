@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Email Confirmed - Tomorrow People</title>
+  <meta name="description" content="Your email has been confirmed. Welcome to Tomorrow People!" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS Files -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/typography.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="Tomorrow People home">
+        <span class="logo" aria-hidden="true">
+          <img src="assets/tmw.ppl.logo.png" alt="Tomorrow People Logo" width="20" height="20">
+        </span>
+        <span>Tomorrow People</span>
+      </a>
+        <nav class="navlinks">
+        <a href="index.html#about">About</a>
+        <a href="index.html#pillars">Pillars</a>
+        <a href="events.html">Events</a>
+        <a href="index.html#join">Join</a>
+        <a class="btn secondary" href="auth.html" id="auth-nav-btn">Sign In</a>
+        <a class="btn primary" href="index.html#join">Get Involved</a>
+        </nav>
+        <button class="menu-toggle" aria-label="Toggle navigation menu">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="auth-section">
+      <div class="container">
+        <div class="auth-container">
+          <div class="auth-header">
+            <h1>🎉 Welcome to Tomorrow People!</h1>
+            <p>Your email has been confirmed. You're now part of the community!</p>
+          </div>
+          
+          <div style="text-align: center; margin: 32px 0;">
+            <div id="confirmation-status">
+              <p>Processing confirmation...</p>
+            </div>
+          </div>
+          
+          <div style="text-align: center;">
+            <a href="profile.html" class="btn primary" id="go-to-profile-btn" style="display: none;">Go to Your Profile</a>
+            <a href="auth.html" class="btn secondary" id="sign-in-btn" style="display: none;">Sign In</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="logo" aria-hidden="true">
+          <img src="assets/tmw.ppl.logo.png" alt="Tomorrow People Logo" width="20" height="20">
+        </span>
+        <span>Tomorrow People</span>
+      </div>
+      <div>
+        <a href="index.html#about">About</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="index.html#pillars">Pillars</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="events.html">Events</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="index.html#join">Join</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Supabase CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  
+  <!-- JavaScript Files -->
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    // Email confirmation page
+    document.addEventListener('DOMContentLoaded', async function() {
+      const statusDiv = document.getElementById('confirmation-status');
+      const profileBtn = document.getElementById('go-to-profile-btn');
+      const signInBtn = document.getElementById('sign-in-btn');
+      
+      try {
+        // Wait for auth manager to be ready
+        const checkAuthReady = () => {
+          if (window.authManager && window.authManager.supabase) {
+            handleEmailConfirmation();
+          } else {
+            setTimeout(checkAuthReady, 100);
+          }
+        };
+        
+        checkAuthReady();
+      } catch (error) {
+        console.error('Error handling email confirmation:', error);
+        statusDiv.innerHTML = '<p style="color: #ef4444;">Error processing confirmation. Please try signing in manually.</p>';
+        signInBtn.style.display = 'inline-block';
+      }
+    });
+    
+    async function handleEmailConfirmation() {
+      const statusDiv = document.getElementById('confirmation-status');
+      const profileBtn = document.getElementById('go-to-profile-btn');
+      const signInBtn = document.getElementById('sign-in-btn');
+      
+      try {
+        // Check if user is already signed in
+        if (window.authManager.user) {
+          statusDiv.innerHTML = '<p style="color: #22c55e;">✅ Email confirmed! You\'re signed in.</p>';
+          profileBtn.style.display = 'inline-block';
+        } else {
+          // Try to get the session from URL parameters
+          const urlParams = new URLSearchParams(window.location.search);
+          const accessToken = urlParams.get('access_token');
+          const refreshToken = urlParams.get('refresh_token');
+          
+          if (accessToken && refreshToken) {
+            // Set the session manually
+            const { data, error } = await window.supabaseClient.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            
+            if (error) throw error;
+            
+            statusDiv.innerHTML = '<p style="color: #22c55e;">✅ Email confirmed! You\'re now signed in.</p>';
+            profileBtn.style.display = 'inline-block';
+          } else {
+            statusDiv.innerHTML = '<p>Email confirmed! Please sign in to continue.</p>';
+            signInBtn.style.display = 'inline-block';
+          }
+        }
+      } catch (error) {
+        console.error('Confirmation error:', error);
+        statusDiv.innerHTML = '<p style="color: #ef4444;">There was an issue confirming your email. Please try signing in manually.</p>';
+        signInBtn.style.display = 'inline-block';
+      }
+    }
+  </script>
+</body>
+</html>
