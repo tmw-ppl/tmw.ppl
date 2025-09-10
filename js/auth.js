@@ -78,10 +78,19 @@ class AuthManager {
   }
 
   async signIn(email, password) {
+    console.log('Attempting sign in for:', email);
+    
     const { data, error } = await this.supabase.auth.signInWithPassword({
       email,
       password,
     })
+    
+    console.log('Sign in result:', { 
+      user: data?.user?.email, 
+      emailConfirmed: data?.user?.email_confirmed_at,
+      error: error?.message 
+    });
+    
     return { data, error }
   }
 
