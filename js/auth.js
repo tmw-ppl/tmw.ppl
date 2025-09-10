@@ -56,15 +56,22 @@ class AuthManager {
       }
     })
     
+    console.log('Signup result:', { data, error });
+    
     // Create profile record
     if (data.user && !error) {
-      await this.supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          full_name: name,
-          email: email
-        })
+      try {
+        await this.supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            full_name: name,
+            email: email
+          })
+        console.log('Profile created successfully');
+      } catch (profileError) {
+        console.error('Error creating profile:', profileError);
+      }
     }
     
     return { data, error }
