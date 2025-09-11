@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create Event — Tomorrow People</title>
+  <meta name="description" content="Create a new event for the Tomorrow People community." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS Files -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/typography.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="Tomorrow People home">
+        <span class="logo" aria-hidden="true">
+          <img src="assets/tmw.ppl.logo.png" alt="Tomorrow People Logo" width="20" height="20">
+        </span>
+        <span>Tomorrow People</span>
+      </a>
+      <nav class="navlinks">
+        <a href="index.html#about">About</a>
+        <a href="index.html#pillars">Pillars</a>
+        <a href="events.html">Events</a>
+        <a href="index.html#join">Join</a>
+        <a class="btn secondary" href="auth.html" id="auth-nav-btn">Sign In</a>
+        <a class="btn primary" href="index.html#join">Get Involved</a>
+      </nav>
+      <button class="menu-toggle" aria-label="Toggle navigation menu">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="auth-section">
+      <div class="container">
+        <div class="auth-container">
+          <div class="auth-header">
+            <h1>Create Event</h1>
+            <p>Share your event with the Tomorrow People community</p>
+          </div>
+
+          <form id="create-event-form" class="auth-form">
+            <div class="form-group">
+              <label for="title">Event Title *</label>
+              <input type="text" id="title" name="title" required placeholder="e.g., Rooftop Jam Session">
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description" name="description" rows="4" placeholder="Tell us about your event..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="date">Date *</label>
+                <input type="date" id="date" name="date" required>
+              </div>
+              <div class="form-group">
+                <label for="time">Time</label>
+                <input type="time" id="time" name="time" placeholder="e.g., 7:00 PM">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="location">Location</label>
+              <input type="text" id="location" name="location" placeholder="e.g., Central Park, NYC">
+            </div>
+
+            <div class="form-group">
+              <label for="rsvp_url">RSVP URL</label>
+              <input type="url" id="rsvp_url" name="rsvp_url" placeholder="https://partiful.com/your-event">
+              <small>Link to Partiful, Eventbrite, or other RSVP platform</small>
+            </div>
+
+            <div class="form-group">
+              <label for="image_url">Image URL</label>
+              <input type="url" id="image_url" name="image_url" placeholder="https://example.com/image.jpg">
+              <small>Optional: Add an image to make your event stand out</small>
+            </div>
+
+            <div class="form-group">
+              <label>Event Type Tags</label>
+              <div class="tag-selector">
+                <label class="tag-option">
+                  <input type="checkbox" name="tags" value="IRL">
+                  <span class="tag-chip">IRL</span>
+                </label>
+                <label class="tag-option">
+                  <input type="checkbox" name="tags" value="Virtual">
+                  <span class="tag-chip">Virtual</span>
+                </label>
+                <label class="tag-option">
+                  <input type="checkbox" name="tags" value="Workshop">
+                  <span class="tag-chip">Workshop</span>
+                </label>
+                <label class="tag-option">
+                  <input type="checkbox" name="tags" value="Social">
+                  <span class="tag-chip">Social</span>
+                </label>
+                <label class="tag-option">
+                  <input type="checkbox" name="tags" value="Wellness">
+                  <span class="tag-chip">Wellness</span>
+                </label>
+                <label class="tag-option">
+                  <input type="checkbox" name="tags" value="Rager">
+                  <span class="tag-chip">Rager</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="published" name="published">
+                <span class="checkmark"></span>
+                Publish immediately (uncheck to save as draft)
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn secondary" onclick="window.location.href='events.html'">Cancel</button>
+              <button type="submit" class="btn primary">Create Event</button>
+            </div>
+          </form>
+
+          <div id="success-message" class="success-message" style="display: none;">
+            <h3>Event Created Successfully!</h3>
+            <p>Your event has been created and is now visible to the community.</p>
+            <div class="success-actions">
+              <a href="events.html" class="btn primary">View All Events</a>
+              <button type="button" class="btn secondary" onclick="resetForm()">Create Another</button>
+            </div>
+          </div>
+
+          <div id="error-message" class="error-message" style="display: none;">
+            <h3>Error Creating Event</h3>
+            <p id="error-text"></p>
+            <button type="button" class="btn secondary" onclick="hideError()">Try Again</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="logo" aria-hidden="true">
+          <img src="assets/tmw.ppl.logo.png" alt="Tomorrow People Logo" width="20" height="20">
+        </span>
+        <span>Tomorrow People</span>
+      </div>
+      <div>
+        <a href="index.html#about">About</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="index.html#pillars">Pillars</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="events.html">Events</a>
+        <span style="margin: 0 8px; opacity:.5;">•</span>
+        <a href="index.html#join">Join</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Supabase CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  
+  <!-- JavaScript Files -->
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/events-manager.js"></script>
+  <script src="js/main.js"></script>
+  
+  <script>
+    // Initialize page when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      // Update auth button
+      if (window.authManager) {
+        window.authManager.updateAuthButton();
+      }
+      
+      // Check if user is authenticated
+      checkAuthStatus();
+      
+      // Set up form submission
+      setupFormSubmission();
+      
+      // Set default date to today
+      const dateInput = document.getElementById('date');
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.value = today;
+    });
+
+    function checkAuthStatus() {
+      const checkAuth = () => {
+        if (window.authManager && window.authManager.user) {
+          // User is authenticated, show form
+          document.getElementById('create-event-form').style.display = 'block';
+          return;
+        } else if (window.authManager && !window.authManager.user) {
+          // User is not authenticated, redirect to login
+          window.location.href = 'auth.html?redirect=create-event.html';
+          return;
+        }
+        // Auth manager not ready yet, check again
+        setTimeout(checkAuth, 100);
+      };
+      checkAuth();
+    }
+
+    function setupFormSubmission() {
+      const form = document.getElementById('create-event-form');
+      
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton.textContent;
+        submitButton.textContent = 'Creating...';
+        submitButton.disabled = true;
+        
+        try {
+          // Collect form data
+          const formData = new FormData(form);
+          const eventData = {
+            title: formData.get('title'),
+            description: formData.get('description'),
+            date: formData.get('date'),
+            time: formData.get('time'),
+            location: formData.get('location'),
+            rsvp_url: formData.get('rsvp_url'),
+            image_url: formData.get('image_url'),
+            tags: formData.getAll('tags'),
+            published: formData.get('published') === 'on'
+          };
+          
+          // Validate required fields
+          if (!eventData.title || !eventData.date) {
+            throw new Error('Title and date are required');
+          }
+          
+          // Create event using events manager
+          if (window.eventsManager) {
+            await window.eventsManager.createEvent(eventData);
+            showSuccess();
+          } else {
+            throw new Error('Events manager not available');
+          }
+          
+        } catch (error) {
+          console.error('Error creating event:', error);
+          showError(error.message || 'Failed to create event. Please try again.');
+        } finally {
+          submitButton.textContent = originalText;
+          submitButton.disabled = false;
+        }
+      });
+      
+      // Add Enter key support
+      form.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && e.target.type !== 'textarea') {
+          e.preventDefault();
+          form.dispatchEvent(new Event('submit'));
+        }
+      });
+    }
+
+    function showSuccess() {
+      document.getElementById('create-event-form').style.display = 'none';
+      document.getElementById('success-message').style.display = 'block';
+      document.getElementById('error-message').style.display = 'none';
+    }
+
+    function showError(message) {
+      document.getElementById('error-text').textContent = message;
+      document.getElementById('error-message').style.display = 'block';
+      document.getElementById('success-message').style.display = 'none';
+    }
+
+    function hideError() {
+      document.getElementById('error-message').style.display = 'none';
+    }
+
+    function resetForm() {
+      document.getElementById('create-event-form').reset();
+      document.getElementById('create-event-form').style.display = 'block';
+      document.getElementById('success-message').style.display = 'none';
+      document.getElementById('error-message').style.display = 'none';
+      
+      // Reset date to today
+      const dateInput = document.getElementById('date');
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.value = today;
+    }
+  </script>
+
+</body>
+</html>

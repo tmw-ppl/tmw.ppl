@@ -160,6 +160,11 @@ class SupabaseEventsManager {
         throw new Error('You must be logged in to delete events');
       }
 
+      // Confirm deletion
+      if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+        return;
+      }
+
       const { error } = await this.supabase
         .from('events')
         .delete()
@@ -178,7 +183,7 @@ class SupabaseEventsManager {
       
     } catch (error) {
       console.error('Error deleting event:', error);
-      throw error;
+      this.showError('Failed to delete event. Please try again.');
     }
   }
 
