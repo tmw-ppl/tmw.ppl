@@ -111,8 +111,15 @@
       
       // Add create event button for authenticated users
       const checkAuthAndAddButton = () => {
+        console.log('Checking auth for create button...');
+        console.log('Auth Manager:', window.authManager);
+        console.log('User:', window.authManager?.user);
+        
         if (window.authManager && window.authManager.user) {
+          console.log('User is authenticated, adding create button');
           const filtersContainer = document.querySelector('.filters');
+          console.log('Filters container:', filtersContainer);
+          
           if (filtersContainer && !document.getElementById('create-event-btn')) {
             const createBtn = document.createElement('a');
             createBtn.id = 'create-event-btn';
@@ -121,8 +128,12 @@
             createBtn.textContent = 'Create Event';
             createBtn.style.marginLeft = '20px';
             filtersContainer.appendChild(createBtn);
+            console.log('Create button added!');
+          } else {
+            console.log('Button already exists or no filters container');
           }
         } else {
+          console.log('User not authenticated, removing create button if exists');
           // Remove button if user is not authenticated
           const createBtn = document.getElementById('create-event-btn');
           if (createBtn) {
@@ -131,8 +142,10 @@
         }
       };
       
-      // Check auth status and add button
-      checkAuthAndAddButton();
+      // Check auth status and add button with delay to allow auth manager to initialize
+      setTimeout(() => {
+        checkAuthAndAddButton();
+      }, 1000);
       
       // Listen for auth changes
       if (window.authManager) {

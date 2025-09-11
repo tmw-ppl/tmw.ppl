@@ -84,6 +84,36 @@ class SupabaseEventsManager {
         throw new Error('You must be logged in to create events');
       }
 
+      // Check if user has a profile
+      const { data: profile, error: profileError } = await this.supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', this.currentUser.id)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Profile not found for user:', this.currentUser.id);
+        console.error('Profile error:', profileError);
+        
+        // Create profile if it doesn't exist
+        const { data: newProfile, error: createError } = await this.supabase
+          .from('profiles')
+          .insert({
+            id: this.currentUser.id,
+            full_name: this.currentUser.user_metadata?.full_name || this.currentUser.email,
+            email: this.currentUser.email
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          throw new Error('Failed to create user profile. Please try again.');
+        }
+        
+        console.log('Profile created:', newProfile);
+      }
+
       const { data, error } = await this.supabase
         .from('events')
         .insert([{

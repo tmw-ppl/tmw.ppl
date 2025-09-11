@@ -249,6 +249,35 @@ small {
   color: var(--muted);
 }
 
+/* Select dropdown styling */
+select {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b3c1d1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+select option {
+  background: var(--card);
+  color: var(--text);
+  padding: 8px;
+}
+
 .loading-message {
   text-align: center;
   padding: 40px 20px;
