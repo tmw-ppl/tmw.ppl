@@ -44,9 +44,9 @@
 }
 
 .btn.secondary { 
-  background: var(--background); 
-  border: 1px solid var(--accent); 
-  color: var(--accent); 
+  background: var(--primary); 
+  border: 1px solid var(--primary); 
+  color: white; 
 }
 
 /* Cards */

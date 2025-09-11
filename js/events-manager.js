@@ -357,8 +357,10 @@ class SupabaseEventsManager {
       <div class="event ${isPast ? 'past' : ''}" data-event-id="${event.id}">
         <div class="event-content">
           <div class="event-header">
-            <h3 class="event-title">${this.escapeHtml(event.title)}</h3>
-            ${event.rsvp_url ? `<a href="${this.escapeHtml(event.rsvp_url)}" target="_blank" class="btn secondary small">${event.rsvp_url.includes('partiful.com') ? 'RSVP on Partiful' : 'RSVP'}</a>` : ''}
+            <h3 class="event-title">
+              ${this.escapeHtml(event.title)}
+              ${event.rsvp_url ? ` • <a href="${this.escapeHtml(event.rsvp_url)}" target="_blank" class="btn secondary small inline">${event.rsvp_url.includes('partiful.com') ? 'RSVP on Partiful' : 'RSVP'}</a>` : ''}
+            </h3>
           </div>
           
           <div class="event-details">
