@@ -11,6 +11,14 @@
   --card: #121a2b;
   --border: #1f2a44;
   
+  /* Status colors */
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --warning: #f59e0b;
+  --warning-hover: #d97706;
+  --success: #10b981;
+  --success-hover: #059669;
+  
   /* Effects */
   --shadow: 0 10px 30px rgba(0,0,0,.35);
   --radius: 18px;

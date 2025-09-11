@@ -54,8 +54,8 @@
           <span class="chip inactive" data-filter="wellness">Wellness</span>
           <span class="chip inactive" data-filter="rager">Rager</span>
         </div>
-        <div class="events" id="events">
-          <!-- Events will be loaded dynamically from Google Sheets -->
+        <div class="events" id="events-container">
+          <!-- Events will be loaded dynamically from Supabase -->
         </div>
       </div>
     </section>
@@ -87,27 +87,58 @@
   <!-- JavaScript Files -->
   <script src="js/supabase.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/events-manager.js"></script>
   <script src="js/main.js"></script>
-  <script src="js/google-sheets.js"></script>
-  <script src="js/static-events.js"></script>
-  <script src="js/events.js"></script>
   
   <script>
-    // Load events when page loads
-    document.addEventListener('DOMContentLoaded', async function() {
+    // Initialize page when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
       // Update auth button
       if (window.authManager) {
         window.authManager.updateAuthButton();
       }
       
-      try {
-        // Try Google Sheets first
-        console.log('Loading events from Google Sheets...');
-        await googleSheetsEventsManager.loadEvents();
-      } catch (error) {
-        console.log('Google Sheets failed, using static events:', error);
-        // Fallback to static events
-        await staticEventsManager.loadEvents();
+      // Set up filter chip event listeners
+      const filterChips = document.querySelectorAll('.chip');
+      filterChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+          const filter = this.dataset.filter;
+          if (window.eventsManager) {
+            window.eventsManager.filterEvents(filter);
+          }
+        });
+      });
+      
+      // Add create event button for authenticated users
+      const checkAuthAndAddButton = () => {
+        if (window.authManager && window.authManager.user) {
+          const filtersContainer = document.querySelector('.filters');
+          if (filtersContainer && !document.getElementById('create-event-btn')) {
+            const createBtn = document.createElement('a');
+            createBtn.id = 'create-event-btn';
+            createBtn.className = 'btn primary';
+            createBtn.href = 'create-event.html';
+            createBtn.textContent = 'Create Event';
+            createBtn.style.marginLeft = '20px';
+            filtersContainer.appendChild(createBtn);
+          }
+        } else {
+          // Remove button if user is not authenticated
+          const createBtn = document.getElementById('create-event-btn');
+          if (createBtn) {
+            createBtn.remove();
+          }
+        }
+      };
+      
+      // Check auth status and add button
+      checkAuthAndAddButton();
+      
+      // Listen for auth changes
+      if (window.authManager) {
+        window.authManager.supabase.auth.onAuthStateChange(() => {
+          checkAuthAndAddButton();
+        });
       }
     });
   </script>
