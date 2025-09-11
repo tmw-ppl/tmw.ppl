@@ -144,7 +144,7 @@
       });
       
       // Login form submission
-      document.getElementById('login-btn').addEventListener('click', async () => {
+      const handleLogin = async () => {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         const errorDiv = document.getElementById('login-error');
@@ -165,10 +165,21 @@
             window.location.href = 'profile.html';
           }, 500);
         }
+      };
+      
+      // Login button click
+      document.getElementById('login-btn').addEventListener('click', handleLogin);
+      
+      // Login form enter key
+      document.getElementById('login-form').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleLogin();
+        }
       });
       
       // Signup form submission
-      document.getElementById('signup-btn').addEventListener('click', async () => {
+      const handleSignup = async () => {
         console.log('Signup button clicked!');
         
         const email = document.getElementById('signup-email').value;
@@ -207,6 +218,17 @@
         } catch (err) {
           console.error('Unexpected error:', err);
           showError(errorDiv, 'An unexpected error occurred. Check console for details.');
+        }
+      };
+      
+      // Signup button click
+      document.getElementById('signup-btn').addEventListener('click', handleSignup);
+      
+      // Signup form enter key
+      document.getElementById('signup-form').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSignup();
         }
       });
       
