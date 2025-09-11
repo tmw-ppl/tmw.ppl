@@ -61,6 +61,10 @@ class SupabaseEventsManager {
 
       this.events = data || [];
       console.log(`Loaded ${this.events.length} events`);
+      
+      // Scrape images for events with Partiful links
+      await this.scrapeEventImages();
+      
       this.renderEvents();
       
     } catch (error) {
@@ -354,7 +358,7 @@ class SupabaseEventsManager {
         <div class="event-content">
           <div class="event-header">
             <h3 class="event-title">${this.escapeHtml(event.title)}</h3>
-            ${event.rsvp_url ? `<a href="${this.escapeHtml(event.rsvp_url)}" target="_blank" class="btn secondary small">RSVP on Partiful</a>` : ''}
+            ${event.rsvp_url ? `<a href="${this.escapeHtml(event.rsvp_url)}" target="_blank" class="btn secondary small">${event.rsvp_url.includes('partiful.com') ? 'RSVP on Partiful' : 'RSVP'}</a>` : ''}
           </div>
           
           <div class="event-details">
@@ -476,6 +480,141 @@ class SupabaseEventsManager {
       month: 'long',
       day: 'numeric'
     });
+  }
+
+  /**
+   * Scrape images for events with Partiful links
+   */
+  async scrapeEventImages() {
+    const eventsWithPartiful = this.events.filter(event => 
+      event.rsvp_url && event.rsvp_url.includes('partiful.com') && !event.image_url
+    );
+    
+    console.log(`Scraping images for ${eventsWithPartiful.length} Partiful events`);
+    
+    for (const event of eventsWithPartiful) {
+      try {
+        const imageUrl = await this.scrapePartifulImage(event.rsvp_url);
+        if (imageUrl) {
+          event.image_url = imageUrl;
+          console.log(`✅ Found image for ${event.title}`);
+          
+          // Update the event in Supabase with the scraped image
+          await this.updateEventImage(event.id, imageUrl);
+        }
+      } catch (error) {
+        console.warn(`Failed to scrape image for ${event.title}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Scrape image from Partiful page
+   */
+  async scrapePartifulImage(partifulUrl) {
+    try {
+      // Use CORS proxy to fetch the Partiful page
+      const proxyUrl = 'https://api.allorigins.win/raw?url=';
+      const fullUrl = proxyUrl + encodeURIComponent(partifulUrl);
+      
+      const response = await fetch(fullUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const html = await response.text();
+      
+      // Strategy 1: Look for meta tags with og:image or name="image" (highest priority)
+      const metaImageMatch = html.match(/<meta[^>]*(?:property="og:image"|name="image")[^>]*content="([^"]*imgix\.net[^"]*)"/i);
+      if (metaImageMatch) {
+        console.log(`✅ Found meta image: ${metaImageMatch[1]}`);
+        return metaImageMatch[1];
+      }
+      
+      // Strategy 2: Look for imgix images in srcset (most reliable for Partiful)
+      const srcsetMatches = html.match(/srcset="([^"]*imgix\.net[^"]*)"/gi);
+      if (srcsetMatches) {
+        const firstSrcset = srcsetMatches[0].match(/srcset="([^"]+)"/i);
+        if (firstSrcset) {
+          const urls = firstSrcset[1].split(',');
+          return urls[urls.length - 1].trim().split(' ')[0];
+        }
+      }
+      
+      // Strategy 3: Look for imgix images in src attribute
+      const imgixMatches = html.match(/src="([^"]*imgix\.net[^"]*)"/gi);
+      if (imgixMatches) {
+        const firstMatch = imgixMatches[0].match(/src="([^"]+)"/i);
+        if (firstMatch) {
+          return firstMatch[1];
+        }
+      }
+      
+      // Strategy 4: Look for EventPage_image class with any image
+      const eventPageMatches = html.match(/class="[^"]*EventPage_image[^"]*"[^>]*>[\s\S]*?<img[^>]*>/gi);
+      if (eventPageMatches) {
+        for (const match of eventPageMatches) {
+          const srcMatch = match.match(/src="([^"]+)"/i) || match.match(/srcset="([^"]+)"/i);
+          if (srcMatch) {
+            let imageUrl = srcMatch[1];
+            if (imageUrl.includes(',')) {
+              imageUrl = imageUrl.split(',')[0].trim().split(' ')[0];
+            }
+            return imageUrl;
+          }
+        }
+      }
+      
+      // Strategy 5: Look for any image with specific alt text patterns
+      const altPatterns = [
+        /<img[^>]*alt="[^"]*(?:event|poster|flyer|banner)[^"]*"[^>]*>/gi,
+        /<img[^>]*alt="[^"]*\.(jpg|jpeg|png|webp)[^"]*"[^>]*>/gi
+      ];
+      
+      for (const pattern of altPatterns) {
+        const altMatches = html.match(pattern);
+        if (altMatches) {
+          for (const match of altMatches) {
+            const srcMatch = match.match(/src="([^"]+)"/i) || match.match(/srcset="([^"]+)"/i);
+            if (srcMatch) {
+              let imageUrl = srcMatch[1];
+              if (imageUrl.includes(',')) {
+                imageUrl = imageUrl.split(',')[0].trim().split(' ')[0];
+              }
+              return imageUrl;
+            }
+          }
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error scraping Partiful image:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update event image URL in Supabase
+   */
+  async updateEventImage(eventId, imageUrl) {
+    try {
+      const { error } = await this.supabase
+        .from('events')
+        .update({ 
+          image_url: imageUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', eventId);
+
+      if (error) {
+        console.error('Error updating event image:', error);
+      } else {
+        console.log(`Updated image for event ${eventId}`);
+      }
+    } catch (error) {
+      console.error('Error updating event image:', error);
+    }
   }
 
   /**
