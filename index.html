@@ -32,7 +32,7 @@
         <a href="events.html">Events</a>
         <a href="#join">Join</a>
         <a class="btn secondary" href="auth.html" id="auth-nav-btn">Sign In</a>
-        <a class="btn primary" href="#join">Get Involved</a>
+        <a class="btn primary" href="auth.html">Get Involved</a>
         </nav>
         <button class="menu-toggle" aria-label="Toggle navigation menu">☰</button>
     </div>
@@ -49,7 +49,7 @@
           <p class="lead">Tomorrow People is a community of builders, artists, and explorers. We mix technology, culture, and real world gatherings to prototype better ways to live and create together.
           </p>
           <div style="display:flex; gap:12px; margin-top:18px; flex-wrap:wrap;">
-            <a class="btn primary" href="#join">Join the waitlist</a>
+            <a class="btn primary" href="auth.html">Join Tomorrow People</a>
             <a class="btn" href="#about">What is this</a>
           </div>
         </div>
@@ -143,11 +143,11 @@
         <div class="cta">
           <div>
             <h3 style="margin:0 0 6px;">Join the first wave</h3>
-            <p>Add your name to the interest list. We will send invites to upcoming meetups, collab prompts, and early projects.</p>
+            <p>Create your account to access exclusive events, connect with the community, and be part of the Tomorrow People movement.</p>
           </div>
           <div style="display:grid; gap:10px;">
-            <a class="btn primary" id="signupBtn" href="https://forms.gle/85yFcsqF6B2G5aJ37" target="_blank" rel="noopener">Open the sign up form</a>
-            <small style="color:var(--muted);">No spam. Unsubscribe any time.</small>
+            <a class="btn primary" href="auth.html">Create Account</a>
+            <small style="color:var(--muted);">Already have an account? <a href="auth.html" style="color:var(--accent);">Sign in here</a></small>
           </div>
         </div>
       </div>
@@ -182,11 +182,6 @@
   <script src="js/auth.js"></script>
   <script src="js/main.js"></script>
   <script>
-    // Set your Google Form link here to keep it in one place
-    const SIGNUP_URL = 'https://forms.gle/85yFcsqF6B2G5aJ37';
-    const btn = document.getElementById('signupBtn');
-    if (btn) btn.href = SIGNUP_URL;
-    
     // Update auth button based on login state
     document.addEventListener('DOMContentLoaded', function() {
       if (window.authManager) {
