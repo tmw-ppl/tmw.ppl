@@ -45,6 +45,8 @@
 /* Events page specific */
 .hero { 
   padding: 70px 0 28px; 
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Event management styles */
@@ -142,6 +144,11 @@
   border-radius: 6px;
   font-weight: 400;
   transition: all 0.2s ease;
+  max-width: 140px; /* Reasonable fixed width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 /* Event creation form styles */
@@ -609,6 +616,9 @@ select option {
   display: grid; 
   gap: 16px; 
   margin: 28px 0 0; 
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .event { 
@@ -621,6 +631,7 @@ select option {
   grid-template-columns: 1fr 150px;
   gap: 20px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
 }
 
 .event:hover {
@@ -636,6 +647,10 @@ select option {
   grid-column: 1;
   justify-content: space-between;
   min-height: 150px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .event-title-row {
@@ -675,6 +690,12 @@ select option {
   font-weight: 700;
   line-height: 1.2;
   color: var(--text);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
 }
 
 .event time { 
@@ -703,6 +724,22 @@ select option {
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* Base level overflow prevention for event content */
+.event-header,
+.event-details,
+.event-meta,
+.event-date,
+.event-location, 
+.event-description,
+.event-actions {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
 }
 
 .filters { 
@@ -737,15 +774,31 @@ select option {
   80%, 100% { content: '...'; }
 }
 
-/* Responsive adjustments for pages */
+/* Responsive adjustments for pages - Enhanced with Tailwind */
 @media (max-width: 960px) {
-  .cta { 
-    grid-template-columns: 1fr; 
+  .events {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0; /* Remove gap, handle spacing with margins */
+    margin: 28px 0 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
   }
   
   .event {
+    display: grid;
     grid-template-columns: 1fr;
     gap: 16px;
+    padding: 20px;
+    margin: 0 16px 16px 16px;
+    width: calc(100% - 32px);
+    max-width: calc(100% - 32px);
+    box-sizing: border-box;
+    overflow: hidden;
+    word-wrap: break-word;
   }
   
   .event-image {
@@ -770,10 +823,123 @@ select option {
   
   .event .actions {
     justify-content: flex-start;
+    flex-wrap: wrap;
   }
   
   .event .actions .btn {
     padding: 10px 20px;
     font-size: 15px;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .event h3 {
+    font-size: 20px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  
+  .event-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  
+  .event-title {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  
+  .event .meta,
+  .event time,
+  .event p {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  
+  .event-content .event-header,
+  .event-content .event-details,
+  .event-content .event-meta,
+  .event-content .event-date,
+  .event-content .event-location,
+  .event-content .event-description,
+  .event-content .event-actions {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+  }
+  
+  .rsvp-link {
+    font-size: 12px;
+    padding: 4px 6px;
+    white-space: nowrap;
+  }
+  
+  .btn.inline {
+    font-size: 0.7em;
+    padding: 3px 6px;
+    margin-left: 6px;
+    max-width: 120px; /* Fixed width instead of full container */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+  .events {
+    gap: 0; /* Remove gap, handle spacing with margins */
+    margin: 20px 0 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  
+  .event {
+    padding: 16px;
+    gap: 12px;
+    margin: 0 12px 12px 12px;
+    width: calc(100% - 24px);
+    max-width: calc(100% - 24px);
+    box-sizing: border-box;
+    overflow: hidden;
+    word-wrap: break-word;
+  }
+  
+  .event h3 {
+    font-size: 18px;
+  }
+  
+  .event .actions .btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .rsvp-link {
+    font-size: 11px;
+    padding: 3px 5px;
+  }
+  
+  .btn.inline {
+    font-size: 0.6em;
+    padding: 2px 4px;
+    margin-left: 4px;
+    max-width: 100px; /* Even smaller on very small screens */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
