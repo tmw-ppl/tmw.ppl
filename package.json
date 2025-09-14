@@ -12,7 +12,7 @@
     "deploy": "gh-pages -d dist",
     "build:gh": "npm run predeploy && npm run deploy"
   },
-  "homepage": "https://sergeypiterman.github.io/TMR_PPL",
+  "homepage": "https://tmw-ppl.github.io/tmw.ppl",
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "@types/react-router-dom": "^5.3.3",
