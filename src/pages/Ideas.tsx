@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import type { Idea, VoteType, IdeaFilters } from '../types/ideas';
+import type { Idea, VoteType, IdeaFilters, CreateIdeaData } from '../types/ideas';
 import IdeaCard from '../components/IdeaCard';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -16,8 +16,16 @@ const Ideas: React.FC = () => {
   const [filters, setFilters] = useState<IdeaFilters>({
     sort_by: 'newest'
   });
-  // const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   // const [showDiscussion, setShowDiscussion] = useState<string | null>(null);
+  const [createFormData, setCreateFormData] = useState<CreateIdeaData>({
+    title: '',
+    description: '',
+    statement: '',
+    type: 'question',
+    category: 'general',
+    tags: []
+  });
 
   // Load ideas from Supabase
   const loadIdeas = async () => {
@@ -74,35 +82,53 @@ const Ideas: React.FC = () => {
 
       console.log('Loaded ideas:', data);
 
-      // If no ideas exist, create a sample idea for testing
+      // If no ideas exist, create sample ideas for testing
       if (!data || data.length === 0) {
         console.log('No ideas found, creating sample data...');
         if (user) {
           try {
-            const { data: sampleIdea, error: createError } = await supabase
-              .from('ideas')
-              .insert({
-                title: 'Sample Idea',
-                description: 'This is a sample idea to test the Ideas Tinder feature',
-                statement: 'Should we implement a community garden in our neighborhood?',
-                type: 'question',
+            const sampleIdeas = [
+              {
+                title: 'Community Garden',
+                description: 'A space for neighbors to grow food together',
+                statement: 'Should we create a community garden in our neighborhood?',
+                type: 'question' as const,
                 category: 'community',
-                tags: ['community', 'gardening', 'sustainability'],
-                creator_id: user.id
-              } as any)
-              .select()
-              .single();
+                tags: ['community', 'gardening', 'sustainability']
+              },
+              {
+                title: 'Weekly Potluck',
+                description: 'Regular gatherings to build community connections',
+                statement: 'We should organize weekly potluck dinners to bring neighbors together',
+                type: 'statement' as const,
+                category: 'events',
+                tags: ['community', 'food', 'social']
+              },
+              {
+                title: 'Tech Workshops',
+                description: 'Educational sessions on modern technology',
+                statement: 'Should we offer free coding workshops for community members?',
+                type: 'proposal' as const,
+                category: 'tech',
+                tags: ['education', 'technology', 'workshops']
+              }
+            ];
 
-            if (createError) {
-              console.error('Error creating sample idea:', createError);
-            } else {
-              console.log('Created sample idea:', sampleIdea);
-              // Reload ideas after creating sample
-              setTimeout(() => loadIdeas(), 1000);
-              return;
+            for (const ideaData of sampleIdeas) {
+              await supabase
+                .from('ideas')
+                .insert({
+                  ...ideaData,
+                  creator_id: user.id
+                } as any);
             }
+
+            console.log('Created sample ideas');
+            // Reload ideas after creating samples
+            setTimeout(() => loadIdeas(), 1000);
+            return;
           } catch (err) {
-            console.error('Error creating sample idea:', err);
+            console.error('Error creating sample ideas:', err);
           }
         }
       }
@@ -215,11 +241,42 @@ const Ideas: React.FC = () => {
     // setShowDiscussion(ideaId);
   };
 
-  // Create a new idea (TODO: Implement create form)
-  // const handleCreateIdea = async (ideaData: CreateIdeaData) => {
-  //   if (!user) return;
-  //   // Implementation will be added in Phase 2
-  // };
+  // Create a new idea
+  const handleCreateIdea = async () => {
+    if (!user || !createFormData.title || !createFormData.statement) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('ideas')
+        .insert({
+          ...createFormData,
+          creator_id: user.id
+        } as any)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating idea:', error);
+        return;
+      }
+
+      // Add to local state
+      setIdeas(prevIdeas => [data, ...prevIdeas]);
+      setShowCreateModal(false);
+      
+      // Reset form
+      setCreateFormData({
+        title: '',
+        description: '',
+        statement: '',
+        type: 'question',
+        category: 'general',
+        tags: []
+      });
+    } catch (err) {
+      console.error('Error creating idea:', err);
+    }
+  };
 
   // Load ideas on component mount
   useEffect(() => {
@@ -250,65 +307,94 @@ const Ideas: React.FC = () => {
 
   const currentIdea = ideas[currentIdeaIndex];
   // const hasMoreIdeas = currentIdeaIndex < ideas.length - 1;
+  const votedIdeas = ideas.filter(idea => idea.user_vote);
+  const remainingIdeas = ideas.length - currentIdeaIndex;
 
   return (
     <div className="page-container">
       <AnimatedSection animationType="fade">
         <div className="page-header">
-          <h1>Ideas Tinder</h1>
+          <h1>💡 Ideas Tinder</h1>
           <p className="lead">
             Swipe through community ideas and vote on what matters to you
           </p>
+          <div className="progress-stats">
+            <span className="stat">
+              <strong>{votedIdeas.length}</strong> voted
+            </span>
+            <span className="stat">
+              <strong>{remainingIdeas}</strong> remaining
+            </span>
+            <span className="stat">
+              <strong>{ideas.length}</strong> total
+            </span>
+          </div>
         </div>
       </AnimatedSection>
 
       <AnimatedSection animationType="slide-up" delay={200}>
-        <div className="ideas-filters">
-          <div className="filter-group">
-            <label>Sort by:</label>
-            <select 
-              value={filters.sort_by || 'newest'}
-              onChange={(e) => setFilters(prev => ({ ...prev, sort_by: e.target.value as any }))}
+        <div className="ideas-controls">
+          <div className="filters-section">
+            <div className="filter-group">
+              <label>📊 Sort by:</label>
+              <select 
+                value={filters.sort_by || 'newest'}
+                onChange={(e) => setFilters(prev => ({ ...prev, sort_by: e.target.value as any }))}
+                className="filter-select"
+              >
+                <option value="newest">🕒 Newest First</option>
+                <option value="oldest">🕰️ Oldest First</option>
+                <option value="most_voted">🔥 Most Voted</option>
+                <option value="most_controversial">⚡ Most Controversial</option>
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label>🏷️ Category:</label>
+              <select 
+                value={filters.category || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value || undefined }))}
+                className="filter-select"
+              >
+                <option value="">🌐 All Categories</option>
+                <option value="tech">💻 Technology</option>
+                <option value="community">🏘️ Community</option>
+                <option value="events">🎉 Events</option>
+                <option value="projects">🚀 Projects</option>
+                <option value="general">💭 General</option>
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label className="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  checked={filters.show_expired || false}
+                  onChange={(e) => setFilters(prev => ({ ...prev, show_expired: e.target.checked }))}
+                />
+                <span>⏰ Show expired ideas</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="actions-section">
+            <Button 
+              variant="primary" 
+              onClick={() => setShowCreateModal(true)}
+              className="create-button"
             >
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="most_voted">Most Voted</option>
-              <option value="most_controversial">Most Controversial</option>
-            </select>
+              ✨ Create New Idea
+            </Button>
+            {currentIdeaIndex > 0 && (
+              <Button 
+                variant="secondary" 
+                onClick={() => setCurrentIdeaIndex(0)}
+                className="restart-button"
+              >
+                🔄 Start Over
+              </Button>
+            )}
           </div>
-
-          <div className="filter-group">
-            <label>Category:</label>
-            <select 
-              value={filters.category || ''}
-              onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value || undefined }))}
-            >
-              <option value="">All Categories</option>
-              <option value="tech">Technology</option>
-              <option value="community">Community</option>
-              <option value="events">Events</option>
-              <option value="projects">Projects</option>
-              <option value="general">General</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label>
-              <input 
-                type="checkbox" 
-                checked={filters.show_expired || false}
-                onChange={(e) => setFilters(prev => ({ ...prev, show_expired: e.target.checked }))}
-              />
-              Show expired ideas
-            </label>
-          </div>
-
-          <Button 
-            variant="primary" 
-            onClick={() => {/* TODO: Show create form */}}
-          >
-            Create Idea
-          </Button>
         </div>
       </AnimatedSection>
 
@@ -324,20 +410,21 @@ const Ideas: React.FC = () => {
           ) : (
             <Card className="no-ideas-card">
               <div className="no-ideas-content">
-                <h3>No more ideas to vote on!</h3>
-                <p>You've seen all available ideas. Check back later for new ones.</p>
+                <div className="no-ideas-icon">🎉</div>
+                <h3>All caught up!</h3>
+                <p>You've voted on all available ideas. Great job helping build community consensus!</p>
                 <div className="no-ideas-actions">
                   <Button 
                     variant="primary" 
                     onClick={() => setCurrentIdeaIndex(0)}
                   >
-                    Start Over
+                    🔄 Review All Ideas
                   </Button>
                   <Button 
                     variant="secondary" 
-                    onClick={() => {/* TODO: Show create form */}}
+                    onClick={() => setShowCreateModal(true)}
                   >
-                    Create New Idea
+                    ✨ Share Your Idea
                   </Button>
                 </div>
               </div>
@@ -346,23 +433,100 @@ const Ideas: React.FC = () => {
         </div>
       </AnimatedSection>
 
-      {/* Ideas Stats */}
-      <AnimatedSection animationType="slide-up" delay={600}>
-        <div className="ideas-stats">
-          <div className="stat-card">
-            <div className="stat-number">{ideas.length}</div>
-            <div className="stat-label">Total Ideas</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">{currentIdeaIndex}</div>
-            <div className="stat-label">Voted On</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">{ideas.length - currentIdeaIndex}</div>
-            <div className="stat-label">Remaining</div>
+      {/* Create Idea Modal */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>✨ Share Your Idea</h2>
+              <button 
+                className="modal-close"
+                onClick={() => setShowCreateModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Idea Title</label>
+                <input
+                  type="text"
+                  value={createFormData.title}
+                  onChange={(e) => setCreateFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="What's your idea about?"
+                  maxLength={255}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Core Statement/Question</label>
+                <textarea
+                  value={createFormData.statement}
+                  onChange={(e) => setCreateFormData(prev => ({ ...prev, statement: e.target.value }))}
+                  placeholder="The main question or statement people will vote on..."
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Description (Optional)</label>
+                <textarea
+                  value={createFormData.description}
+                  onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Additional context or details..."
+                  rows={2}
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Type</label>
+                  <select
+                    value={createFormData.type}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, type: e.target.value as any }))}
+                  >
+                    <option value="question">❓ Question</option>
+                    <option value="statement">💭 Statement</option>
+                    <option value="proposal">🚀 Proposal</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Category</label>
+                  <select
+                    value={createFormData.category}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, category: e.target.value }))}
+                  >
+                    <option value="general">💭 General</option>
+                    <option value="tech">💻 Technology</option>
+                    <option value="community">🏘️ Community</option>
+                    <option value="events">🎉 Events</option>
+                    <option value="projects">🚀 Projects</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowCreateModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={handleCreateIdea}
+                disabled={!createFormData.title || !createFormData.statement}
+              >
+                🚀 Share Idea
+              </Button>
+            </div>
           </div>
         </div>
-      </AnimatedSection>
+      )}
     </div>
   );
 };
