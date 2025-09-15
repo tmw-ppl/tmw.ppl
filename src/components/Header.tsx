@@ -22,7 +22,7 @@ const Header: React.FC = () => {
         <Link href="/" className="brand" aria-label="Tomorrow People home">
           <span className="logo" aria-hidden="true">
             <img
-              src="/tmw.ppl/assets/logo-original.png"
+              src="/assets/logo-original.png"
               alt="Tomorrow People Logo"
               width="20"
               height="20"
