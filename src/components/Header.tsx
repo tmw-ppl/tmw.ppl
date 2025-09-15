@@ -36,6 +36,7 @@ const Header: React.FC = () => {
           </Link>
           <Link to="/projects" onClick={() => setMobileMenuOpen(false)}>Projects</Link>
           <Link to="/profiles" onClick={() => setMobileMenuOpen(false)}>Profiles</Link>
+          <Link to="/ideas" onClick={() => setMobileMenuOpen(false)}>Ideas</Link>
           <Link to="/#join" onClick={() => setMobileMenuOpen(false)}>Join</Link>
           
           {loading ? (

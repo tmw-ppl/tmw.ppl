@@ -1588,3 +1588,273 @@ input[type="checkbox"] {
   background-size: 400% 400%;
   animation: gradient-shift 8s ease infinite;
 }
+
+/* Ideas Tinder Styles */
+.idea-card-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  height: 600px;
+  perspective: 1000px;
+}
+
+.idea-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  cursor: grab;
+  user-select: none;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: transform 0.3s ease-out;
+}
+
+.idea-card:active {
+  cursor: grabbing;
+}
+
+.idea-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.idea-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.idea-type {
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.idea-time {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.idea-creator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.creator-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.creator-avatar.placeholder {
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.creator-name {
+  font-size: 0.875rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.idea-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.idea-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.idea-statement {
+  font-size: 1.125rem;
+  color: var(--text);
+  line-height: 1.6;
+  margin: 0;
+  font-weight: 500;
+}
+
+.idea-description {
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.idea-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.idea-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.vote-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bg-2);
+  border-radius: 12px;
+}
+
+.vote-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.vote-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.vote-percentage {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.idea-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.comment-count,
+.total-votes {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.swipe-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  text-align: center;
+  pointer-events: none;
+}
+
+.swipe-icon {
+  display: block;
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.swipe-text {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.swipe-instructions {
+  position: absolute;
+  bottom: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.swipe-hint {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  gap: 2rem;
+}
+
+.toggle-buttons {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-buttons:hover {
+  background: var(--bg-2);
+  color: var(--text);
+}
+
+.vote-buttons {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+/* Responsive design for Ideas Tinder */
+@media (max-width: 768px) {
+  .idea-card-container {
+    max-width: 100%;
+    height: 500px;
+  }
+  
+  .idea-card {
+    padding: 1rem;
+  }
+  
+  .idea-title {
+    font-size: 1.125rem;
+  }
+  
+  .idea-statement {
+    font-size: 1rem;
+  }
+  
+  .vote-stats {
+    padding: 0.75rem;
+  }
+  
+  .vote-percentage {
+    font-size: 1.25rem;
+  }
+}

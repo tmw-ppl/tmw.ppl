@@ -10,6 +10,7 @@ import Auth from './pages/Auth'
 import Profile from './pages/Profile'
 import Projects from './pages/Projects'
 import Profiles from './pages/Profiles'
+import Ideas from './pages/Ideas'
 import CreateEvent from './pages/CreateEvent'
 import Confirm from './pages/Confirm'
 import EditEvent from './pages/EditEvent'
@@ -27,6 +28,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/profiles" element={<Profiles />} />
+              <Route path="/ideas" element={<Ideas />} />
               <Route path="/create-event" element={<CreateEvent />} />
               <Route path="/confirm" element={<Confirm />} />
               <Route path="/edit-event" element={<EditEvent />} />
