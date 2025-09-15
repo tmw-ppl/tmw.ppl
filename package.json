@@ -1,39 +1,33 @@
 {
-  "name": "tmw.ppl-react",
+  "name": "tmw.ppl-nextjs",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "0.0.1",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist",
-    "build:gh": "npm run predeploy && npm run deploy",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
     "populate-ideas": "node scripts/populate-sample-ideas.js"
   },
   "homepage": "https://tmw-ppl.github.io/tmw.ppl",
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
-    "@types/react-router-dom": "^5.3.3",
     "dotenv": "^17.2.2",
+    "next": "^15.1.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.1"
+    "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@types/node": "^22.10.2",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
-    "@vitejs/plugin-react": "^5.0.0",
     "eslint": "^9.33.0",
+    "eslint-config-next": "^15.1.0",
     "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.20",
     "gh-pages": "^6.3.0",
     "globals": "^16.3.0",
     "typescript": "~5.8.3",
-    "typescript-eslint": "^8.39.1",
-    "vite": "^7.1.2"
+    "typescript-eslint": "^8.39.1"
   }
 }

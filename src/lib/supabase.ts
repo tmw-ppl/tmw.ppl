@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://eloardiuuuuuuvecrooo.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsb2FyZGl1dXV1dXV2ZWNyb29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxMDAxNTQsImV4cCI6MjA3MjY3NjE1NH0.1VdDRP3df1v5gJWp56P1_KwX87LceDp6JMaIyogkOHU'
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  'https://eloardiuuuuuuvecrooo.supabase.co'
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsb2FyZGl1dXV1dXV2ZWNyb29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxMDAxNTQsImV4cCI6MjA3MjY3NjE1NH0.1VdDRP3df1v5gJWp56P1_KwX87LceDp6JMaIyogkOHU'
 
 // Create a singleton instance to prevent multiple GoTrueClient instances
 let supabaseInstance: ReturnType<typeof createClient> | null = null
@@ -12,8 +16,8 @@ export const supabase = (() => {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
-      }
+        detectSessionInUrl: true,
+      },
     })
   }
   return supabaseInstance
