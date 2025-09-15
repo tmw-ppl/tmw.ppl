@@ -19,7 +19,7 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <Router basename="/tmw.ppl">
+        <Router basename={import.meta.env.PROD ? "/tmw.ppl" : "/"}>
           <Layout>
             <Routes>
               <Route path="/" element={<Home />} />
