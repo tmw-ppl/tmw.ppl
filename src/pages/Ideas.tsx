@@ -27,14 +27,7 @@ const Ideas: React.FC = () => {
 
       let query = supabase
         .from('ideas')
-        .select(`
-          *,
-          creator:profiles!ideas_creator_id_fkey(
-            id,
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -75,8 +68,43 @@ const Ideas: React.FC = () => {
 
       if (error) {
         console.error('Error loading ideas:', error);
-        setError('Failed to load ideas');
+        setError(`Failed to load ideas: ${error.message}`);
         return;
+      }
+
+      console.log('Loaded ideas:', data);
+
+      // If no ideas exist, create a sample idea for testing
+      if (!data || data.length === 0) {
+        console.log('No ideas found, creating sample data...');
+        if (user) {
+          try {
+            const { data: sampleIdea, error: createError } = await supabase
+              .from('ideas')
+              .insert({
+                title: 'Sample Idea',
+                description: 'This is a sample idea to test the Ideas Tinder feature',
+                statement: 'Should we implement a community garden in our neighborhood?',
+                type: 'question',
+                category: 'community',
+                tags: ['community', 'gardening', 'sustainability'],
+                creator_id: user.id
+              } as any)
+              .select()
+              .single();
+
+            if (createError) {
+              console.error('Error creating sample idea:', createError);
+            } else {
+              console.log('Created sample idea:', sampleIdea);
+              // Reload ideas after creating sample
+              setTimeout(() => loadIdeas(), 1000);
+              return;
+            }
+          } catch (err) {
+            console.error('Error creating sample idea:', err);
+          }
+        }
       }
 
       // Load user votes for each idea
