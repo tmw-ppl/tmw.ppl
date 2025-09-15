@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import type { Idea, VoteType, IdeaFilters, CreateIdeaData } from '@/types/ideas'
-import IdeaCard from '@/components/IdeaCard'
+import CardStack from '@/components/CardStack'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import Chip from '@/components/ui/Chip'
@@ -18,6 +18,7 @@ const Ideas: React.FC = () => {
     sort_by: 'newest',
   })
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards')
   // const [showDiscussion, setShowDiscussion] = useState<string | null>(null);
   const [createFormData, setCreateFormData] = useState<CreateIdeaData>({
@@ -200,18 +201,15 @@ const Ideas: React.FC = () => {
         })
       )
 
-      // Move to next idea after voting
-      setTimeout(() => {
-        setCurrentIdeaIndex((prev) => prev + 1)
-      }, 500)
+      // CardStack component will handle moving to next card
     } catch (err) {
       console.error('Error voting:', err)
     }
   }
 
-  // Pass on an idea (no vote recorded)
+  // Pass on an idea (no vote recorded) - CardStack will handle moving to next card
   const handlePass = (_ideaId: string) => {
-    setCurrentIdeaIndex((prev) => prev + 1)
+    // CardStack component handles the card transition
   }
 
   // Show discussion for an idea
@@ -292,160 +290,47 @@ const Ideas: React.FC = () => {
     <div className="page-container">
       <AnimatedSection animationType="fade">
         <div className="page-header">
-          <h1>💡 Ideas Tinder</h1>
-          <p className="lead">
-            Swipe through community ideas and vote on what matters to you
-          </p>
-          <div className="progress-stats">
-            <span className="stat">
-              <strong>{votedIdeas.length}</strong> voted
-            </span>
-            <span className="stat">
-              <strong>{remainingIdeas}</strong> remaining
-            </span>
-            <span className="stat">
-              <strong>{ideas.length}</strong> total
-            </span>
-          </div>
-        </div>
-      </AnimatedSection>
-
-      <AnimatedSection animationType="slide-up" delay={200}>
-        <div className="ideas-controls">
-          <div className="filters-section">
-            <div className="filter-group">
-              <label>📊 Sort by:</label>
-              <select
-                value={filters.sort_by || 'newest'}
-                onChange={(e) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    sort_by: e.target.value as any,
-                  }))
-                }
-                className="filter-select"
-              >
-                <option value="newest">🕒 Newest First</option>
-                <option value="oldest">🕰️ Oldest First</option>
-                <option value="most_voted">🔥 Most Voted</option>
-                <option value="most_controversial">
-                  ⚡ Most Controversial
-                </option>
-                <option value="most_agree">✅ Most Agree</option>
-                <option value="most_disagree">❌ Most Disagree</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>🏷️ Category:</label>
-              <select
-                value={filters.category || ''}
-                onChange={(e) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    category: e.target.value || undefined,
-                  }))
-                }
-                className="filter-select"
-              >
-                <option value="">🌐 All Categories</option>
-                <option value="tech">💻 Technology</option>
-                <option value="community">🏘️ Community</option>
-                <option value="events">🎉 Events</option>
-                <option value="projects">🚀 Projects</option>
-                <option value="general">💭 General</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={filters.show_expired || false}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      show_expired: e.target.checked,
-                    }))
-                  }
-                />
-                <span>⏰ Show expired ideas</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="actions-section">
-            <div className="view-toggle">
-              <button
-                className={viewMode === 'cards' ? 'active' : ''}
-                onClick={() => setViewMode('cards')}
-              >
-                🃏 Cards
-              </button>
-              <button
-                className={viewMode === 'list' ? 'active' : ''}
-                onClick={() => setViewMode('list')}
-              >
-                📋 List
-              </button>
-            </div>
-
-            <Button
-              variant="primary"
-              onClick={() => setShowCreateModal(true)}
-              className="create-button"
-            >
-              ✨ Create New Idea
-            </Button>
-            {currentIdeaIndex > 0 && (
+          <div className="header-top">
+            <h1>💡 Ideas Tinder</h1>
+            {viewMode === 'cards' && (
               <Button
-                variant="secondary"
-                onClick={() => setCurrentIdeaIndex(0)}
-                className="restart-button"
+                variant="primary"
+                onClick={() => setShowCreateModal(true)}
+                className="create-button-inline"
               >
-                🔄 Start Over
+                ✨ Create New Idea
               </Button>
+            )}
+          </div>
+          <div className="header-info">
+            <button 
+              className="info-toggle"
+              onClick={() => setShowInfo(!showInfo)}
+            >
+              <span>ℹ️</span>
+              <span className="info-text">About Ideas Tinder</span>
+            </button>
+            {showInfo && (
+              <div className="info-dropdown">
+                <p>Swipe through community ideas and vote on what matters to you. Help build consensus by sharing your thoughts on proposals, questions, and statements from the community.</p>
+              </div>
             )}
           </div>
         </div>
       </AnimatedSection>
 
-      <AnimatedSection animationType="fade" delay={400}>
+      {/* Mobile-first layout: Show card stack first on mobile */}
+      <AnimatedSection animationType="fade" delay={200}>
         <div className="ideas-content">
           {viewMode === 'cards' ? (
-            currentIdea ? (
-              <IdeaCard
-                idea={currentIdea}
-                onVote={handleVote}
-                onShowDiscussion={handleShowDiscussion}
-                onPass={handlePass}
-              />
-            ) : (
-              <Card className="no-ideas-card">
-                <div className="no-ideas-content">
-                  <div className="no-ideas-icon">🎉</div>
-                  <h3>All caught up!</h3>
-                  <p>
-                    You've voted on all available ideas. Great job helping build
-                    community consensus!
-                  </p>
-                  <div className="no-ideas-actions">
-                    <Button
-                      variant="primary"
-                      onClick={() => setCurrentIdeaIndex(0)}
-                    >
-                      🔄 Review All Ideas
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setShowCreateModal(true)}
-                    >
-                      ✨ Share Your Idea
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            )
+            <CardStack
+              ideas={ideas}
+              currentIndex={currentIdeaIndex}
+              onVote={handleVote}
+              onShowDiscussion={handleShowDiscussion}
+              onPass={handlePass}
+              onCardComplete={() => setCurrentIdeaIndex(prev => prev + 1)}
+            />
           ) : (
             <div className="ideas-list">
               {ideas.map((idea) => {
@@ -537,6 +422,139 @@ const Ideas: React.FC = () => {
             </div>
           )}
         </div>
+        
+        {/* Compact progress stats below cards */}
+        <div className="compact-progress-stats">
+          <span className="stat">
+            <strong>{votedIdeas.length}</strong> voted
+          </span>
+          <span className="stat">
+            <strong>{remainingIdeas}</strong> remaining
+          </span>
+          <span className="stat">
+            <strong>{ideas.length}</strong> total
+          </span>
+        </div>
+      </AnimatedSection>
+
+      {/* Controls section - different layouts for different views */}
+      <AnimatedSection animationType="slide-up" delay={400}>
+        {viewMode === 'list' ? (
+          <div className="ideas-controls">
+            <div className="filters-section">
+              <div className="filter-group">
+                <label>📊 Sort by:</label>
+                <select
+                  value={filters.sort_by || 'newest'}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      sort_by: e.target.value as any,
+                    }))
+                  }
+                  className="filter-select"
+                >
+                  <option value="newest">🕒 Newest First</option>
+                  <option value="oldest">🕰️ Oldest First</option>
+                  <option value="most_voted">🔥 Most Voted</option>
+                  <option value="most_controversial">
+                    ⚡ Most Controversial
+                  </option>
+                  <option value="most_agree">✅ Most Agree</option>
+                  <option value="most_disagree">❌ Most Disagree</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>🏷️ Category:</label>
+                <select
+                  value={filters.category || ''}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      category: e.target.value || undefined,
+                    }))
+                  }
+                  className="filter-select"
+                >
+                  <option value="">🌐 All Categories</option>
+                  <option value="tech">💻 Technology</option>
+                  <option value="community">🏘️ Community</option>
+                  <option value="events">🎉 Events</option>
+                  <option value="projects">🚀 Projects</option>
+                  <option value="general">💭 General</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={filters.show_expired || false}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        show_expired: e.target.checked,
+                      }))
+                    }
+                  />
+                  <span>⏰ Show expired ideas</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="actions-section">
+              <div className="view-toggle">
+                <button
+                  className={viewMode === 'cards' ? 'active' : ''}
+                  onClick={() => setViewMode('cards')}
+                >
+                  🃏 Cards
+                </button>
+                <button
+                  className={viewMode === 'list' ? 'active' : ''}
+                  onClick={() => setViewMode('list')}
+                >
+                  📋 List
+                </button>
+              </div>
+
+              <Button
+                variant="primary"
+                onClick={() => setShowCreateModal(true)}
+                className="create-button"
+              >
+                ✨ Create New Idea
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="cards-controls">
+            <div className="view-toggle">
+              <button
+                className={viewMode === 'cards' ? 'active' : ''}
+                onClick={() => setViewMode('cards')}
+              >
+                🃏 Cards
+              </button>
+              <button
+                className={viewMode === 'list' ? 'active' : ''}
+                onClick={() => setViewMode('list')}
+              >
+                📋 List
+              </button>
+            </div>
+            {currentIdeaIndex > 0 && (
+              <Button
+                variant="secondary"
+                onClick={() => setCurrentIdeaIndex(0)}
+                className="restart-button"
+              >
+                🔄 Start Over
+              </Button>
+            )}
+          </div>
+        )}
       </AnimatedSection>
 
       {/* Create Idea Modal */}
