@@ -10,12 +10,14 @@
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
-    "build:gh": "npm run predeploy && npm run deploy"
+    "build:gh": "npm run predeploy && npm run deploy",
+    "populate-ideas": "node scripts/populate-sample-ideas.js"
   },
   "homepage": "https://tmw-ppl.github.io/tmw.ppl",
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "@types/react-router-dom": "^5.3.3",
+    "dotenv": "^17.2.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1"

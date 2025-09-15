@@ -90,210 +90,9 @@ const Ideas: React.FC = () => {
 
       console.log('Loaded ideas:', data);
 
-      // If no ideas exist, create sample ideas for testing
+      // If no ideas exist, show a message to populate the database
       if (!data || data.length === 0) {
-        console.log('No ideas found, creating sample data...');
-        if (user) {
-          try {
-            const sampleIdeas = [
-              // Community & Social
-              {
-                title: 'Community Garden',
-                description: 'A shared space for neighbors to grow fresh food together',
-                statement: 'Should we create a community garden in our neighborhood?',
-                type: 'question' as const,
-                category: 'community',
-                tags: ['community', 'gardening', 'sustainability']
-              },
-              {
-                title: 'Weekly Potluck',
-                description: 'Regular gatherings to build stronger community connections',
-                statement: 'We should organize weekly potluck dinners to bring neighbors together',
-                type: 'statement' as const,
-                category: 'events',
-                tags: ['community', 'food', 'social']
-              },
-              {
-                title: 'Neighborhood Watch',
-                description: 'Community safety program to look out for each other',
-                statement: 'Should we establish a neighborhood watch program?',
-                type: 'proposal' as const,
-                category: 'community',
-                tags: ['safety', 'community', 'security']
-              },
-              {
-                title: 'Block Party',
-                description: 'Annual celebration to strengthen neighborhood bonds',
-                statement: 'We should organize an annual block party for the whole neighborhood',
-                type: 'statement' as const,
-                category: 'events',
-                tags: ['community', 'celebration', 'social']
-              },
-              
-              // Technology & Innovation
-              {
-                title: 'Tech Workshops',
-                description: 'Educational sessions on modern technology and digital skills',
-                statement: 'Should we offer free coding workshops for community members?',
-                type: 'proposal' as const,
-                category: 'tech',
-                tags: ['education', 'technology', 'workshops']
-              },
-              {
-                title: 'Community App',
-                description: 'A mobile app to connect neighbors and share resources',
-                statement: 'We should develop a community app for sharing tools and services',
-                type: 'proposal' as const,
-                category: 'tech',
-                tags: ['technology', 'community', 'sharing']
-              },
-              {
-                title: 'Digital Literacy',
-                description: 'Programs to help seniors learn technology',
-                statement: 'Should we offer digital literacy classes for seniors?',
-                type: 'question' as const,
-                category: 'tech',
-                tags: ['education', 'seniors', 'technology']
-              },
-              {
-                title: 'Smart Home Network',
-                description: 'Connected devices for energy efficiency and security',
-                statement: 'We should create a smart home network for energy savings',
-                type: 'proposal' as const,
-                category: 'tech',
-                tags: ['technology', 'energy', 'efficiency']
-              },
-              
-              // Environment & Sustainability
-              {
-                title: 'Solar Initiative',
-                description: 'Community-wide solar panel installation program',
-                statement: 'Should we organize a group solar panel installation program?',
-                type: 'proposal' as const,
-                category: 'projects',
-                tags: ['solar', 'environment', 'energy']
-              },
-              {
-                title: 'Composting Program',
-                description: 'Shared composting system for organic waste',
-                statement: 'We should start a community composting program',
-                type: 'statement' as const,
-                category: 'community',
-                tags: ['composting', 'environment', 'sustainability']
-              },
-              {
-                title: 'Tree Planting',
-                description: 'Annual tree planting to improve air quality',
-                statement: 'Should we organize annual tree planting events?',
-                type: 'question' as const,
-                category: 'projects',
-                tags: ['trees', 'environment', 'air-quality']
-              },
-              {
-                title: 'Electric Vehicle Charging',
-                description: 'Community EV charging stations',
-                statement: 'We should install electric vehicle charging stations',
-                type: 'proposal' as const,
-                category: 'tech',
-                tags: ['electric-vehicles', 'infrastructure', 'environment']
-              },
-              
-              // Arts & Culture
-              {
-                title: 'Community Art Mural',
-                description: 'Collaborative mural to beautify the neighborhood',
-                statement: 'Should we create a community art mural?',
-                type: 'question' as const,
-                category: 'projects',
-                tags: ['art', 'beautification', 'community']
-              },
-              {
-                title: 'Local Music Festival',
-                description: 'Annual festival showcasing local musicians',
-                statement: 'We should organize an annual local music festival',
-                type: 'proposal' as const,
-                category: 'events',
-                tags: ['music', 'festival', 'local-artists']
-              },
-              {
-                title: 'Book Exchange',
-                description: 'Little free library system for book sharing',
-                statement: 'Should we install little free libraries throughout the neighborhood?',
-                type: 'question' as const,
-                category: 'community',
-                tags: ['books', 'education', 'sharing']
-              },
-              
-              // Health & Wellness
-              {
-                title: 'Community Fitness Classes',
-                description: 'Free fitness classes in the park',
-                statement: 'We should offer free fitness classes in the community park',
-                type: 'statement' as const,
-                category: 'events',
-                tags: ['fitness', 'health', 'community']
-              },
-              {
-                title: 'Mental Health Support',
-                description: 'Support group for mental health and wellness',
-                statement: 'Should we create a mental health support group?',
-                type: 'question' as const,
-                category: 'community',
-                tags: ['mental-health', 'support', 'wellness']
-              },
-              {
-                title: 'Community Kitchen',
-                description: 'Shared kitchen space for cooking classes and events',
-                statement: 'We should build a community kitchen for cooking events',
-                type: 'proposal' as const,
-                category: 'projects',
-                tags: ['cooking', 'community', 'education']
-              },
-              
-              // Transportation & Infrastructure
-              {
-                title: 'Bike Sharing Program',
-                description: 'Community bike sharing for local transportation',
-                statement: 'Should we start a community bike sharing program?',
-                type: 'proposal' as const,
-                category: 'projects',
-                tags: ['bikes', 'transportation', 'environment']
-              },
-              {
-                title: 'Sidewalk Improvements',
-                description: 'Better sidewalks for walking and accessibility',
-                statement: 'We should improve sidewalks for better accessibility',
-                type: 'statement' as const,
-                category: 'projects',
-                tags: ['infrastructure', 'accessibility', 'walking']
-              },
-              {
-                title: 'Public Transportation',
-                description: 'Advocate for better public transportation options',
-                statement: 'Should we advocate for improved public transportation?',
-                type: 'question' as const,
-                category: 'projects',
-                tags: ['transportation', 'advocacy', 'public-transit']
-              }
-            ];
-
-            for (const ideaData of sampleIdeas) {
-              await supabase
-                .from('ideas')
-                .insert({
-                  ...ideaData,
-                  creator_id: user.id
-                } as any);
-            }
-
-            console.log('Created sample ideas');
-            // Reload ideas after creating samples
-            setTimeout(() => loadIdeas(), 1000);
-            return;
-          } catch (err) {
-            console.error('Error creating sample ideas:', err);
-          }
-        }
+        console.log('No ideas found in database. Please run the sample data script to populate ideas.');
       }
 
       // Load user votes for each idea
@@ -337,9 +136,17 @@ const Ideas: React.FC = () => {
     if (!user) return;
 
     try {
+      // First, try to delete any existing vote
+      await supabase
+        .from('idea_votes')
+        .delete()
+        .eq('idea_id', ideaId)
+        .eq('user_id', user.id);
+
+      // Then insert the new vote
       const { error } = await supabase
         .from('idea_votes')
-        .upsert({
+        .insert({
           idea_id: ideaId,
           user_id: user.id,
           vote_type: voteType
