@@ -506,13 +506,13 @@ const Ideas: React.FC = () => {
             <div className="actions-section">
               <div className="view-toggle">
                 <button
-                  className={viewMode === 'cards' ? 'active' : ''}
+                  className=""
                   onClick={() => setViewMode('cards')}
                 >
                   🃏 Cards
                 </button>
                 <button
-                  className={viewMode === 'list' ? 'active' : ''}
+                  className="active"
                   onClick={() => setViewMode('list')}
                 >
                   📋 List
@@ -532,13 +532,13 @@ const Ideas: React.FC = () => {
           <div className="cards-controls">
             <div className="view-toggle">
               <button
-                className={viewMode === 'cards' ? 'active' : ''}
+                className="active"
                 onClick={() => setViewMode('cards')}
               >
                 🃏 Cards
               </button>
               <button
-                className={viewMode === 'list' ? 'active' : ''}
+                className=""
                 onClick={() => setViewMode('list')}
               >
                 📋 List
