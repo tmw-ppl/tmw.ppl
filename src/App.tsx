@@ -19,7 +19,7 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <Router>
+        <Router basename="/tmw.ppl">
           <Layout>
             <Routes>
               <Route path="/" element={<Home />} />
