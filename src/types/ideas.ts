@@ -123,5 +123,5 @@ export interface IdeaFilters {
   tags?: string[];
   show_voted?: boolean;
   show_expired?: boolean;
-  sort_by?: 'newest' | 'oldest' | 'most_voted' | 'most_controversial';
+  sort_by?: 'newest' | 'oldest' | 'most_voted' | 'most_controversial' | 'most_agree' | 'most_disagree';
 }

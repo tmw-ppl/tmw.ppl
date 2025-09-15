@@ -5,6 +5,7 @@ import type { Idea, VoteType, IdeaFilters, CreateIdeaData } from '../types/ideas
 import IdeaCard from '../components/IdeaCard';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import Chip from '../components/ui/Chip';
 import AnimatedSection from '../components/AnimatedSection';
 
 const Ideas: React.FC = () => {
@@ -17,6 +18,7 @@ const Ideas: React.FC = () => {
     sort_by: 'newest'
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
   // const [showDiscussion, setShowDiscussion] = useState<string | null>(null);
   const [createFormData, setCreateFormData] = useState<CreateIdeaData>({
     title: '',
@@ -65,8 +67,14 @@ const Ideas: React.FC = () => {
           query = query.order('total_votes', { ascending: false });
           break;
         case 'most_controversial':
-          // Ideas where votes are close to 50/50
+          // Ideas where votes are close to 50/50 - we'll sort by total votes for now
           query = query.order('total_votes', { ascending: false });
+          break;
+        case 'most_agree':
+          query = query.order('agree_votes', { ascending: false });
+          break;
+        case 'most_disagree':
+          query = query.order('disagree_votes', { ascending: false });
           break;
         default:
           query = query.order('created_at', { ascending: false });
@@ -88,9 +96,10 @@ const Ideas: React.FC = () => {
         if (user) {
           try {
             const sampleIdeas = [
+              // Community & Social
               {
                 title: 'Community Garden',
-                description: 'A space for neighbors to grow food together',
+                description: 'A shared space for neighbors to grow fresh food together',
                 statement: 'Should we create a community garden in our neighborhood?',
                 type: 'question' as const,
                 category: 'community',
@@ -98,19 +107,173 @@ const Ideas: React.FC = () => {
               },
               {
                 title: 'Weekly Potluck',
-                description: 'Regular gatherings to build community connections',
+                description: 'Regular gatherings to build stronger community connections',
                 statement: 'We should organize weekly potluck dinners to bring neighbors together',
                 type: 'statement' as const,
                 category: 'events',
                 tags: ['community', 'food', 'social']
               },
               {
+                title: 'Neighborhood Watch',
+                description: 'Community safety program to look out for each other',
+                statement: 'Should we establish a neighborhood watch program?',
+                type: 'proposal' as const,
+                category: 'community',
+                tags: ['safety', 'community', 'security']
+              },
+              {
+                title: 'Block Party',
+                description: 'Annual celebration to strengthen neighborhood bonds',
+                statement: 'We should organize an annual block party for the whole neighborhood',
+                type: 'statement' as const,
+                category: 'events',
+                tags: ['community', 'celebration', 'social']
+              },
+              
+              // Technology & Innovation
+              {
                 title: 'Tech Workshops',
-                description: 'Educational sessions on modern technology',
+                description: 'Educational sessions on modern technology and digital skills',
                 statement: 'Should we offer free coding workshops for community members?',
                 type: 'proposal' as const,
                 category: 'tech',
                 tags: ['education', 'technology', 'workshops']
+              },
+              {
+                title: 'Community App',
+                description: 'A mobile app to connect neighbors and share resources',
+                statement: 'We should develop a community app for sharing tools and services',
+                type: 'proposal' as const,
+                category: 'tech',
+                tags: ['technology', 'community', 'sharing']
+              },
+              {
+                title: 'Digital Literacy',
+                description: 'Programs to help seniors learn technology',
+                statement: 'Should we offer digital literacy classes for seniors?',
+                type: 'question' as const,
+                category: 'tech',
+                tags: ['education', 'seniors', 'technology']
+              },
+              {
+                title: 'Smart Home Network',
+                description: 'Connected devices for energy efficiency and security',
+                statement: 'We should create a smart home network for energy savings',
+                type: 'proposal' as const,
+                category: 'tech',
+                tags: ['technology', 'energy', 'efficiency']
+              },
+              
+              // Environment & Sustainability
+              {
+                title: 'Solar Initiative',
+                description: 'Community-wide solar panel installation program',
+                statement: 'Should we organize a group solar panel installation program?',
+                type: 'proposal' as const,
+                category: 'projects',
+                tags: ['solar', 'environment', 'energy']
+              },
+              {
+                title: 'Composting Program',
+                description: 'Shared composting system for organic waste',
+                statement: 'We should start a community composting program',
+                type: 'statement' as const,
+                category: 'community',
+                tags: ['composting', 'environment', 'sustainability']
+              },
+              {
+                title: 'Tree Planting',
+                description: 'Annual tree planting to improve air quality',
+                statement: 'Should we organize annual tree planting events?',
+                type: 'question' as const,
+                category: 'projects',
+                tags: ['trees', 'environment', 'air-quality']
+              },
+              {
+                title: 'Electric Vehicle Charging',
+                description: 'Community EV charging stations',
+                statement: 'We should install electric vehicle charging stations',
+                type: 'proposal' as const,
+                category: 'tech',
+                tags: ['electric-vehicles', 'infrastructure', 'environment']
+              },
+              
+              // Arts & Culture
+              {
+                title: 'Community Art Mural',
+                description: 'Collaborative mural to beautify the neighborhood',
+                statement: 'Should we create a community art mural?',
+                type: 'question' as const,
+                category: 'projects',
+                tags: ['art', 'beautification', 'community']
+              },
+              {
+                title: 'Local Music Festival',
+                description: 'Annual festival showcasing local musicians',
+                statement: 'We should organize an annual local music festival',
+                type: 'proposal' as const,
+                category: 'events',
+                tags: ['music', 'festival', 'local-artists']
+              },
+              {
+                title: 'Book Exchange',
+                description: 'Little free library system for book sharing',
+                statement: 'Should we install little free libraries throughout the neighborhood?',
+                type: 'question' as const,
+                category: 'community',
+                tags: ['books', 'education', 'sharing']
+              },
+              
+              // Health & Wellness
+              {
+                title: 'Community Fitness Classes',
+                description: 'Free fitness classes in the park',
+                statement: 'We should offer free fitness classes in the community park',
+                type: 'statement' as const,
+                category: 'events',
+                tags: ['fitness', 'health', 'community']
+              },
+              {
+                title: 'Mental Health Support',
+                description: 'Support group for mental health and wellness',
+                statement: 'Should we create a mental health support group?',
+                type: 'question' as const,
+                category: 'community',
+                tags: ['mental-health', 'support', 'wellness']
+              },
+              {
+                title: 'Community Kitchen',
+                description: 'Shared kitchen space for cooking classes and events',
+                statement: 'We should build a community kitchen for cooking events',
+                type: 'proposal' as const,
+                category: 'projects',
+                tags: ['cooking', 'community', 'education']
+              },
+              
+              // Transportation & Infrastructure
+              {
+                title: 'Bike Sharing Program',
+                description: 'Community bike sharing for local transportation',
+                statement: 'Should we start a community bike sharing program?',
+                type: 'proposal' as const,
+                category: 'projects',
+                tags: ['bikes', 'transportation', 'environment']
+              },
+              {
+                title: 'Sidewalk Improvements',
+                description: 'Better sidewalks for walking and accessibility',
+                statement: 'We should improve sidewalks for better accessibility',
+                type: 'statement' as const,
+                category: 'projects',
+                tags: ['infrastructure', 'accessibility', 'walking']
+              },
+              {
+                title: 'Public Transportation',
+                description: 'Advocate for better public transportation options',
+                statement: 'Should we advocate for improved public transportation?',
+                type: 'question' as const,
+                category: 'projects',
+                tags: ['transportation', 'advocacy', 'public-transit']
               }
             ];
 
@@ -346,6 +509,8 @@ const Ideas: React.FC = () => {
                 <option value="oldest">🕰️ Oldest First</option>
                 <option value="most_voted">🔥 Most Voted</option>
                 <option value="most_controversial">⚡ Most Controversial</option>
+                <option value="most_agree">✅ Most Agree</option>
+                <option value="most_disagree">❌ Most Disagree</option>
               </select>
             </div>
 
@@ -378,6 +543,21 @@ const Ideas: React.FC = () => {
           </div>
 
           <div className="actions-section">
+            <div className="view-toggle">
+              <button 
+                className={viewMode === 'cards' ? 'active' : ''}
+                onClick={() => setViewMode('cards')}
+              >
+                🃏 Cards
+              </button>
+              <button 
+                className={viewMode === 'list' ? 'active' : ''}
+                onClick={() => setViewMode('list')}
+              >
+                📋 List
+              </button>
+            </div>
+            
             <Button 
               variant="primary" 
               onClick={() => setShowCreateModal(true)}
@@ -400,35 +580,106 @@ const Ideas: React.FC = () => {
 
       <AnimatedSection animationType="fade" delay={400}>
         <div className="ideas-content">
-          {currentIdea ? (
-            <IdeaCard
-              idea={currentIdea}
-              onVote={handleVote}
-              onShowDiscussion={handleShowDiscussion}
-              onPass={handlePass}
-            />
-          ) : (
-            <Card className="no-ideas-card">
-              <div className="no-ideas-content">
-                <div className="no-ideas-icon">🎉</div>
-                <h3>All caught up!</h3>
-                <p>You've voted on all available ideas. Great job helping build community consensus!</p>
-                <div className="no-ideas-actions">
-                  <Button 
-                    variant="primary" 
-                    onClick={() => setCurrentIdeaIndex(0)}
-                  >
-                    🔄 Review All Ideas
-                  </Button>
-                  <Button 
-                    variant="secondary" 
-                    onClick={() => setShowCreateModal(true)}
-                  >
-                    ✨ Share Your Idea
-                  </Button>
+          {viewMode === 'cards' ? (
+            currentIdea ? (
+              <IdeaCard
+                idea={currentIdea}
+                onVote={handleVote}
+                onShowDiscussion={handleShowDiscussion}
+                onPass={handlePass}
+              />
+            ) : (
+              <Card className="no-ideas-card">
+                <div className="no-ideas-content">
+                  <div className="no-ideas-icon">🎉</div>
+                  <h3>All caught up!</h3>
+                  <p>You've voted on all available ideas. Great job helping build community consensus!</p>
+                  <div className="no-ideas-actions">
+                    <Button 
+                      variant="primary" 
+                      onClick={() => setCurrentIdeaIndex(0)}
+                    >
+                      🔄 Review All Ideas
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => setShowCreateModal(true)}
+                    >
+                      ✨ Share Your Idea
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            )
+          ) : (
+            <div className="ideas-list">
+              {ideas.map((idea) => {
+                const totalVotes = idea.agree_votes + idea.disagree_votes;
+                const agreePercentage = totalVotes > 0 ? Math.round((idea.agree_votes / totalVotes) * 100) : 0;
+                const disagreePercentage = totalVotes > 0 ? Math.round((idea.disagree_votes / totalVotes) * 100) : 0;
+                
+                return (
+                  <div key={idea.id} className="idea-list-item">
+                    <div className="idea-list-header">
+                      <div>
+                        <h3 className="idea-list-title">{idea.title}</h3>
+                        <div className="idea-list-meta">
+                          <Chip>{idea.category}</Chip>
+                          <span>{idea.type}</span>
+                          <span>{new Date(idea.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="idea-list-actions">
+                        <Button
+                          variant={idea.user_vote === 'agree' ? 'success' : 'secondary'}
+                          size="small"
+                          onClick={() => handleVote(idea.id, 'agree')}
+                        >
+                          ✓ Agree
+                        </Button>
+                        <Button
+                          variant={idea.user_vote === 'disagree' ? 'danger' : 'secondary'}
+                          size="small"
+                          onClick={() => handleVote(idea.id, 'disagree')}
+                        >
+                          ✗ Disagree
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <p className="idea-list-statement">{idea.statement}</p>
+                    
+                    <div className="idea-list-footer">
+                      <div className="idea-list-stats">
+                        <div className="idea-list-votes">
+                          <span>👥 {idea.total_votes} votes</span>
+                          <span>💬 {idea.comment_count} comments</span>
+                        </div>
+                        
+                        <div className="percentage-bar">
+                          <div className="percentage-bar-fill">
+                            <div 
+                              className="percentage-bar-agree" 
+                              style={{ width: `${agreePercentage}%` }}
+                            ></div>
+                            <div 
+                              className="percentage-bar-disagree" 
+                              style={{ width: `${disagreePercentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
+                          {agreePercentage}% agree • {disagreePercentage}% disagree
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </AnimatedSection>

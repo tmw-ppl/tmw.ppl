@@ -218,6 +218,20 @@ const IdeaCard: React.FC<IdeaCardProps> = ({
             </div>
           </div>
           
+          {/* Percentage Bar */}
+          <div className="percentage-bar">
+            <div className="percentage-bar-fill">
+              <div 
+                className="percentage-bar-agree" 
+                style={{ width: `${agreePercentage}%` }}
+              ></div>
+              <div 
+                className="percentage-bar-disagree" 
+                style={{ width: `${disagreePercentage}%` }}
+              ></div>
+            </div>
+          </div>
+          
           <div className="idea-actions">
             <span className="comment-count">
               💬 {idea.comment_count}
