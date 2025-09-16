@@ -32,7 +32,11 @@ const Header: React.FC = () => {
         </Link>
 
         <nav className={`navlinks ${mobileMenuOpen ? 'open' : ''}`}>
-          <Link href="/#about" onClick={() => setMobileMenuOpen(false)}>
+          <Link 
+            href="/about" 
+            className={isActive('/about') ? 'active' : ''}
+            onClick={() => setMobileMenuOpen(false)}
+          >
             About
           </Link>
           <Link
@@ -42,48 +46,49 @@ const Header: React.FC = () => {
           >
             Events
           </Link>
-          <Link href="/projects" onClick={() => setMobileMenuOpen(false)}>
+          <Link 
+            href="/projects" 
+            className={isActive('/projects') ? 'active' : ''}
+            onClick={() => setMobileMenuOpen(false)}
+          >
             Projects
           </Link>
-          <Link href="/profiles" onClick={() => setMobileMenuOpen(false)}>
+          <Link 
+            href="/profiles" 
+            className={isActive('/profiles') ? 'active' : ''}
+            onClick={() => setMobileMenuOpen(false)}
+          >
             Profiles
           </Link>
-          <Link href="/ideas" onClick={() => setMobileMenuOpen(false)}>
+          <Link 
+            href="/ideas" 
+            className={isActive('/ideas') ? 'active' : ''}
+            onClick={() => setMobileMenuOpen(false)}
+          >
             Ideas
-          </Link>
-          <Link href="/#join" onClick={() => setMobileMenuOpen(false)}>
-            Join
           </Link>
 
           {loading ? (
-            <span className="btn secondary" style={{ opacity: 0.6 }}>
+            <span className="btn primary" style={{ opacity: 0.6 }}>
               Loading...
             </span>
           ) : user ? (
             <Link
               href="/profile"
-              className="btn secondary"
+              className="btn primary"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Profile
+              👤 Profile
             </Link>
           ) : (
             <Link
               href="/auth"
-              className="btn secondary"
+              className="btn primary"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Sign In
+              🚀 Join Us
             </Link>
           )}
-
-          <Link
-            href="/#join"
-            className="btn primary"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            Get Involved
-          </Link>
         </nav>
 
         <button
