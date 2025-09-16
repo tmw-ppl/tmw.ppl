@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Header from './Header'
 import Footer from './Footer'
 import { useSmoothScroll } from '../hooks/useSmoothScroll'
+import { Analytics } from '@vercel/analytics/next'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -65,6 +66,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <Header />
       <main>{children}</main>
       <Footer />
+      <Analytics />
     </>
   )
 }
