@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
+import TimePicker from '@/components/ui/TimePicker'
+import DatePicker from '@/components/ui/DatePicker'
 import AnimatedSection from '@/components/AnimatedSection'
 
 interface CreateEventData {
@@ -197,7 +199,7 @@ const CreateEvent: React.FC = () => {
     return (
       <section className="auth-section">
         <div className="container">
-          <div className="auth-container">
+          <div className="create-event-container">
             <AnimatedSection animationType="scale">
               <Card>
                 <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -216,7 +218,7 @@ const CreateEvent: React.FC = () => {
   return (
     <section className="auth-section">
       <div className="container">
-        <div className="auth-container">
+        <div className="create-event-container">
           <div className="auth-header">
             <h1>Create Event</h1>
             <p>Organize your own Tomorrow People gathering</p>
@@ -264,39 +266,30 @@ const CreateEvent: React.FC = () => {
                 <div className="form-section">
                   <h3>Date & Time</h3>
                   
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="date">Date *</label>
-                      <input
-                        type="date"
-                        id="date"
-                        value={formData.date}
-                        onChange={(e) => handleInputChange('date', e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
-                        required
-                      />
-                    </div>
+                  <div className="form-row date-time-row">
+                    <DatePicker
+                      id="date"
+                      label="Date"
+                      value={formData.date}
+                      onChange={(date) => handleInputChange('date', date)}
+                      minDate={new Date().toISOString().split('T')[0]}
+                      required
+                    />
 
-                    <div className="form-group">
-                      <label htmlFor="time">Start Time *</label>
-                      <input
-                        type="time"
-                        id="time"
-                        value={formData.time}
-                        onChange={(e) => handleInputChange('time', e.target.value)}
-                        required
-                      />
-                    </div>
+                    <TimePicker
+                      id="time"
+                      label="Start Time"
+                      value={formData.time}
+                      onChange={(time) => handleInputChange('time', time)}
+                      required
+                    />
 
-                    <div className="form-group">
-                      <label htmlFor="end_time">End Time</label>
-                      <input
-                        type="time"
-                        id="end_time"
-                        value={formData.end_time}
-                        onChange={(e) => handleInputChange('end_time', e.target.value)}
-                      />
-                    </div>
+                    <TimePicker
+                      id="end_time"
+                      label="End Time"
+                      value={formData.end_time}
+                      onChange={(time) => handleInputChange('end_time', time)}
+                    />
                   </div>
                 </div>
 
