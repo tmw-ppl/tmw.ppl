@@ -1,6 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { Loader } from '@googlemaps/js-api-loader'
 
+// Type declaration for Google Maps (fallback if types not available)
+declare global {
+  interface Window {
+    google: any
+  }
+}
+
 interface LocationAutocompleteProps {
   value: string
   onChange: (value: string) => void
@@ -17,7 +24,7 @@ export default function LocationAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasApiKey, setHasApiKey] = useState(false)
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+  const autocompleteRef = useRef<any>(null)
 
   useEffect(() => {
     const initializeAutocomplete = async () => {
@@ -43,7 +50,7 @@ export default function LocationAutocomplete({
 
         if (inputRef.current) {
           // Use the old but stable Autocomplete (still supported)
-          const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+          const autocomplete = new (window as any).google.maps.places.Autocomplete(inputRef.current, {
             types: ['establishment', 'geocode'],
             fields: ['formatted_address', 'geometry', 'name', 'place_id', 'types']
           })
@@ -75,8 +82,8 @@ export default function LocationAutocomplete({
 
     // Cleanup
     return () => {
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current)
+      if (autocompleteRef.current && (window as any).google) {
+        (window as any).google.maps.event.clearInstanceListeners(autocompleteRef.current)
       }
     }
   }, [onChange])
