@@ -138,9 +138,26 @@ const CreateEvent: React.FC = () => {
     setError(null)
 
     try {
-      const { error } = await (supabase as any)
+      console.log('Current user:', user)
+      console.log('User ID:', user?.id)
+      
+      console.log('Attempting to create event with data:', {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        date: formData.date,
+        time: formData.time,
+        end_time: formData.end_time || null,
+        location: formData.location.trim(),
+        rsvp_url: formData.rsvp_url.trim() || null,
+        image_url: formData.image_url.trim() || null,
+        tags: formData.tags,
+        published: formData.published,
+        created_by: user.id
+      })
+
+      const { data, error } = await (supabase as any)
         .from('events')
-        .insert([{
+        .insert({
           title: formData.title.trim(),
           description: formData.description.trim(),
           date: formData.date,
@@ -152,11 +169,14 @@ const CreateEvent: React.FC = () => {
           tags: formData.tags,
           published: formData.published,
           created_by: user.id
-        }])
+        })
+        .select()
+
+      console.log('Supabase response:', { data, error })
 
       if (error) {
         console.error('Error creating event:', error)
-        setError('Failed to create event. Please try again.')
+        setError(`Failed to create event: ${error.message || 'Unknown error'}`)
         return
       }
 
