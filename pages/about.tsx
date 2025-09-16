@@ -150,23 +150,22 @@ const About: React.FC = () => {
           
           <div className="feature-grid">
             <AnimatedSection animationType="scale" delay={100}>
-              <Card style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div className="icon" style={{ color: '#FF0000' }} aria-hidden="true">
+              <Card className="social-card">
+                <div className="social-card-header">
+                  <div className="icon social-card-icon" aria-hidden="true">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M23.498 6.186a2.999 2.999 0 0 0-2.114-2.114C19.505 3.546 12 3.546 12 3.546s-7.505 0-9.384.526A2.999 2.999 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a2.999 2.999 0 0 0 2.114 2.114C4.495 20.454 12 20.454 12 20.454s7.505 0 9.384-.526a2.999 2.999 0 0 0 2.114-2.114C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                     </svg>
                   </div>
-                  <h4 style={{ margin: 0 }}>YouTube Channel</h4>
+                  <h4 className="social-card-title">YouTube Channel</h4>
                 </div>
-                <p style={{ flexGrow: 1 }}>Watch behind-the-scenes content, tutorials, and community highlights. Get inspired by our creative process and learn from our experiments.</p>
-                <div style={{ marginTop: '1rem' }}>
+                <p className="social-card-content">Watch behind-the-scenes content, tutorials, and community highlights. Get inspired by our creative process and learn from our experiments.</p>
+                <div className="social-card-action">
                   <a 
                     href="https://www.youtube.com/@sergai" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="btn secondary"
-                    style={{ width: '100%' }}
+                    className="btn secondary social-card-button"
                   >
                     🎥 Watch on YouTube
                   </a>
@@ -175,23 +174,22 @@ const About: React.FC = () => {
             </AnimatedSection>
             
             <AnimatedSection animationType="scale" delay={200}>
-              <Card style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div className="icon" style={{ color: '#E4405F' }} aria-hidden="true">
+              <Card className="social-card">
+                <div className="social-card-header">
+                  <div className="icon" className="instagram-icon" aria-hidden="true">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/>
                     </svg>
                   </div>
-                  <h4 style={{ margin: 0 }}>Instagram</h4>
+                  <h4 className="social-card-title">Instagram</h4>
                 </div>
-                <p style={{ flexGrow: 1 }}>Follow us for daily inspiration, event photos, and community moments. See behind-the-scenes content and connect with fellow creators.</p>
-                <div style={{ marginTop: '1rem' }}>
+                <p className="social-card-content">Follow us for daily inspiration, event photos, and community moments. See behind-the-scenes content and connect with fellow creators.</p>
+                <div className="social-card-action">
                   <a 
                     href="https://www.instagram.com/tmw.ppl" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="btn secondary"
-                    style={{ width: '100%' }}
+                    className="btn secondary social-card-button"
                   >
                     📸 Follow @tmw.ppl
                   </a>
@@ -200,23 +198,22 @@ const About: React.FC = () => {
             </AnimatedSection>
             
             <AnimatedSection animationType="scale" delay={300}>
-              <Card style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div className="icon" style={{ color: '#000000' }} aria-hidden="true">
+              <Card className="social-card">
+                <div className="social-card-header">
+                  <div className="icon" className="medium-icon" aria-hidden="true">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M13.54 12a6.8 6.8 0 01-6.77 6.82A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.82A6.8 6.8 0 0113.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/>
                     </svg>
                   </div>
-                  <h4 style={{ margin: 0 }}>Medium Blog</h4>
+                  <h4 className="social-card-title">Medium Blog</h4>
                 </div>
-                <p style={{ flexGrow: 1 }}>Read in-depth articles about community building, creativity, and the future of collaboration. Dive deep into our philosophy and approach.</p>
-                <div style={{ marginTop: '1rem' }}>
+                <p className="social-card-content">Read in-depth articles about community building, creativity, and the future of collaboration. Dive deep into our philosophy and approach.</p>
+                <div className="social-card-action">
                   <a 
                     href="https://medium.com/tomorrow-people" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="btn secondary"
-                    style={{ width: '100%' }}
+                    className="btn secondary social-card-button"
                   >
                     ✍️ Read on Medium
                   </a>

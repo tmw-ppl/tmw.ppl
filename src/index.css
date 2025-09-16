@@ -437,6 +437,48 @@ section {
   margin-top: 3rem;
 }
 
+/* Social media card styling */
+.social-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.social-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.social-card-icon {
+  color: #FF0000;
+}
+
+.social-card-title {
+  margin: 0;
+}
+
+.social-card-content {
+  flex-grow: 1;
+}
+
+.social-card-action {
+  margin-top: 1rem;
+}
+
+.social-card-button {
+  width: 100%;
+}
+
+.instagram-icon {
+  color: #E4405F;
+}
+
+.medium-icon {
+  color: #000000;
+}
+
 .feature {
   background: var(--card);
   border: 1px solid var(--border);
