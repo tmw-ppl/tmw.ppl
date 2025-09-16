@@ -143,67 +143,94 @@ const Ideas: React.FC = () => {
     if (!user) return
 
     try {
-      // First, try to delete any existing vote
-      await supabase
+      console.log(`Voting on idea ${ideaId} with vote type: ${voteType}`)
+      
+      // Use UPSERT (INSERT with ON CONFLICT UPDATE) for atomic operation
+      const { error } = await supabase
         .from('idea_votes')
-        .delete()
-        .eq('idea_id', ideaId)
-        .eq('user_id', user.id)
-
-      // Then insert the new vote
-      const { error } = await supabase.from('idea_votes').insert({
-        idea_id: ideaId,
-        user_id: user.id,
-        vote_type: voteType,
-      } as any)
+        .upsert({
+          idea_id: ideaId,
+          user_id: user.id,
+          vote_type: voteType,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'idea_id,user_id' // Update if combination exists
+        })
 
       if (error) {
         console.error('Error voting:', error)
+        throw error
+      }
+
+      console.log(`Vote successfully recorded: ${voteType} on idea ${ideaId}`)
+
+      // Reload the specific idea to get fresh data from the database
+      // This ensures we have the correct vote counts after triggers run
+      await refreshIdeaData(ideaId)
+
+      // CardStack component will handle moving to next card
+    } catch (err) {
+      console.error('Error voting:', err)
+    }
+  }
+
+  // Refresh data for a specific idea after voting
+  const refreshIdeaData = async (ideaId: string) => {
+    try {
+      // Fetch updated idea data
+      const { data: ideaData, error: ideaError } = await supabase
+        .from('ideas')
+        .select('*')
+        .eq('id', ideaId)
+        .single()
+
+      if (ideaError) {
+        console.error('Error refreshing idea data:', ideaError)
         return
       }
 
-      // Update local state
-      setIdeas((prevIdeas) =>
-        prevIdeas.map((idea) => {
+      // Fetch user's vote for this idea
+      let userVote = null
+      if (user) {
+        const { data: voteData } = await supabase
+          .from('idea_votes')
+          .select('vote_type')
+          .eq('idea_id', ideaId)
+          .eq('user_id', user.id)
+          .single()
+
+        userVote = voteData?.vote_type
+      }
+
+      // Update the specific idea in local state
+      setIdeas(prevIdeas =>
+        prevIdeas.map(idea => {
           if (idea.id === ideaId) {
-            const newIdea = { ...idea }
-
-            // Remove old vote if exists
-            if (idea.user_vote) {
-              if (idea.user_vote === 'agree') newIdea.agree_votes--
-              else if (idea.user_vote === 'disagree') newIdea.disagree_votes--
-              else if (idea.user_vote === 'pass') newIdea.pass_votes--
-              newIdea.total_votes--
-            }
-
-            // Add new vote
-            newIdea.user_vote = voteType
-            if (voteType === 'agree') newIdea.agree_votes++
-            else if (voteType === 'disagree') newIdea.disagree_votes++
-            else if (voteType === 'pass') newIdea.pass_votes++
-            newIdea.total_votes++
-
-            // Recalculate percentages
-            newIdea.agree_percentage =
-              newIdea.total_votes > 0
-                ? Math.round((newIdea.agree_votes / newIdea.total_votes) * 100)
-                : 0
-            newIdea.disagree_percentage =
-              newIdea.total_votes > 0
-                ? Math.round(
-                    (newIdea.disagree_votes / newIdea.total_votes) * 100
-                  )
-                : 0
-
-            return newIdea
+            return {
+              ...ideaData,
+              user_vote: userVote,
+              agree_percentage: ideaData.total_votes > 0 
+                ? Math.round((ideaData.agree_votes / ideaData.total_votes) * 100)
+                : 0,
+              disagree_percentage: ideaData.total_votes > 0 
+                ? Math.round((ideaData.disagree_votes / ideaData.total_votes) * 100)
+                : 0,
+            } as Idea
           }
           return idea
         })
       )
 
-      // CardStack component will handle moving to next card
+      console.log(`Refreshed idea data for ${ideaId}:`, {
+        total_votes: ideaData.total_votes,
+        agree_votes: ideaData.agree_votes,
+        disagree_votes: ideaData.disagree_votes,
+        pass_votes: ideaData.pass_votes,
+        user_vote: userVote
+      })
+
     } catch (err) {
-      console.error('Error voting:', err)
+      console.error('Error refreshing idea data:', err)
     }
   }
 
