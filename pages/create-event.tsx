@@ -456,14 +456,16 @@ const CreateEvent: React.FC = () => {
                         checked={formData.published}
                         onChange={(e) => handleInputChange('published', e.target.checked)}
                       />
-                      <span className="checkmark"></span>
-                      Publish event immediately
+                      <div className="custom-checkbox"></div>
+                      <div className="checkbox-text">
+                        <span className="checkbox-title">Publish event immediately</span>
+                        <span className="checkbox-description">
+                          {formData.published 
+                            ? 'Your event will be visible to all community members' 
+                            : 'Save as draft - you can publish later'}
+                        </span>
+                      </div>
                     </label>
-                    <p className="form-help">
-                      {formData.published 
-                        ? 'Your event will be visible to all community members' 
-                        : 'Save as draft - you can publish later'}
-                    </p>
                   </div>
                 </div>
 

@@ -2885,12 +2885,63 @@ input[type="checkbox"] {
   font-weight: 500;
   margin-bottom: 0.5rem;
   flex-direction: row;
+  padding: 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.checkbox-label.checkbox-label:hover {
+  background: var(--bg-2);
+  border-color: var(--primary);
 }
 
 .checkbox-label input[type="checkbox"] {
-  width: auto;
-  margin: 0;
-  accent-color: var(--accent);
+  display: none;
+}
+
+.custom-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .custom-checkbox {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .custom-checkbox::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.checkbox-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.checkbox-title {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.checkbox-description {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
 }
 
 /* Form Actions */
