@@ -105,12 +105,14 @@ const DatePicker: React.FC<DatePickerProps> = ({
       <div className="date-picker-container" ref={containerRef}>
         <button
           type="button"
-          className="date-picker-input"
+          className="date-picker-input ios-style"
           onClick={() => setIsOpen(!isOpen)}
           id={id}
         >
-          <span>{formatDateForDisplay(value)}</span>
-          <span className="date-picker-icon">📅</span>
+          <div className="date-display">
+            <span className="date-text">{formatDateForDisplay(value)}</span>
+          </div>
+          <span className="chevron-right">›</span>
         </button>
         
         {isOpen && (

@@ -2660,6 +2660,128 @@ input[type="checkbox"] {
   width: 100%;
 }
 
+/* Large Title Input Styled as Header */
+.title-group {
+  margin-bottom: 0;
+}
+
+/* Remove border from title form section */
+.form-section:has(.title-group) {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.title-group .title-input {
+  width: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: 3.5rem !important;
+  font-weight: 900 !important;
+  color: var(--text) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+  font-family: inherit !important;
+  line-height: 0.9 !important;
+  text-align: left !important;
+}
+
+.title-group .title-input:focus {
+  outline: none !important;
+}
+
+.title-group .title-input::placeholder {
+  color: var(--muted) !important;
+  font-weight: 400 !important;
+}
+
+/* Mobile responsive title */
+@media (max-width: 768px) {
+  .title-group {
+    margin-bottom: 0;
+  }
+  
+  .title-group .title-input {
+    font-size: 1.75rem !important;
+    line-height: 0.9 !important;
+  }
+}
+
+/* DateTime Preview Section */
+.datetime-preview-section {
+  position: relative;
+  margin-bottom: 2rem;
+  margin-top: 0;
+}
+
+.datetime-preview-button {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  padding: 1.5rem 2rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 80px;
+}
+
+.datetime-preview-button:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preview-content {
+  text-align: left;
+  width: 100%;
+}
+
+.preview-date {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.preview-time {
+  font-size: 2rem;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  line-height: 1.2;
+}
+
+.preview-default {
+  font-size: 1.25rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.dropdown-arrow {
+  font-size: 1rem;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.datetime-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0 !important;
+  transform: none !important;
+  z-index: 100;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  margin-top: 0.5rem;
+  overflow: hidden;
+  width: 100% !important;
+  max-width: 600px;
+}
+
 .create-event-form {
   max-width: 100%;
 }
@@ -3253,5 +3375,335 @@ input[type="checkbox"] {
     right: -1rem;
     margin-left: 0;
     margin-right: 0;
+  }
+}
+
+/* iOS-Style DateTime Picker */
+.datetime-picker-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.event-preview {
+  background: var(--bg-2);
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.preview-content {
+  text-align: center;
+}
+
+.preview-date {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.preview-time {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+/* Default preview text styling */
+.preview-default {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.datetime-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.datetime-tabs {
+  display: flex;
+}
+
+.datetime-tab {
+  background: none;
+  border: none;
+  padding: 1rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.datetime-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--primary);
+  background: var(--card);
+}
+
+.datetime-tab:hover:not(.active) {
+  color: var(--text);
+}
+
+.tab-icon {
+  display: inline-block;
+  padding: 0.25rem;
+  margin-right: 0.25rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.tab-icon:hover {
+  background-color: var(--bg-2);
+}
+
+/* TimePicker Component */
+.time-picker {
+  max-height: 400px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  background: var(--card);
+}
+
+.time-option {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-weight: 400;
+  outline: none;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.15s ease;
+}
+
+.time-option:hover:not(.disabled) {
+  background: var(--bg-2);
+}
+
+.time-option.selected {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.time-option.disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.timezone-selector {
+  padding: 1rem;
+}
+
+.timezone-select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  color: var(--text);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.datetime-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  min-height: 450px;
+}
+
+.calendar-section {
+  padding: 1.5rem;
+  border-right: 1px solid var(--border);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.calendar-nav {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.calendar-nav:hover {
+  background: var(--bg-2);
+}
+
+.calendar-month-year {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 1.125rem;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 1rem;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0.5rem 0;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.calendar-day:hover:not(:disabled) {
+  background: var(--bg-2);
+}
+
+.calendar-day.selected {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.calendar-day:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.time-section {
+  background: var(--bg-2);
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: 450px;
+  /* Prevent scroll from affecting parent elements */
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
+  /* Create isolated stacking context to prevent page scroll */
+  position: relative;
+  isolation: isolate;
+}
+
+.time-header {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.time-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.time-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Prevent scroll from bubbling to page */
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
+}
+
+.time-option {
+  background: none;
+  border: none;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.time-option:hover {
+  background: var(--bg);
+}
+
+.time-option.selected {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.time-option.disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.time-option.disabled:hover {
+  background: none;
+}
+
+@media (max-width: 768px) {
+  .datetime-content {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  
+  .calendar-section {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .time-section {
+    max-height: 300px;
+  }
+  
+  .datetime-tabs {
+    flex: 1;
+  }
+  
+  .datetime-tab {
+    flex: 1;
+    text-align: center;
+  }
+  
+  /* Force left alignment on mobile */
+  .datetime-dropdown {
+    left: 0 !important;
+    right: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
   }
 }

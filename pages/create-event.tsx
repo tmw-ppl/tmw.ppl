@@ -1,12 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
-import TimePicker from '@/components/ui/TimePicker'
-import DatePicker from '@/components/ui/DatePicker'
+import DateTimePicker from '@/components/ui/DateTimePicker'
 import AnimatedSection from '@/components/AnimatedSection'
 
 interface CreateEventData {
@@ -16,6 +15,7 @@ interface CreateEventData {
   time: string
   end_date: string
   end_time: string
+  timezone: string
   location: string
   rsvp_url: string
   image_url: string
@@ -24,7 +24,7 @@ interface CreateEventData {
 }
 
 const CreateEvent: React.FC = () => {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,6 +37,7 @@ const CreateEvent: React.FC = () => {
     time: '',
     end_date: '',
     end_time: '',
+    timezone: 'PT',
     location: '',
     rsvp_url: '',
     image_url: '',
@@ -45,6 +46,8 @@ const CreateEvent: React.FC = () => {
   })
 
   const [newTag, setNewTag] = useState('')
+  const [showDateTimePicker, setShowDateTimePicker] = useState(false)
+  const dateTimeRef = useRef<HTMLDivElement>(null)
 
   const availableTags = [
     'IRL', 'Virtual', 'Workshop', 'Social', 'Wellness', 'Rager',
@@ -52,11 +55,44 @@ const CreateEvent: React.FC = () => {
     'Outdoor', 'Food', 'Art', 'Music', 'Discussion'
   ]
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dateTimeRef.current && !dateTimeRef.current.contains(event.target as Node)) {
+        setShowDateTimePicker(false)
+      }
+    }
+
+    if (showDateTimePicker) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [showDateTimePicker])
+
   React.useEffect(() => {
-    if (!user) {
+    // Only redirect if auth is done loading and user is still null
+    if (!authLoading && !user) {
       router.push('/auth')
     }
-  }, [user, router])
+  }, [user, authLoading, router])
+
+  // Show loading state while auth is being checked
+  if (authLoading) {
+    return (
+      <section className="auth-section">
+        <div className="container">
+          <div className="create-event-container">
+            <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+              <p>Loading...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   if (!user) {
     return null
@@ -226,10 +262,6 @@ const CreateEvent: React.FC = () => {
     <section className="auth-section">
       <div className="container">
         <div className="create-event-container">
-          <div className="auth-header">
-            <h1>Create Event</h1>
-            <p>Organize your own Tomorrow People gathering</p>
-          </div>
 
           <AnimatedSection animationType="fade">
           <Card>
@@ -240,22 +272,97 @@ const CreateEvent: React.FC = () => {
                   </div>
                 )}
 
-                {/* Basic Information */}
+                {/* Event Title - Styled Input */}
                 <div className="form-section">
-                  <h3>Basic Information</h3>
-                  
-                  <div className="form-group">
-                    <label htmlFor="title">Event Title *</label>
+                  <div className="form-group title-group">
                     <input
                       type="text"
                       id="title"
                       value={formData.title}
                       onChange={(e) => handleInputChange('title', e.target.value)}
-                      placeholder="e.g., AI Workshop & Networking Night"
+                      placeholder="Event Title"
+                      className="title-input"
                       required
                     />
                   </div>
+                </div>
 
+                {/* Date & Time Picker with Preview */}
+                <div className="form-section">
+                  <div className="datetime-preview-section" ref={dateTimeRef}>
+                    <div 
+                      className="datetime-preview-button"
+                      onClick={() => setShowDateTimePicker(!showDateTimePicker)}
+                    >
+                      {formData.date && formData.time ? (
+                        <div className="preview-content">
+                          <div className="preview-time">
+                            {new Date(formData.date + 'T00:00:00').toLocaleDateString('en-US', { 
+                              weekday: 'short', 
+                              month: 'short', 
+                              day: 'numeric'
+                            })} · {new Date(`2000-01-01T${formData.time}`).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            }).toLowerCase()}{formData.end_time ? ' —' : ''}
+                          </div>
+                          {formData.end_time && (
+                            <div className="preview-time">
+                              {formData.end_date && formData.end_date !== formData.date ? 
+                                new Date(formData.end_date + 'T00:00:00').toLocaleDateString('en-US', { 
+                                  weekday: 'short', 
+                                  month: 'short', 
+                                  day: 'numeric'
+                                }) :
+                                new Date(formData.date + 'T00:00:00').toLocaleDateString('en-US', { 
+                                  weekday: 'short', 
+                                  month: 'short', 
+                                  day: 'numeric'
+                                })
+                              } · {new Date(`2000-01-01T${formData.end_time}`).toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              }).toLowerCase()}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="preview-default">
+                          Select Date and Time
+                        </div>
+                      )}
+                      <span className="dropdown-arrow">{showDateTimePicker ? '▲' : '▼'}</span>
+                    </div>
+
+                    {showDateTimePicker && (
+                      <div className="datetime-dropdown">
+                        <DateTimePicker
+                          startDate={formData.date}
+                          startTime={formData.time}
+                          endDate={formData.end_date}
+                          endTime={formData.end_time}
+                          timezone={formData.timezone}
+                          onStartChange={(date, time) => {
+                            handleInputChange('date', date)
+                            handleInputChange('time', time)
+                          }}
+                          onEndChange={(date, time) => {
+                            handleInputChange('end_date', date)
+                            handleInputChange('end_time', time)
+                          }}
+                          onTimezoneChange={(tz) => handleInputChange('timezone', tz)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="form-section">
+                  <h3>Details</h3>
+                  
                   <div className="form-group">
                     <label htmlFor="description">Description *</label>
                     <textarea
@@ -267,84 +374,6 @@ const CreateEvent: React.FC = () => {
                       required
                     />
                   </div>
-                </div>
-
-                {/* Date & Time */}
-                <div className="form-section">
-                  <h3>Date & Time</h3>
-                  
-                  <div className="datetime-container ios-style">
-                    <div className="datetime-row primary">
-                      <div className="datetime-primary-info">
-                        <div className="date-display-large">
-                          {formData.date ? 
-                            new Date(formData.date).toLocaleDateString('en-US', { 
-                              weekday: 'short', 
-                              month: 'short', 
-                              day: 'numeric' 
-                            }) : 
-                            'Select Date'
-                          }
-                        </div>
-                        <div className="time-display-large">
-                          {formData.time ? 
-                            new Date(`2000-01-01T${formData.time}`).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true
-                            }) : 
-                            'Select Time'
-                          }
-                        </div>
-                      </div>
-                      <div className="datetime-optional">
-                        <span className="optional-label">Optional</span>
-                        <span className="end-label">End Date</span>
-                      </div>
-                      <span className="chevron-right">›</span>
-                    </div>
-                    
-                    <div className="datetime-pickers">
-                      <div className="picker-row">
-                        <DatePicker
-                          id="date"
-                          label="Start Date"
-                          value={formData.date}
-                          onChange={(date) => handleInputChange('date', date)}
-                          minDate={new Date().toISOString().split('T')[0]}
-                          required
-                        />
-                        <TimePicker
-                          id="time"
-                          label="Start Time"
-                          value={formData.time}
-                          onChange={(time) => handleInputChange('time', time)}
-                          required
-                        />
-                      </div>
-                      
-                      <div className="picker-row">
-                        <DatePicker
-                          id="end_date"
-                          label="End Date (Optional)"
-                          value={formData.end_date}
-                          onChange={(date) => handleInputChange('end_date', date)}
-                          minDate={formData.date || new Date().toISOString().split('T')[0]}
-                        />
-                        <TimePicker
-                          id="end_time"
-                          label="End Time (Optional)"
-                          value={formData.end_time}
-                          onChange={(time) => handleInputChange('end_time', time)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Location & Links */}
-                <div className="form-section">
-                  <h3>Location & Links</h3>
                   
                   <div className="form-group">
                     <label htmlFor="location">Location *</label>
