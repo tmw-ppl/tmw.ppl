@@ -185,6 +185,38 @@ const CreateEvent: React.FC = () => {
       console.log('Current user:', user)
       console.log('User ID:', user?.id)
       
+      console.log('User ID for created_by:', user.id)
+      
+      // Check if user exists in profiles table
+      const { data: profileCheck, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+      
+      console.log('Profile check:', { profileCheck, profileError })
+      
+      if (profileError || !profileCheck) {
+        console.error('User profile not found in database. Creating profile...')
+        
+        // Try to create the profile first
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            created_at: new Date().toISOString()
+          } as any)
+        
+        if (createProfileError) {
+          console.error('Failed to create profile:', createProfileError)
+          setError('User profile setup failed. Please try signing out and back in.')
+          return
+        }
+        
+        console.log('Profile created successfully')
+      }
+      
       console.log('Attempting to create event with data:', {
         title: formData.title.trim(),
         description: formData.description.trim(),
