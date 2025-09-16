@@ -14,6 +14,7 @@ interface CreateEventData {
   description: string
   date: string
   time: string
+  end_date: string
   end_time: string
   location: string
   rsvp_url: string
@@ -34,6 +35,7 @@ const CreateEvent: React.FC = () => {
     description: '',
     date: '',
     time: '',
+    end_date: '',
     end_time: '',
     location: '',
     rsvp_url: '',
@@ -98,12 +100,15 @@ const CreateEvent: React.FC = () => {
       return 'Event date and time must be in the future'
     }
 
-    // Validate end time is after start time if provided
-    if (formData.end_time) {
-      const startTime = new Date(`${formData.date}T${formData.time}`)
-      const endTime = new Date(`${formData.date}T${formData.end_time}`)
-      if (endTime <= startTime) {
-        return 'End time must be after start time'
+    // Validate end date/time is after start date/time if provided
+    if (formData.end_time || formData.end_date) {
+      const startDateTime = new Date(`${formData.date}T${formData.time}`)
+      const endDate = formData.end_date || formData.date
+      const endTime = formData.end_time || '23:59'
+      const endDateTime = new Date(`${endDate}T${endTime}`)
+      
+      if (endDateTime <= startDateTime) {
+        return 'End date and time must be after start date and time'
       }
     }
 
@@ -148,6 +153,7 @@ const CreateEvent: React.FC = () => {
         description: formData.description.trim(),
         date: formData.date,
         time: formData.time,
+        end_date: formData.end_date || null,
         end_time: formData.end_time || null,
         location: formData.location.trim(),
         rsvp_url: formData.rsvp_url.trim() || null,
@@ -164,6 +170,7 @@ const CreateEvent: React.FC = () => {
           description: formData.description.trim(),
           date: formData.date,
           time: formData.time,
+          end_date: formData.end_date || null,
           end_time: formData.end_time || null,
           location: formData.location.trim(),
           rsvp_url: formData.rsvp_url.trim() || null,
@@ -225,7 +232,7 @@ const CreateEvent: React.FC = () => {
           </div>
 
           <AnimatedSection animationType="fade">
-            <Card>
+          <Card>
               <form onSubmit={handleSubmit} className="create-event-form">
                 {error && (
                   <div className="error-message" style={{ marginBottom: '1.5rem' }}>
@@ -266,30 +273,72 @@ const CreateEvent: React.FC = () => {
                 <div className="form-section">
                   <h3>Date & Time</h3>
                   
-                  <div className="form-row date-time-row">
-                    <DatePicker
-                      id="date"
-                      label="Date"
-                      value={formData.date}
-                      onChange={(date) => handleInputChange('date', date)}
-                      minDate={new Date().toISOString().split('T')[0]}
-                      required
-                    />
-
-                    <TimePicker
-                      id="time"
-                      label="Start Time"
-                      value={formData.time}
-                      onChange={(time) => handleInputChange('time', time)}
-                      required
-                    />
-
-                    <TimePicker
-                      id="end_time"
-                      label="End Time"
-                      value={formData.end_time}
-                      onChange={(time) => handleInputChange('end_time', time)}
-                    />
+                  <div className="datetime-container ios-style">
+                    <div className="datetime-row primary">
+                      <div className="datetime-primary-info">
+                        <div className="date-display-large">
+                          {formData.date ? 
+                            new Date(formData.date).toLocaleDateString('en-US', { 
+                              weekday: 'short', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            }) : 
+                            'Select Date'
+                          }
+                        </div>
+                        <div className="time-display-large">
+                          {formData.time ? 
+                            new Date(`2000-01-01T${formData.time}`).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            }) : 
+                            'Select Time'
+                          }
+                        </div>
+                      </div>
+                      <div className="datetime-optional">
+                        <span className="optional-label">Optional</span>
+                        <span className="end-label">End Date</span>
+                      </div>
+                      <span className="chevron-right">›</span>
+                    </div>
+                    
+                    <div className="datetime-pickers">
+                      <div className="picker-row">
+                        <DatePicker
+                          id="date"
+                          label="Start Date"
+                          value={formData.date}
+                          onChange={(date) => handleInputChange('date', date)}
+                          minDate={new Date().toISOString().split('T')[0]}
+                          required
+                        />
+                        <TimePicker
+                          id="time"
+                          label="Start Time"
+                          value={formData.time}
+                          onChange={(time) => handleInputChange('time', time)}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="picker-row">
+                        <DatePicker
+                          id="end_date"
+                          label="End Date (Optional)"
+                          value={formData.end_date}
+                          onChange={(date) => handleInputChange('end_date', date)}
+                          minDate={formData.date || new Date().toISOString().split('T')[0]}
+                        />
+                        <TimePicker
+                          id="end_time"
+                          label="End Time (Optional)"
+                          value={formData.end_time}
+                          onChange={(time) => handleInputChange('end_time', time)}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -423,7 +472,7 @@ const CreateEvent: React.FC = () => {
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => router.push('/events')}
+                onClick={() => router.push('/events')}
                     disabled={loading}
                   >
                     Cancel
@@ -435,9 +484,9 @@ const CreateEvent: React.FC = () => {
                   >
                     {loading ? 'Creating...' : formData.published ? 'Create & Publish Event' : 'Save as Draft'}
                   </Button>
-                </div>
+            </div>
               </form>
-            </Card>
+          </Card>
           </AnimatedSection>
         </div>
       </div>

@@ -2962,6 +2962,84 @@ input[type="checkbox"] {
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
+/* iOS-Style DateTime Container */
+.datetime-container.ios-style {
+  background: var(--bg-2);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid var(--border);
+}
+
+.datetime-row.primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.datetime-row.primary:hover {
+  background: var(--bg-2);
+}
+
+.datetime-primary-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.date-display-large {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.time-display-large {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.datetime-optional {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.optional-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.end-label {
+  font-size: 0.875rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.chevron-right {
+  font-size: 1.25rem;
+  color: var(--muted);
+  font-weight: 300;
+}
+
+.datetime-pickers {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.picker-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
 .date-time-row {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
@@ -2969,19 +3047,63 @@ input[type="checkbox"] {
   align-items: end;
 }
 
+/* Enhanced Date Picker Input */
+.date-picker-input.ios-style {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 3rem;
+}
+
+.date-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.date-text {
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
 @media (max-width: 768px) {
   .create-event-container {
     max-width: 100%;
-    padding: 0 1rem;
+    padding: 0 0.5rem;
   }
 
   .form-row {
     grid-template-columns: 1fr;
   }
   
+  .picker-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
   .date-time-row {
     grid-template-columns: 1fr;
     gap: 1.5rem;
+  }
+  
+  .datetime-container.ios-style {
+    margin: 0 -0.5rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .datetime-row.primary {
+    padding: 1.25rem;
+  }
+  
+  .date-display-large {
+    font-size: 1.5rem;
+  }
+  
+  .time-display-large {
+    font-size: 1.125rem;
   }
   
   .form-actions {
