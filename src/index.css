@@ -2771,19 +2771,52 @@ input[type="checkbox"] {
 
 /* Chip enhancements for form */
 .chip.selected {
-  background: var(--accent);
+  background: var(--primary);
   color: white;
-  border-color: var(--accent);
+  border-color: var(--primary);
 }
 
 .chip.removable {
-  background: rgba(139, 92, 246, 0.1);
-  color: var(--accent);
-  border-color: var(--accent);
+  background: var(--bg-2);
+  color: var(--text);
+  border-color: var(--border);
   cursor: pointer;
+  position: relative;
 }
 
 .chip.removable:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+/* Override any conflicting chip styles */
+.tags-grid .chip,
+.tags-list .chip {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.tags-grid .chip:hover {
+  background: var(--bg-2);
+  transform: translateY(-1px);
+}
+
+.tags-grid .chip.selected {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.tags-list .chip.removable {
+  background: var(--bg-2);
+  color: var(--text);
+  border-color: var(--primary);
+}
+
+.tags-list .chip.removable:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
   border-color: #ef4444;
