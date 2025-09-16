@@ -105,7 +105,7 @@ const Ideas: React.FC = () => {
           .from('idea_votes')
           .select('idea_id, vote_type')
           .in('idea_id', ideaIds)
-          .eq('user_id', user.id)
+          .eq('user_id', user.id) as { data: any[] | null }
 
         // Add user vote to each idea
         const ideasWithVotes = (data as any[]).map((idea) => {
@@ -199,7 +199,7 @@ const Ideas: React.FC = () => {
           .eq('user_id', user.id)
           .single()
 
-        userVote = voteData?.vote_type
+        userVote = (voteData as any)?.vote_type
       }
 
       // Update the specific idea in local state
