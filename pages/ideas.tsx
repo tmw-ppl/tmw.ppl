@@ -203,17 +203,18 @@ const Ideas: React.FC = () => {
       }
 
       // Update the specific idea in local state
+      const typedIdeaData = ideaData as any
       setIdeas(prevIdeas =>
         prevIdeas.map(idea => {
           if (idea.id === ideaId) {
             return {
-              ...ideaData,
+              ...typedIdeaData,
               user_vote: userVote,
-              agree_percentage: ideaData.total_votes > 0 
-                ? Math.round((ideaData.agree_votes / ideaData.total_votes) * 100)
+              agree_percentage: typedIdeaData.total_votes > 0 
+                ? Math.round((typedIdeaData.agree_votes / typedIdeaData.total_votes) * 100)
                 : 0,
-              disagree_percentage: ideaData.total_votes > 0 
-                ? Math.round((ideaData.disagree_votes / ideaData.total_votes) * 100)
+              disagree_percentage: typedIdeaData.total_votes > 0 
+                ? Math.round((typedIdeaData.disagree_votes / typedIdeaData.total_votes) * 100)
                 : 0,
             } as Idea
           }
@@ -222,10 +223,10 @@ const Ideas: React.FC = () => {
       )
 
       console.log(`Refreshed idea data for ${ideaId}:`, {
-        total_votes: ideaData.total_votes,
-        agree_votes: ideaData.agree_votes,
-        disagree_votes: ideaData.disagree_votes,
-        pass_votes: ideaData.pass_votes,
+        total_votes: typedIdeaData.total_votes,
+        agree_votes: typedIdeaData.agree_votes,
+        disagree_votes: typedIdeaData.disagree_votes,
+        pass_votes: typedIdeaData.pass_votes,
         user_vote: userVote
       })
 
