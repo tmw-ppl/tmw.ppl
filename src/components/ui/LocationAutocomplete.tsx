@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { Loader } from '@googlemaps/js-api-loader'
 
 // Type declaration for Google Maps (fallback if types not available)
@@ -86,11 +86,11 @@ export default function LocationAutocomplete({
         (window as any).google.maps.event.clearInstanceListeners(autocompleteRef.current)
       }
     }
-  }, [onChange])
+  }, []) // Remove onChange from dependencies to prevent re-initialization
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value)
-  }
+  }, [onChange])
 
   return (
     <div className="location-autocomplete">
