@@ -3716,6 +3716,100 @@ input[type="checkbox"] {
   background: none;
 }
 
+/* Location Autocomplete Component */
+.location-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.location-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.15s ease;
+}
+
+.location-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.loading-indicator {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.autocomplete-container {
+  width: 100%;
+}
+
+/* Style the new Google Maps PlaceAutocompleteElement */
+gmp-place-autocomplete {
+  width: 100% !important;
+}
+
+gmp-place-autocomplete input {
+  width: 100% !important;
+  padding: 0.75rem !important;
+  background: var(--bg-2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  color: var(--text) !important;
+  font-size: 1rem !important;
+  font-family: inherit !important;
+  transition: all 0.15s ease !important;
+}
+
+gmp-place-autocomplete input:focus {
+  outline: none !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1) !important;
+}
+
+/* Google Maps autocomplete dropdown styling */
+.pac-container {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+  font-family: inherit !important;
+  z-index: 1000 !important;
+}
+
+.pac-item {
+  color: var(--text) !important;
+  padding: 0.75rem 1rem !important;
+  border-bottom: 1px solid var(--border) !important;
+  cursor: pointer !important;
+  font-size: 1rem !important;
+}
+
+.pac-item:hover {
+  background: var(--bg-2) !important;
+}
+
+.pac-item-selected {
+  background: var(--primary) !important;
+  color: white !important;
+}
+
+.pac-matched {
+  font-weight: 600 !important;
+}
+
+.pac-item-query {
+  color: var(--text) !important;
+  font-size: 1rem !important;
+}
+
 @media (max-width: 768px) {
   .datetime-content {
     grid-template-columns: 1fr;

@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import DateTimePicker from '@/components/ui/DateTimePicker'
 import AnimatedSection from '@/components/AnimatedSection'
+import LocationAutocomplete from '@/components/ui/LocationAutocomplete'
 
 interface CreateEventData {
   title: string
@@ -377,11 +378,9 @@ const CreateEvent: React.FC = () => {
                   
                   <div className="form-group">
                     <label htmlFor="location">Location *</label>
-                    <input
-                      type="text"
-                      id="location"
+                    <LocationAutocomplete
                       value={formData.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
+                      onChange={(value) => handleInputChange('location', value)}
                       placeholder="e.g., WeWork Downtown or Zoom (link in RSVP)"
                       required
                     />
