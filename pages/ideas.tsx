@@ -153,7 +153,7 @@ const Ideas: React.FC = () => {
           user_id: user.id,
           vote_type: voteType,
           updated_at: new Date().toISOString()
-        }, {
+        } as any, {
           onConflict: 'idea_id,user_id' // Update if combination exists
         })
 
