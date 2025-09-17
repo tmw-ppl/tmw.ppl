@@ -1022,6 +1022,43 @@ input[type="checkbox"] {
 
 .profile-avatar {
   flex-shrink: 0;
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+
+.avatar-upload {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+}
+
+.upload-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  border: 2px solid var(--bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.upload-button:hover {
+  background: var(--primary-dark, var(--primary));
+  transform: scale(1.05);
 }
 
 .avatar-placeholder {

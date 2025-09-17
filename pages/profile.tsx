@@ -9,6 +9,7 @@ interface ProfileData {
   full_name: string
   bio: string
   interests: string
+  profile_picture_url?: string
   created_at: string
   updated_at: string
 }
@@ -24,6 +25,7 @@ const Profile: React.FC = () => {
     bio: '',
     interests: '',
   })
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -82,6 +84,77 @@ const Profile: React.FC = () => {
       setError('Failed to load profile data')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !user) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be smaller than 5MB')
+      return
+    }
+
+    try {
+      setUploadingImage(true)
+      setError('')
+
+      // Create unique filename
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        throw uploadError
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(fileName)
+
+      const publicUrl = urlData.publicUrl
+
+      // Update profile with new image URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          profile_picture_url: publicUrl,
+          updated_at: new Date().toISOString(),
+        } as any)
+
+      if (updateError) {
+        console.error('Profile update error:', updateError)
+        throw updateError
+      }
+
+      // Update local state
+      setProfileData(prev => prev ? { ...prev, profile_picture_url: publicUrl } : null)
+      setSuccess('Profile picture updated successfully!')
+      setTimeout(() => setSuccess(''), 5000)
+
+    } catch (error: any) {
+      console.error('Error uploading image:', error)
+      setError(error.message || 'Failed to upload image')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -188,8 +261,31 @@ const Profile: React.FC = () => {
           <div className="profile-content">
             <div className="profile-info">
               <div className="profile-avatar">
-                <div className="avatar-placeholder">
-                  <span>{getInitials(profileData?.full_name || 'User')}</span>
+                {profileData?.profile_picture_url ? (
+                  <img 
+                    src={profileData.profile_picture_url} 
+                    alt="Profile picture"
+                    className="avatar-image"
+                  />
+                ) : (
+                  <div className="avatar-placeholder">
+                    <span>{getInitials(profileData?.full_name || 'User')}</span>
+                  </div>
+                )}
+                <div className="avatar-upload">
+                  <input
+                    type="file"
+                    id="profile-picture"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                  <label 
+                    htmlFor="profile-picture" 
+                    className="upload-button"
+                  >
+                    {uploadingImage ? '⏳' : '📷'}
+                  </label>
                 </div>
               </div>
               <div className="profile-details">
