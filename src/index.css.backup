@@ -32,7 +32,7 @@
   }
 }
 
-/* Keep original CSS intact - migrate components one by one */
+/* Keep original CSS intact - only add Tailwind for new components */
 
 /* CSS Custom Properties (Variables) */
 :root {
@@ -3778,7 +3778,7 @@ input[type="checkbox"] {
   color: white;
   font-weight: 600;
 }
-
+to
 .time-option.disabled {
   color: var(--muted);
   cursor: not-allowed;
