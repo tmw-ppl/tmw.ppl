@@ -63,4 +63,9 @@ export interface Event {
   created_by: string
   created_at: string
   updated_at: string
+  // Creator information from join
+  creator?: {
+    full_name: string
+    email: string
+  }
 }

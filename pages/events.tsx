@@ -38,21 +38,32 @@ const Events: React.FC = () => {
   const loadEvents = async () => {
     try {
       setLoading(true)
+      console.log('🔍 Loading events from database...')
+      
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select(`
+          *,
+          creator:profiles!created_by (
+            full_name,
+            email
+          )
+        `)
         .eq('published', true)
         .order('date', { ascending: true })
 
+      console.log('📊 Database response:', { data, error, count: data?.length })
+
       if (error) {
-        console.error('Error loading events:', error)
+        console.error('❌ Error loading events:', error)
         setError('Failed to load events. Please try again.')
         return
       }
 
+      console.log('✅ Events loaded successfully:', data)
       setEvents(data || [])
     } catch (error) {
-      console.error('Error loading events:', error)
+      console.error('❌ Exception loading events:', error)
       setError('Failed to load events. Please try again.')
     } finally {
       setLoading(false)
@@ -62,14 +73,63 @@ const Events: React.FC = () => {
   const filterEvents = (filter: string) => {
     setActiveFilter(filter)
     let filtered = [...events]
+    
+    console.log(`🔍 Filtering events with filter: ${filter}`)
+    console.log(`📊 Total events before filtering: ${events.length}`)
 
     switch (filter) {
       case 'upcoming':
         filtered = filtered.filter((event) => {
-          const eventDateTime = event.time 
-            ? new Date(`${event.date}T${event.time}`)
-            : new Date(event.date)
-          return eventDateTime >= new Date()
+          const now = new Date()
+          let eventDateTime: Date
+          
+          // Extract just the date part (YYYY-MM-DD) from the database timestamp
+          const dateOnly = event.date.split('T')[0]
+          
+          if (event.time) {
+            // Handle different time formats
+            let timeIn24Hour = event.time
+            
+            // Convert 12-hour format to 24-hour if needed
+            if (event.time.includes('AM') || event.time.includes('PM') || event.time.includes('am') || event.time.includes('pm')) {
+              const timeStr = event.time.replace(/\s/g, '').toLowerCase()
+              const isPM = timeStr.includes('pm')
+              const timeWithoutPeriod = timeStr.replace(/am|pm/g, '')
+              const [hours, minutes = '00'] = timeWithoutPeriod.split(':')
+              let hour24 = parseInt(hours)
+              
+              if (isPM && hour24 !== 12) hour24 += 12
+              if (!isPM && hour24 === 12) hour24 = 0
+              
+              timeIn24Hour = `${String(hour24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+            }
+            
+            // Ensure time has seconds
+            if (!timeIn24Hour.includes(':')) {
+              timeIn24Hour = `${timeIn24Hour}:00`
+            }
+            if (timeIn24Hour.split(':').length === 2) {
+              timeIn24Hour = `${timeIn24Hour}:00`
+            }
+            
+            eventDateTime = new Date(`${dateOnly}T${timeIn24Hour}`)
+          } else {
+            // If no time, assume end of day
+            eventDateTime = new Date(dateOnly)
+            eventDateTime.setHours(23, 59, 59, 999)
+          }
+          
+          const isUpcoming = eventDateTime >= now
+          console.log(`📅 Event "${event.title}":`)
+          console.log(`   Raw Date: ${event.date}`)
+          console.log(`   Date Only: ${dateOnly}`)
+          console.log(`   Raw Time: ${event.time || 'no-time'}`)
+          console.log(`   Parsed DateTime: ${eventDateTime.toLocaleString()}`)
+          console.log(`   Now: ${now.toLocaleString()}`)
+          console.log(`   → ${isUpcoming ? 'UPCOMING' : 'PAST'}`)
+          console.log('---')
+          
+          return isUpcoming
         })
         break
       case 'past':
@@ -89,6 +149,8 @@ const Events: React.FC = () => {
           (event) => event.tags && event.tags.includes(filter)
         )
     }
+
+    console.log(`✅ Events after filtering: ${filtered.length}`)
 
     // Sort events by date and time
     filtered.sort((a, b) => {
@@ -147,7 +209,7 @@ const Events: React.FC = () => {
                     RSVP
                   </a>
                 )}
-                {user && (
+                {user && event.created_by === user.id && (
                   <Link
                     href={`/edit-event/${event.id}`}
                     className="btn secondary"
@@ -163,6 +225,22 @@ const Events: React.FC = () => {
           <div className="event-meta">
             <div className="meta">{event.description}</div>
             {event.location && <div className="meta">📍 {event.location}</div>}
+            <div className="meta">
+              👤 Created by {event.creator?.full_name || 'Unknown'}
+              {user && event.created_by === user.id && (
+                <span style={{ 
+                  marginLeft: '0.5rem', 
+                  padding: '2px 6px', 
+                  background: 'var(--primary)', 
+                  color: 'white', 
+                  borderRadius: '4px', 
+                  fontSize: '0.75rem',
+                  fontWeight: '600'
+                }}>
+                  YOU
+                </span>
+              )}
+            </div>
             {event.tags && event.tags.length > 0 && (
               <div className="event-tags">
                 {event.tags.map((tag) => (
