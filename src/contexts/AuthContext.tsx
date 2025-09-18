@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             id: authUser.id,
             email: authUser.email,
             full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-            phone: authUser.user_metadata?.phone || null,
+            phone: (authUser.user_metadata as any)?.phone || null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           } as any)
@@ -133,7 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         data: {
           full_name: name,
           phone: phone
-        }
+        } as any
       }
     })
 
