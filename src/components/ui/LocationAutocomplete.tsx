@@ -92,8 +92,35 @@ export default function LocationAutocomplete({
     onChange(e.target.value)
   }, [onChange])
 
+  // Container styles
+  const containerStyles: React.CSSProperties = {
+    position: 'relative',
+    width: '100%',
+  }
+
+  // Input styles
+  const inputStyles: React.CSSProperties = {
+    width: '100%',
+    padding: '0.75rem',
+    border: '1px solid var(--border)',
+    borderRadius: '6px',
+    background: 'var(--card)',
+    color: 'var(--text)',
+    fontSize: '0.875rem',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+  }
+
+  // Loading indicator styles
+  const loadingIndicatorStyles: React.CSSProperties = {
+    position: 'absolute',
+    right: '0.75rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    pointerEvents: 'none',
+  }
+
   return (
-    <div className="location-autocomplete">
+    <div style={containerStyles}>
       <input
         ref={inputRef}
         type="text"
@@ -101,18 +128,26 @@ export default function LocationAutocomplete({
         onChange={handleInputChange}
         placeholder={placeholder}
         required={required}
-        className="location-input"
+        style={inputStyles}
         autoComplete="off"
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = 'var(--accent)'
+          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)'
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = 'var(--border)'
+          e.currentTarget.style.boxShadow = 'none'
+        }}
       />
       {!isLoaded && hasApiKey && (
-        <div className="loading-indicator">
+        <div style={loadingIndicatorStyles}>
           <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
             Loading Maps...
           </span>
         </div>
       )}
       {isLoaded && !hasApiKey && (
-        <div className="loading-indicator">
+        <div style={loadingIndicatorStyles}>
           <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
             💡 Add Google Maps API key for autocomplete
           </span>

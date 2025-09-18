@@ -99,61 +99,222 @@ const DatePicker: React.FC<DatePickerProps> = ({
   const days = getDaysInMonth(currentMonth)
   const monthYear = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
+  // Form group styles
+  const formGroupStyles: React.CSSProperties = {
+    marginBottom: '1rem',
+  }
+
+  // Label styles
+  const labelStyles: React.CSSProperties = {
+    display: 'block',
+    marginBottom: '0.5rem',
+    fontWeight: 500,
+    color: 'var(--text)',
+  }
+
+  // Container styles
+  const containerStyles: React.CSSProperties = {
+    position: 'relative',
+    width: '100%',
+  }
+
+  // Input styles
+  const inputStyles: React.CSSProperties = {
+    width: '100%',
+    padding: '1rem',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    background: 'var(--bg)',
+    color: 'var(--text)',
+    fontSize: '0.875rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    cursor: 'pointer',
+    minHeight: '3rem',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+  }
+
+  // Dropdown styles
+  const dropdownStyles: React.CSSProperties = {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
+    borderRadius: '6px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+    zIndex: 10,
+    padding: '1rem',
+    marginTop: '4px',
+  }
+
+  // Header styles
+  const headerStyles: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1rem',
+  }
+
+  // Navigation button styles
+  const navButtonStyles: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    fontSize: '1.25rem',
+    color: 'var(--text)',
+    cursor: 'pointer',
+    padding: '0.25rem 0.5rem',
+    borderRadius: '4px',
+    transition: 'background-color 0.2s ease',
+  }
+
+  // Month/year display styles
+  const monthYearStyles: React.CSSProperties = {
+    fontWeight: 600,
+    color: 'var(--text)',
+  }
+
+  // Weekdays grid styles
+  const weekdaysStyles: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, 1fr)',
+    gap: '2px',
+    marginBottom: '0.5rem',
+  }
+
+  // Weekday styles
+  const weekdayStyles: React.CSSProperties = {
+    textAlign: 'center',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    color: 'var(--muted)',
+    padding: '0.5rem 0',
+  }
+
+  // Days grid styles
+  const daysStyles: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, 1fr)',
+    gap: '2px',
+  }
+
+  // Day button styles
+  const getDayStyles = (isSelected: boolean, isDisabled: boolean): React.CSSProperties => {
+    const baseStyles: React.CSSProperties = {
+      aspectRatio: '1',
+      border: 'none',
+      background: 'none',
+      color: 'var(--text)',
+      cursor: isDisabled ? 'not-allowed' : 'pointer',
+      borderRadius: '4px',
+      fontSize: '0.875rem',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '2.5rem',
+    }
+
+    if (isDisabled) {
+      return {
+        ...baseStyles,
+        color: 'var(--muted)',
+        opacity: 0.5,
+      }
+    }
+
+    if (isSelected) {
+      return {
+        ...baseStyles,
+        background: 'var(--accent)',
+        color: 'white',
+      }
+    }
+
+    return baseStyles
+  }
+
   return (
-    <div className="form-group">
-      <label htmlFor={id}>{label} {required && '*'}</label>
-      <div className="date-picker-container" ref={containerRef}>
+    <div style={formGroupStyles}>
+      <label htmlFor={id} style={labelStyles}>{label} {required && '*'}</label>
+      <div style={containerStyles} ref={containerRef}>
         <button
           type="button"
-          className="date-picker-input ios-style"
+          style={inputStyles}
           onClick={() => setIsOpen(!isOpen)}
           id={id}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--accent)'
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
         >
-          <div className="date-display">
-            <span className="date-text">{formatDateForDisplay(value)}</span>
+          <div>
+            <span>{formatDateForDisplay(value)}</span>
           </div>
-          <span className="chevron-right">›</span>
+          <span style={{ fontSize: '1rem', opacity: 0.7 }}>›</span>
         </button>
         
         {isOpen && (
-          <div className="date-picker-dropdown">
-            <div className="date-picker-header">
+          <div style={dropdownStyles}>
+            <div style={headerStyles}>
               <button
                 type="button"
-                className="date-picker-nav"
+                style={navButtonStyles}
                 onClick={() => navigateMonth('prev')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-2)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
               >
                 ‹
               </button>
-              <span className="date-picker-month-year">{monthYear}</span>
+              <span style={monthYearStyles}>{monthYear}</span>
               <button
                 type="button"
-                className="date-picker-nav"
+                style={navButtonStyles}
                 onClick={() => navigateMonth('next')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-2)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
               >
                 ›
               </button>
             </div>
             
-            <div className="date-picker-weekdays">
+            <div style={weekdaysStyles}>
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="date-picker-weekday">{day}</div>
+                <div key={day} style={weekdayStyles}>{day}</div>
               ))}
             </div>
             
-            <div className="date-picker-days">
+            <div style={daysStyles}>
               {days.map((day, index) => (
                 <button
                   key={index}
                   type="button"
-                  className={`date-picker-day ${
-                    day && value === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0] 
-                      ? 'selected' : ''
-                  } ${
-                    day && isDateDisabled(day) ? 'disabled' : ''
-                  }`}
+                  style={getDayStyles(
+                    day ? value === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0] : false,
+                    day ? isDateDisabled(day) : true
+                  )}
                   onClick={() => day && !isDateDisabled(day) && handleDateSelect(day)}
                   disabled={!day || isDateDisabled(day)}
+                  onMouseEnter={(e) => {
+                    const isSelected = day && value === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0]
+                    const isDisabled = day ? isDateDisabled(day) : true
+                    if (!isDisabled && !isSelected) {
+                      e.currentTarget.style.background = 'var(--bg-2)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    const isSelected = day && value === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0]
+                    const isDisabled = day ? isDateDisabled(day) : true
+                    if (!isDisabled && !isSelected) {
+                      e.currentTarget.style.background = 'none'
+                    }
+                  }}
                 >
                   {day}
                 </button>
