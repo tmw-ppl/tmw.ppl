@@ -1050,25 +1050,28 @@ input[type="checkbox"] {
 }
 
 .profile-info {
-  display: flex;
-  align-items: center;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
   margin-bottom: 24px;
+  min-height: 200px;
 }
 
 .profile-avatar {
-  flex-shrink: 0;
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .avatar-image {
-  width: 100%;
-  height: 100%;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--border);
+  border: 3px solid var(--border);
 }
 
 .avatar-upload {
@@ -1098,16 +1101,24 @@ input[type="checkbox"] {
 }
 
 .avatar-placeholder {
-  width: 80px;
-  height: 80px;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
   background: linear-gradient(135deg, #8b5cf6, #3b82f6, #06b6d4, #8b5cf6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 48px;
   font-weight: 700;
   color: white;
+  border: 3px solid var(--border);
+}
+
+.profile-right-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 200px;
 }
 
 .profile-details h2 {
@@ -1553,8 +1564,19 @@ input[type="checkbox"] {
 /* Responsive profile page styles */
 @media (max-width: 640px) {
   .profile-info {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    gap: 24px;
     text-align: center;
+  }
+  
+  .profile-avatar {
+    height: auto;
+    justify-self: center;
+  }
+  
+  .profile-right-column {
+    min-height: auto;
+    gap: 24px;
   }
   
   .profile-actions {

@@ -299,26 +299,29 @@ const Profile: React.FC = () => {
                   </label>
                 </div>
               </div>
-              <div className="profile-details">
-                <h2>{profileData?.full_name || 'User'}</h2>
-                <p>{user.email}</p>
-                <p className="member-since">
-                  Member since {formatMemberSince(user.created_at || '')}
-                </p>
-              </div>
-            </div>
+              
+              <div className="profile-right-column">
+                <div className="profile-details">
+                  <h2>{profileData?.full_name || 'User'}</h2>
+                  <p>{user.email}</p>
+                  <p className="member-since">
+                    Member since {formatMemberSince(user.created_at || '')}
+                  </p>
+                </div>
 
-            <div className="profile-actions">
-              <Button
-                variant="secondary"
-                onClick={() => setShowEditForm(true)}
-                disabled={showEditForm}
-              >
-                Edit Profile
-              </Button>
-              <Button variant="secondary" onClick={handleSignOut}>
-                Sign Out
-              </Button>
+                <div className="profile-actions">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowEditForm(true)}
+                    disabled={showEditForm}
+                  >
+                    Edit Profile
+                  </Button>
+                  <Button variant="secondary" onClick={handleSignOut}>
+                    Sign Out
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
