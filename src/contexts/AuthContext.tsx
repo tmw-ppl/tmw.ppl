@@ -38,57 +38,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [session, setSession] = useState<AuthSession | null>(null)
   const [loading, setLoading] = useState(true)
-  const [profileCheckInProgress, setProfileCheckInProgress] = useState(false)
-
-  // Ensure user has a profile in the database
-  const ensureProfileExists = async (authUser: AuthUser) => {
-    // Prevent multiple simultaneous profile checks
-    if (profileCheckInProgress) {
-      console.log('Profile check already in progress, skipping...')
-      return
-    }
-
-    setProfileCheckInProgress(true)
-    
-    try {
-      // Check if profile exists
-      const { data: existingProfile, error: checkError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', authUser.id)
-        .single()
-
-      // If profile doesn't exist, create it
-      if (checkError && checkError.code === 'PGRST116') {
-        console.log('Creating profile for existing user:', authUser.id)
-        
-        const { error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authUser.id,
-            email: authUser.email,
-            full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-            phone: (authUser.user_metadata as any)?.phone || null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          } as any)
-
-        if (createError) {
-          console.error('Error creating profile for existing user:', createError)
-        } else {
-          console.log('Profile created successfully for existing user')
-        }
-      } else if (checkError) {
-        console.error('Error checking profile existence:', checkError)
-      } else {
-        console.log('Profile already exists for user:', authUser.id)
-      }
-    } catch (error) {
-      console.error('Error in ensureProfileExists:', error)
-    } finally {
-      setProfileCheckInProgress(false)
-    }
-  }
 
   useEffect(() => {
     let mounted = true
@@ -121,12 +70,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (mounted) {
           setSession(session)
           setUser(session?.user ?? null)
-          
-          // Auto-create profile for signed-in users who don't have one
-          if (event === 'SIGNED_IN' && session?.user) {
-            await ensureProfileExists(session.user)
-          }
-          
           setLoading(false)
         }
       }
