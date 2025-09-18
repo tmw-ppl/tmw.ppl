@@ -1,6 +1,50 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import TimePicker from './TimePicker'
 
+// Function to convert full timezone to short format
+const getShortTimezone = (fullTimezone: string): string => {
+  const timezoneMap: Record<string, string> = {
+    'America/Los_Angeles': 'PT',
+    'America/Denver': 'MT', 
+    'America/Chicago': 'CT',
+    'America/New_York': 'ET',
+    'Europe/London': 'GMT',
+    'Europe/Paris': 'CET',
+    'Asia/Tokyo': 'JST',
+    'Australia/Sydney': 'AEST',
+    // Add more as needed
+  }
+  
+  return timezoneMap[fullTimezone] || fullTimezone.split('/').pop() || 'UTC'
+}
+
+// Function to get current date in local timezone (not UTC)
+const getCurrentLocalDate = (): string => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Function to get current time rounded UP to next 15-minute interval
+const getRoundedCurrentTime = (): string => {
+  const now = new Date()
+  const hours = now.getHours()
+  const minutes = now.getMinutes()
+  
+  // Always round UP to next 15-minute interval (add 1 minute to force rounding up)
+  const roundedMinutes = Math.ceil((minutes + 1) / 15) * 15
+  
+  if (roundedMinutes >= 60) {
+    // Handle hour overflow
+    const newHours = (hours + 1) % 24
+    return `${String(newHours).padStart(2, '0')}:00`
+  }
+  
+  return `${String(hours).padStart(2, '0')}:${String(roundedMinutes).padStart(2, '0')}`
+}
+
 interface DateTimePickerProps {
   startDate: string
   startTime: string
@@ -19,68 +63,44 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
   endTime,
   onStartChange,
   onEndChange,
-  timezone = 'PT',
+  timezone,
   onTimezoneChange
 }) => {
   const [activeTab, setActiveTab] = useState<'start' | 'end'>('start')
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const timeOptionsRef = useRef<HTMLDivElement>(null)
+  const [detectedTimezone, setDetectedTimezone] = useState<string>('')
 
-  // Set smart defaults
+  // Detect user's timezone on mount
+  useEffect(() => {
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const shortTimezone = getShortTimezone(userTimezone)
+    setDetectedTimezone(shortTimezone)
+    
+    // Set timezone if not provided
+    if (!timezone && onTimezoneChange) {
+      onTimezoneChange(shortTimezone)
+    }
+  }, [timezone, onTimezoneChange])
+
+  // Set smart defaults based on user's current timezone
   useEffect(() => {
     if (!startDate || !startTime) {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getCurrentLocalDate() // Use local date instead of UTC
       const currentTime = getRoundedCurrentTime()
-      console.log('Setting smart defaults:', { today, currentTime })
+      console.log('Setting smart defaults:', { 
+        today, 
+        currentTime, 
+        timezone: detectedTimezone,
+        userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        localTime: new Date().toLocaleString()
+      })
       onStartChange(today, currentTime)
     }
-  }, [startDate, startTime, onStartChange])
+  }, [startDate, startTime, onStartChange, detectedTimezone])
 
 
-  // No more complex scroll logic - handled by TimePicker2
-
-  const getRoundedCurrentTime = () => {
-    const now = new Date()
-    const hours = now.getHours()
-    const minutes = now.getMinutes()
-    
-    console.log('Current time details:', { 
-      hours, 
-      minutes, 
-      nowString: now.toTimeString(),
-      nowHours: now.getHours(),
-      nowMinutes: now.getMinutes()
-    })
-    
-    // Round up to next 15-minute interval
-    const roundedMinutes = Math.ceil(minutes / 15) * 15
-    
-    let finalHours = hours
-    let finalMinutes = roundedMinutes
-    
-    // Handle minute overflow
-    if (roundedMinutes >= 60) {
-      finalHours = hours + 1
-      finalMinutes = 0
-    }
-    
-    // Handle hour overflow (shouldn't happen in normal use)
-    if (finalHours >= 24) {
-      finalHours = 0
-    }
-    
-    const timeString = `${finalHours.toString().padStart(2, '0')}:${finalMinutes.toString().padStart(2, '0')}`
-    console.log('Generated current time:', { 
-      originalHours: hours,
-      originalMinutes: minutes,
-      roundedMinutes,
-      finalHours, 
-      finalMinutes,
-      timeString,
-      actualCurrentTime: now.toLocaleTimeString()
-    })
-    return timeString
-  }
+  // Using the global getRoundedCurrentTime function
 
   const generateTimeOptions = () => {
     const times: string[] = []
@@ -171,7 +191,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
 
   const isTimeDisabled = (time: string) => {
     const selectedDate = getCurrentDate()
-    const today = new Date().toISOString().split('T')[0]
+    const today = getCurrentLocalDate() // Use local date instead of UTC
     
     if (activeTab === 'start') {
       // For start times, disable if it's today and the time has passed
@@ -241,7 +261,8 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
     const year = currentMonth.getFullYear()
     const month = currentMonth.getMonth()
     const selectedDate = new Date(year, month, day)
-    const dateString = selectedDate.toISOString().split('T')[0]
+    // Format the selected date properly in local timezone
+    const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     
     if (activeTab === 'start') {
       onStartChange(dateString, startTime)
@@ -341,16 +362,30 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
           </button>
         </div>
         
-        <div className="timezone-selector">
+        <div style={{ padding: '1rem' }}>
           <select 
-            value={timezone} 
+            value={timezone || detectedTimezone} 
             onChange={(e) => onTimezoneChange?.(e.target.value)}
-            className="timezone-select"
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              background: 'var(--bg)',
+              color: 'var(--text)',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+            }}
           >
-            <option value="PT">PT</option>
-            <option value="GMT-8">GMT-8</option>
-            <option value="EST">EST</option>
-            <option value="GMT">GMT</option>
+            <option value="PT">PT (Pacific Time)</option>
+            <option value="MT">MT (Mountain Time)</option>
+            <option value="CT">CT (Central Time)</option>
+            <option value="ET">ET (Eastern Time)</option>
+            <option value="GMT">GMT (Greenwich Mean Time)</option>
+            <option value="CET">CET (Central European Time)</option>
+            <option value="JST">JST (Japan Standard Time)</option>
+            <option value="AEST">AEST (Australian Eastern Time)</option>
+            <option value="UTC">UTC (Coordinated Universal Time)</option>
           </select>
         </div>
       </div>
@@ -389,7 +424,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
                 key={index}
                 type="button"
                 className={`calendar-day ${
-                  day && getCurrentDate() === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0] 
+                  day && getCurrentDate() === `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` 
                     ? 'selected' : ''
                 } ${
                   day && isDateDisabled(day) ? 'disabled' : ''
