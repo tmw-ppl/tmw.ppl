@@ -2850,7 +2850,7 @@ input[type="checkbox"] {
   top: 100%;
   left: 0 !important;
   transform: none !important;
-  z-index: 100;
+  z-index: 50;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -3856,27 +3856,81 @@ gmp-place-autocomplete input:focus {
   .calendar-section {
     border-right: none;
     border-bottom: 1px solid var(--border);
+    padding: 1rem;
+    overflow-x: auto;
   }
   
   .time-section {
     max-height: 300px;
+    padding: 1rem;
   }
   
   .datetime-tabs {
     flex: 1;
+    width: 100%;
   }
   
   .datetime-tab {
     flex: 1;
     text-align: center;
+    font-size: 0.75rem;
+    padding: 0.75rem 0.5rem;
   }
   
-  /* Force left alignment on mobile */
+  /* Force left alignment and proper sizing on mobile */
   .datetime-dropdown {
     left: 0 !important;
-    right: auto !important;
+    right: 0 !important;
     transform: none !important;
     width: 100% !important;
-    max-width: none !important;
+    max-width: calc(100vw - 2rem) !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    z-index: 50 !important;
+  }
+  
+  /* Mobile container constraints */
+  .datetime-picker-container {
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .datetime-content {
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  /* Mobile calendar styling */
+  .calendar-days {
+    gap: 2px;
+  }
+  
+  .calendar-day {
+    min-width: 35px;
+    height: 35px;
+    font-size: 0.875rem;
+  }
+  
+  .calendar-header {
+    margin-bottom: 1rem;
+  }
+  
+  .calendar-month-year {
+    font-size: 1.125rem;
+  }
+  
+  .calendar-nav {
+    font-size: 1.25rem;
+  }
+  
+  /* Mobile time picker styling */
+  .time-picker {
+    max-height: 250px;
+    margin: 0;
+  }
+  
+  .time-option {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
   }
 }
