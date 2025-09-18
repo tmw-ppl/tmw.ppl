@@ -82,10 +82,57 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
     e.stopPropagation()
   }
 
+  // TimePicker container styles
+  const timePickerStyles: React.CSSProperties = {
+    maxHeight: '400px',
+    overflowY: 'auto',
+    overscrollBehavior: 'contain',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '4px',
+    background: 'var(--card)',
+  }
+
+  // Time option styles
+  const getTimeOptionStyles = (isSelected: boolean, isDisabled: boolean): React.CSSProperties => {
+    const baseStyles: React.CSSProperties = {
+      width: '100%',
+      textAlign: 'left',
+      padding: '10px 12px',
+      borderRadius: '6px',
+      border: 'none',
+      background: 'transparent',
+      fontWeight: 400,
+      outline: 'none',
+      cursor: isDisabled ? 'not-allowed' : 'pointer',
+      color: 'var(--text)',
+      transition: 'all 0.2s ease',
+    }
+
+    if (isDisabled) {
+      return {
+        ...baseStyles,
+        color: 'var(--muted)',
+        opacity: 0.4,
+      }
+    }
+
+    if (isSelected) {
+      return {
+        ...baseStyles,
+        background: 'var(--primary)',
+        color: 'white',
+        fontWeight: 600,
+      }
+    }
+
+    return baseStyles
+  }
+
   return (
     <div
       ref={containerRef}
-      className="time-picker"
+      style={timePickerStyles}
       role="listbox"
       aria-label="Select time"
       onClick={handleContainerClick}
@@ -102,7 +149,17 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
             aria-selected={isSelected}
             tabIndex={isSelected ? 0 : -1}
             disabled={isDisabled}
-            className={`time-option ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+            style={getTimeOptionStyles(isSelected, isDisabled)}
+            onMouseEnter={(e) => {
+              if (!isDisabled && !isSelected) {
+                e.currentTarget.style.background = 'var(--bg-2)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isDisabled && !isSelected) {
+                e.currentTarget.style.background = 'transparent'
+              }
+            }}
           >
             {new Date(`2000-01-01T${t}`).toLocaleTimeString('en-US', {
               hour: 'numeric',
