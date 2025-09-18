@@ -9,6 +9,7 @@ interface ProfileData {
   full_name: string
   bio: string
   interests: string
+  phone?: string
   profile_picture_url?: string
   created_at: string
   updated_at: string
@@ -24,6 +25,7 @@ const Profile: React.FC = () => {
     full_name: '',
     bio: '',
     interests: '',
+    phone: '',
   })
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState('')
@@ -56,11 +58,13 @@ const Profile: React.FC = () => {
       }
 
       if (profile) {
+        console.log('Loaded profile data:', profile)
         setProfileData(profile as ProfileData)
         setEditForm({
           full_name: (profile as any).full_name || '',
           bio: (profile as any).bio || '',
           interests: (profile as any).interests || '',
+          phone: (profile as any).phone || '',
         })
       } else {
         // Use auth metadata if no profile exists
@@ -70,6 +74,7 @@ const Profile: React.FC = () => {
           full_name: displayName,
           bio: '',
           interests: '',
+          profile_picture_url: undefined,
           created_at: user.created_at || '',
           updated_at: user.created_at || '',
         })
@@ -77,6 +82,7 @@ const Profile: React.FC = () => {
           full_name: displayName,
           bio: '',
           interests: '',
+          phone: '',
         })
       }
     } catch (error) {
@@ -149,6 +155,9 @@ const Profile: React.FC = () => {
       setProfileData(prev => prev ? { ...prev, profile_picture_url: publicUrl } : null)
       setSuccess('Profile picture updated successfully!')
       setTimeout(() => setSuccess(''), 5000)
+      
+      // Reload profile data to ensure we have the latest info
+      await loadUserProfile()
 
     } catch (error: any) {
       console.error('Error uploading image:', error)
@@ -173,6 +182,7 @@ const Profile: React.FC = () => {
         full_name: editForm.full_name.trim(),
         bio: editForm.bio.trim(),
         interests: editForm.interests.trim(),
+        phone: editForm.phone.trim() || null,
         updated_at: new Date().toISOString(),
       } as any)
 
@@ -191,6 +201,7 @@ const Profile: React.FC = () => {
               full_name: editForm.full_name.trim(),
               bio: editForm.bio.trim(),
               interests: editForm.interests.trim(),
+              phone: editForm.phone.trim() || undefined,
             }
           : null
       )
@@ -357,6 +368,22 @@ const Profile: React.FC = () => {
                   placeholder="Technology, Art, Design..."
                 />
                 <small>Separate interests with commas</small>
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-phone">Phone Number</label>
+                <input
+                  type="tel"
+                  id="edit-phone"
+                  value={editForm.phone}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      phone: e.target.value,
+                    }))
+                  }
+                  placeholder="(555) 123-4567"
+                />
+                <small>Optional - for event organizers to contact you</small>
               </div>
               <div className="form-actions">
                 <Button variant="primary" onClick={handleSaveProfile}>

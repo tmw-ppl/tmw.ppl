@@ -15,6 +15,7 @@ const Auth: React.FC = () => {
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
   const [signupName, setSignupName] = useState('')
+  const [signupPhone, setSignupPhone] = useState('')
 
   const { signIn, signUp } = useAuth()
   const router = useRouter()
@@ -60,7 +61,7 @@ const Auth: React.FC = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!signupEmail || !signupPassword || !signupName) {
+    if (!signupEmail || !signupPassword || !signupName || !signupPhone) {
       showError('Please fill in all fields')
       return
     }
@@ -72,7 +73,7 @@ const Auth: React.FC = () => {
 
     setLoading(true)
     try {
-      const { error } = await signUp(signupEmail, signupPassword, signupName)
+      const { error } = await signUp(signupEmail, signupPassword, signupName, signupPhone)
 
       if (error) {
         showError(error.message)
@@ -177,6 +178,17 @@ const Auth: React.FC = () => {
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
                   placeholder="Your full name"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="signup-phone">Phone Number</label>
+                <input
+                  type="tel"
+                  id="signup-phone"
+                  value={signupPhone}
+                  onChange={(e) => setSignupPhone(e.target.value)}
+                  placeholder="(555) 123-4567"
                   required
                 />
               </div>
