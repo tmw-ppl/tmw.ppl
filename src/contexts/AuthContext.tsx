@@ -38,9 +38,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [session, setSession] = useState<AuthSession | null>(null)
   const [loading, setLoading] = useState(true)
+  const [profileCheckInProgress, setProfileCheckInProgress] = useState(false)
 
   // Ensure user has a profile in the database
   const ensureProfileExists = async (authUser: AuthUser) => {
+    // Prevent multiple simultaneous profile checks
+    if (profileCheckInProgress) {
+      console.log('Profile check already in progress, skipping...')
+      return
+    }
+
+    setProfileCheckInProgress(true)
+    
     try {
       // Check if profile exists
       const { data: existingProfile, error: checkError } = await supabase
@@ -71,9 +80,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } else if (checkError) {
         console.error('Error checking profile existence:', checkError)
+      } else {
+        console.log('Profile already exists for user:', authUser.id)
       }
     } catch (error) {
       console.error('Error in ensureProfileExists:', error)
+    } finally {
+      setProfileCheckInProgress(false)
     }
   }
 
