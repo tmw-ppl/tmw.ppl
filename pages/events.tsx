@@ -65,12 +65,20 @@ const Events: React.FC = () => {
 
     switch (filter) {
       case 'upcoming':
-        filtered = filtered.filter(
-          (event) => new Date(event.date) >= new Date()
-        )
+        filtered = filtered.filter((event) => {
+          const eventDateTime = event.time 
+            ? new Date(`${event.date}T${event.time}`)
+            : new Date(event.date)
+          return eventDateTime >= new Date()
+        })
         break
       case 'past':
-        filtered = filtered.filter((event) => new Date(event.date) < new Date())
+        filtered = filtered.filter((event) => {
+          const eventDateTime = event.time 
+            ? new Date(`${event.date}T${event.time}`)
+            : new Date(event.date)
+          return eventDateTime < new Date()
+        })
         break
       case 'all':
         // Show all events
@@ -82,26 +90,45 @@ const Events: React.FC = () => {
         )
     }
 
-    // Sort events by date
-    filtered.sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    )
+    // Sort events by date and time
+    filtered.sort((a, b) => {
+      const aDateTime = a.time ? new Date(`${a.date}T${a.time}`) : new Date(a.date)
+      const bDateTime = b.time ? new Date(`${b.date}T${b.time}`) : new Date(b.date)
+      return aDateTime.getTime() - bDateTime.getTime()
+    })
     setFilteredEvents(filtered)
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDateTime = (dateString: string, timeString?: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+    const dateFormatted = date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
     })
+    
+    if (timeString) {
+      // Parse time and format it
+      const [hours, minutes] = timeString.split(':').map(Number)
+      const timeDate = new Date()
+      timeDate.setHours(hours, minutes, 0, 0)
+      const timeFormatted = timeDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+      return `${dateFormatted} at ${timeFormatted}`
+    }
+    
+    return dateFormatted
   }
 
   const renderEvent = (event: Event) => {
-    const isPast = new Date(event.date) < new Date()
+    // Check if event is past considering both date and time
+    const eventDateTime = event.time 
+      ? new Date(`${event.date}T${event.time}`)
+      : new Date(event.date)
+    const isPast = eventDateTime < new Date()
 
     return (
       <Card key={event.id} className={`event ${isPast ? 'past' : ''}`}>
@@ -130,7 +157,7 @@ const Events: React.FC = () => {
                 )}
               </div>
             </div>
-            <div className="event-date">{formatDate(event.date)}</div>
+            <div className="event-date">{formatDateTime(event.date, event.time)}</div>
           </div>
 
           <div className="event-meta">
