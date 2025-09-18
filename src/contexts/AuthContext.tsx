@@ -5,7 +5,7 @@ interface AuthContextType {
   user: AuthUser | null
   session: AuthSession | null
   loading: boolean
-  signUp: (email: string, password: string, name: string) => Promise<{ data: any; error: any }>
+  signUp: (email: string, password: string, name: string, phone: string) => Promise<{ data: any; error: any }>
   signIn: (email: string, password: string) => Promise<{ data: any; error: any }>
   signOut: () => Promise<{ error: any }>
   isAuthenticated: boolean
@@ -39,6 +39,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<AuthSession | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Ensure user has a profile in the database
+  const ensureProfileExists = async (authUser: AuthUser) => {
+    try {
+      // Check if profile exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', authUser.id)
+        .single()
+
+      // If profile doesn't exist, create it
+      if (checkError && checkError.code === 'PGRST116') {
+        console.log('Creating profile for existing user:', authUser.id)
+        
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authUser.id,
+            email: authUser.email,
+            full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
+            phone: authUser.user_metadata?.phone || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          } as any)
+
+        if (createError) {
+          console.error('Error creating profile for existing user:', createError)
+        } else {
+          console.log('Profile created successfully for existing user')
+        }
+      } else if (checkError) {
+        console.error('Error checking profile existence:', checkError)
+      }
+    } catch (error) {
+      console.error('Error in ensureProfileExists:', error)
+    }
+  }
+
   useEffect(() => {
     let mounted = true
 
@@ -66,10 +104,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (mounted) {
           setSession(session)
           setUser(session?.user ?? null)
+          
+          // Auto-create profile for signed-in users who don't have one
+          if (event === 'SIGNED_IN' && session?.user) {
+            await ensureProfileExists(session.user)
+          }
+          
           setLoading(false)
         }
       }
@@ -81,13 +125,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [])
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, name: string, phone: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name: name
+          full_name: name,
+          phone: phone
         }
       }
     })
@@ -100,7 +145,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .insert({
             id: data.user.id,
             full_name: name,
-            email: email
+            email: email,
+            phone: phone,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           } as any)
         if (profileError) {
           console.error('Error creating profile:', profileError)
