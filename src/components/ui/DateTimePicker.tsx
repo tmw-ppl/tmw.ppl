@@ -277,27 +277,64 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
   const monthYear = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   const timeOptions = generateTimeOptions()
 
+  // Main container styles
+  const containerStyles: React.CSSProperties = {
+    background: 'var(--card)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    overflow: 'hidden',
+  }
+
+  // Header styles
+  const headerStyles: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    background: 'var(--bg-2)',
+    borderBottom: '1px solid var(--border)',
+  }
+
+  // Tabs container styles
+  const tabsStyles: React.CSSProperties = {
+    display: 'flex',
+  }
+
+  // Tab button styles
+  const getTabStyles = (isActive: boolean): React.CSSProperties => ({
+    background: 'none',
+    border: 'none',
+    padding: '1rem 1.5rem',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    color: isActive ? 'var(--primary)' : 'var(--muted)',
+    cursor: 'pointer',
+    transition: 'color 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  })
+
   return (
-    <div className="datetime-picker-container">
+    <div style={containerStyles}>
 
       {/* Tabs and Timezone */}
-      <div className="datetime-header">
-        <div className="datetime-tabs">
+      <div style={headerStyles}>
+        <div style={tabsStyles}>
           <button
             type="button"
-            className={`datetime-tab ${activeTab === 'start' ? 'active' : ''}`}
+            style={getTabStyles(activeTab === 'start')}
             onClick={() => setActiveTab('start')}
           >
             START
           </button>
           <button
             type="button"
-            className={`datetime-tab ${activeTab === 'end' ? 'active' : ''}`}
+            style={getTabStyles(activeTab === 'end')}
             onClick={handleEndTabClick}
           >
             <span 
-              className="tab-icon" 
               onClick={handleEndIconClick}
+              style={{ cursor: 'pointer' }}
             >
               {getEndTabIcon()}
             </span> END
