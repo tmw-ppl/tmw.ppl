@@ -11,6 +11,7 @@ interface ProfileData {
   interests: string
   phone?: string
   profile_picture_url?: string
+  private?: boolean
   created_at: string
   updated_at: string
 }
@@ -26,6 +27,7 @@ const Profile: React.FC = () => {
     bio: '',
     interests: '',
     phone: '',
+    private: false,
   })
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState('')
@@ -65,6 +67,7 @@ const Profile: React.FC = () => {
           bio: (profile as any).bio || '',
           interests: (profile as any).interests || '',
           phone: (profile as any).phone || '',
+          private: (profile as any).private || false,
         })
       } else {
         // Use auth metadata if no profile exists
@@ -83,6 +86,7 @@ const Profile: React.FC = () => {
           bio: '',
           interests: '',
           phone: '',
+          private: false,
         })
       }
     } catch (error) {
@@ -183,6 +187,7 @@ const Profile: React.FC = () => {
         bio: editForm.bio.trim(),
         interests: editForm.interests.trim(),
         phone: editForm.phone.trim() || null,
+        private: editForm.private,
         updated_at: new Date().toISOString(),
       } as any)
 
@@ -387,6 +392,46 @@ const Profile: React.FC = () => {
                   placeholder="(555) 123-4567"
                 />
                 <small>Optional - for event organizers to contact you</small>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  cursor: 'pointer',
+                  padding: '1rem',
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={editForm.private}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        private: e.target.checked,
+                      }))
+                    }
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      accentColor: 'var(--primary)'
+                    }}
+                  />
+                  <div>
+                    <strong>Make my profile private</strong>
+                    <div style={{ 
+                      fontSize: '0.875rem', 
+                      color: 'var(--text-muted)',
+                      marginTop: '0.25rem'
+                    }}>
+                      Private profiles are hidden from the public community directory
+                    </div>
+                  </div>
+                </label>
               </div>
               <div className="form-actions">
                 <Button variant="primary" onClick={handleSaveProfile}>

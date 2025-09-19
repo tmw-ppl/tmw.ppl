@@ -14,6 +14,7 @@ interface Profile {
   bio?: string
   phone?: string
   profile_picture_url?: string
+  private?: boolean
   created_at: string
   updated_at: string
 }
@@ -22,6 +23,7 @@ const Profiles: React.FC = () => {
   const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('latest') // 'latest', 'first', 'alphabetical'
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,15 +34,42 @@ const Profiles: React.FC = () => {
     loadProfiles()
   }, [])
 
-  const loadProfiles = async () => {
+  // Reload profiles when sort changes
+  useEffect(() => {
+    if (profiles.length > 0) {
+      loadProfiles()
+    }
+  }, [sortBy])
+
+  const loadProfiles = async (sortOrder = sortBy) => {
     try {
       setLoading(true)
       console.log('🔍 Loading profiles from database...')
       
+      // Determine sort order based on sortBy state
+      let orderBy = 'created_at'
+      let ascending = false
+      
+      switch (sortOrder) {
+        case 'first':
+          orderBy = 'created_at'
+          ascending = true
+          break
+        case 'latest':
+          orderBy = 'created_at'
+          ascending = false
+          break
+        case 'alphabetical':
+          orderBy = 'full_name'
+          ascending = true
+          break
+      }
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false })
+        .or(`private.is.null,private.eq.false${user ? `,id.eq.${user.id}` : ''}`)
+        .order(orderBy, { ascending })
 
       console.log('📊 Profiles response:', { data, error, count: data?.length })
 
@@ -140,7 +169,21 @@ const Profiles: React.FC = () => {
     return (
       <section className="hero">
         <div className="container">
-          <h1>Community Profiles</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <h1>Community Profiles</h1>
+            {profiles.length > 0 && (
+              <span style={{
+                background: 'var(--primary)',
+                color: 'white',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '20px',
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}>
+                {profiles.length} {profiles.length === 1 ? 'Member' : 'Members'}
+              </span>
+            )}
+          </div>
           <p className="lead">
             Discover creative minds, connect with collaborators, and find your
             next project partner in the Tomorrow People community.
@@ -155,14 +198,28 @@ const Profiles: React.FC = () => {
     return (
       <section className="hero">
         <div className="container">
-          <h1>Community Profiles</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <h1>Community Profiles</h1>
+            {profiles.length > 0 && (
+              <span style={{
+                background: 'var(--primary)',
+                color: 'white',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '20px',
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}>
+                {profiles.length} {profiles.length === 1 ? 'Member' : 'Members'}
+              </span>
+            )}
+          </div>
           <p className="lead">
             Discover creative minds, connect with collaborators, and find your
             next project partner in the Tomorrow People community.
           </p>
           <div className="error-message">
             <p>{error}</p>
-            <Button onClick={loadProfiles}>Retry</Button>
+            <Button onClick={() => loadProfiles()}>Retry</Button>
           </div>
         </div>
       </section>
@@ -172,7 +229,19 @@ const Profiles: React.FC = () => {
   return (
     <section className="hero">
       <div className="container">
-        <h1>Community Profiles</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <h1>Community Profiles</h1>
+          <span style={{
+            background: 'var(--primary)',
+            color: 'white',
+            padding: '0.25rem 0.75rem',
+            borderRadius: '20px',
+            fontSize: '0.875rem',
+            fontWeight: '600'
+          }}>
+            {profiles.length} {profiles.length === 1 ? 'Member' : 'Members'}
+          </span>
+        </div>
         <p className="lead">
           Discover creative minds, connect with collaborators, and find your
           next project partner in the Tomorrow People community.
@@ -201,6 +270,38 @@ const Profiles: React.FC = () => {
                 {filter.label}
               </Chip>
             ))}
+          </div>
+
+          {/* Sort Options */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '1rem', 
+            marginTop: '1rem',
+            fontSize: '0.875rem',
+            color: 'var(--text-muted)'
+          }}>
+            <span>Sort by:</span>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Chip
+                onClick={() => setSortBy('latest')}
+                className={sortBy === 'latest' ? 'active' : 'inactive'}
+              >
+                Latest to Join
+              </Chip>
+              <Chip
+                onClick={() => setSortBy('first')}
+                className={sortBy === 'first' ? 'active' : 'inactive'}
+              >
+                First Joined
+              </Chip>
+              <Chip
+                onClick={() => setSortBy('alphabetical')}
+                className={sortBy === 'alphabetical' ? 'active' : 'inactive'}
+              >
+                A-Z
+              </Chip>
+            </div>
           </div>
         </div>
 
