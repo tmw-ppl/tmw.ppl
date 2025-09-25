@@ -8,6 +8,7 @@ import Chip from '@/components/ui/Chip'
 import DateTimePicker from '@/components/ui/DateTimePicker'
 import AnimatedSection from '@/components/AnimatedSection'
 import LocationAutocomplete from '@/components/ui/LocationAutocomplete'
+import { createEventDateTime, getCurrentLocalDate, getRoundedCurrentTime } from '@/utils/dateTime'
 
 interface CreateEventData {
   title: string
@@ -131,22 +132,27 @@ const CreateEvent: React.FC = () => {
     if (!formData.time) return 'Event time is required'
     if (!formData.location.trim()) return 'Event location is required'
     
-    // Validate date is not in the past
-    const eventDateTime = new Date(`${formData.date}T${formData.time}`)
-    if (eventDateTime < new Date()) {
-      return 'Event date and time must be in the future'
-    }
-
-    // Validate end date/time is after start date/time if provided
-    if (formData.end_time || formData.end_date) {
-      const startDateTime = new Date(`${formData.date}T${formData.time}`)
-      const endDate = formData.end_date || formData.date
-      const endTime = formData.end_time || '23:59'
-      const endDateTime = new Date(`${endDate}T${endTime}`)
-      
-      if (endDateTime <= startDateTime) {
-        return 'End date and time must be after start date and time'
+    // Validate date is not in the past using proper ISO datetime
+    try {
+      const eventISODateTime = createEventDateTime(formData.date, formData.time)
+      const eventDateTime = new Date(eventISODateTime)
+      if (eventDateTime <= new Date()) {
+        return 'Event date and time must be in the future'
       }
+
+      // Validate end date/time is after start date/time if provided
+      if (formData.end_time || formData.end_date) {
+        const endDate = formData.end_date || formData.date
+        const endTime = formData.end_time || '23:59'
+        const endISODateTime = createEventDateTime(endDate, endTime)
+        const endDateTime = new Date(endISODateTime)
+        
+        if (endDateTime <= eventDateTime) {
+          return 'End date and time must be after start date and time'
+        }
+      }
+    } catch (error) {
+      return 'Invalid date or time format'
     }
 
     // Validate URLs if provided
@@ -217,13 +223,17 @@ const CreateEvent: React.FC = () => {
         console.log('Profile created successfully')
       }
       
+      // Create ISO timestamps for proper storage
+      const startDateTime = createEventDateTime(formData.date, formData.time)
+      const endDateTime = (formData.end_date || formData.end_time) 
+        ? createEventDateTime(formData.end_date || formData.date, formData.end_time || '23:59')
+        : null
+
       console.log('Attempting to create event with data:', {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        date: formData.date,
-        time: formData.time,
-        end_date: formData.end_date || null,
-        end_time: formData.end_time || null,
+        date: startDateTime, // Now storing as ISO timestamp
+        end_date: endDateTime,
         location: formData.location.trim(),
         rsvp_url: formData.rsvp_url.trim() || null,
         image_url: formData.image_url.trim() || null,
@@ -237,10 +247,8 @@ const CreateEvent: React.FC = () => {
         .insert({
           title: formData.title.trim(),
           description: formData.description.trim(),
-          date: formData.date,
-          time: formData.time,
-          end_date: formData.end_date || null,
-          end_time: formData.end_time || null,
+          date: startDateTime, // Store as ISO timestamp instead of separate date/time
+          end_date: endDateTime, // Store end as ISO timestamp too
           location: formData.location.trim(),
           rsvp_url: formData.rsvp_url.trim() || null,
           image_url: formData.image_url.trim() || null,
