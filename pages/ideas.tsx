@@ -139,7 +139,7 @@ const Ideas: React.FC = () => {
   }
 
   // Vote on an idea
-  const handleVote = async (ideaId: string, voteType: VoteType) => {
+  const handleVote = async (ideaId: string, voteType: VoteType): Promise<void> => {
     if (!user) return
 
     try {
@@ -164,19 +164,26 @@ const Ideas: React.FC = () => {
 
       console.log(`Vote successfully recorded: ${voteType} on idea ${ideaId}`)
 
+      // Small delay to ensure database triggers have completed
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       // Reload the specific idea to get fresh data from the database
       // This ensures we have the correct vote counts after triggers run
       await refreshIdeaData(ideaId)
 
-      // CardStack component will handle moving to next card
+      console.log(`Vote processing completed for idea ${ideaId}`)
+      // CardStack component will handle moving to next card after this Promise resolves
     } catch (err) {
       console.error('Error voting:', err)
+      throw err // Re-throw so CardStack can handle the error
     }
   }
 
   // Refresh data for a specific idea after voting
   const refreshIdeaData = async (ideaId: string) => {
     try {
+      console.log(`🔄 Refreshing data for idea ${ideaId}...`)
+      
       // Fetch updated idea data
       const { data: ideaData, error: ideaError } = await supabase
         .from('ideas')
@@ -189,45 +196,71 @@ const Ideas: React.FC = () => {
         return
       }
 
+      console.log(`📊 Fresh idea data from DB:`, {
+        id: ideaId,
+        total_votes: (ideaData as any)?.total_votes,
+        agree_votes: (ideaData as any)?.agree_votes,
+        disagree_votes: (ideaData as any)?.disagree_votes,
+        pass_votes: (ideaData as any)?.pass_votes
+      })
+
       // Fetch user's vote for this idea
       let userVote = null
       if (user) {
-        const { data: voteData } = await supabase
+        const { data: voteData, error: voteError } = await supabase
           .from('idea_votes')
           .select('vote_type')
           .eq('idea_id', ideaId)
           .eq('user_id', user.id)
           .single()
 
+        if (voteError && voteError.code !== 'PGRST116') { // PGRST116 = no rows found
+          console.error('Error fetching user vote:', voteError)
+        }
+
         userVote = (voteData as any)?.vote_type
+        console.log(`👤 User vote for idea ${ideaId}:`, userVote)
       }
 
       // Update the specific idea in local state
       const typedIdeaData = ideaData as any
-      setIdeas(prevIdeas =>
-        prevIdeas.map(idea => {
+      const updatedIdea = {
+        ...typedIdeaData,
+        user_vote: userVote,
+        agree_percentage: typedIdeaData.total_votes > 0 
+          ? Math.round((typedIdeaData.agree_votes / typedIdeaData.total_votes) * 100)
+          : 0,
+        disagree_percentage: typedIdeaData.total_votes > 0 
+          ? Math.round((typedIdeaData.disagree_votes / typedIdeaData.total_votes) * 100)
+          : 0,
+      } as Idea
+
+      console.log(`✅ Updated idea object:`, {
+        id: ideaId,
+        total_votes: updatedIdea.total_votes,
+        agree_votes: updatedIdea.agree_votes,
+        disagree_votes: updatedIdea.disagree_votes,
+        pass_votes: updatedIdea.pass_votes,
+        user_vote: updatedIdea.user_vote,
+        agree_percentage: updatedIdea.agree_percentage,
+        disagree_percentage: updatedIdea.disagree_percentage
+      })
+
+      setIdeas(prevIdeas => {
+        const oldIdea = prevIdeas.find(idea => idea.id === ideaId)
+        console.log(`🔄 Before update - idea ${ideaId}:`, {
+          total_votes: oldIdea?.total_votes,
+          agree_votes: oldIdea?.agree_votes,
+          disagree_votes: oldIdea?.disagree_votes,
+          user_vote: oldIdea?.user_vote
+        })
+
+        return prevIdeas.map(idea => {
           if (idea.id === ideaId) {
-            return {
-              ...typedIdeaData,
-              user_vote: userVote,
-              agree_percentage: typedIdeaData.total_votes > 0 
-                ? Math.round((typedIdeaData.agree_votes / typedIdeaData.total_votes) * 100)
-                : 0,
-              disagree_percentage: typedIdeaData.total_votes > 0 
-                ? Math.round((typedIdeaData.disagree_votes / typedIdeaData.total_votes) * 100)
-                : 0,
-            } as Idea
+            return updatedIdea
           }
           return idea
         })
-      )
-
-      console.log(`Refreshed idea data for ${ideaId}:`, {
-        total_votes: typedIdeaData.total_votes,
-        agree_votes: typedIdeaData.agree_votes,
-        disagree_votes: typedIdeaData.disagree_votes,
-        pass_votes: typedIdeaData.pass_votes,
-        user_vote: userVote
       })
 
     } catch (err) {

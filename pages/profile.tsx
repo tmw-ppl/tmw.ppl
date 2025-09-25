@@ -16,10 +16,26 @@ interface ProfileData {
   updated_at: string
 }
 
+interface UserEvent {
+  id: string
+  title: string
+  description?: string
+  date: string
+  time: string
+  end_time?: string
+  location?: string
+  rsvp_url?: string
+  image_url?: string
+  published: boolean
+  created_at: string
+}
+
 const Profile: React.FC = () => {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
+  const [userEvents, setUserEvents] = useState<UserEvent[]>([])
+  const [eventsLoading, setEventsLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [showEditForm, setShowEditForm] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -39,6 +55,7 @@ const Profile: React.FC = () => {
       return
     }
     loadUserProfile()
+    loadUserEvents()
   }, [user, router])
 
   const loadUserProfile = async () => {
@@ -94,6 +111,33 @@ const Profile: React.FC = () => {
       setError('Failed to load profile data')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadUserEvents = async () => {
+    if (!user) return
+
+    try {
+      setEventsLoading(true)
+      console.log('🎪 Loading events for user:', user.id)
+
+      const { data: events, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('created_by', user.id)
+        .order('date', { ascending: false })
+
+      if (error) {
+        console.error('Error loading user events:', error)
+        return
+      }
+
+      console.log('✅ Loaded user events:', events?.length || 0)
+      setUserEvents((events as UserEvent[]) || [])
+    } catch (error) {
+      console.error('Error loading user events:', error)
+    } finally {
+      setEventsLoading(false)
     }
   }
 
@@ -459,18 +503,154 @@ const Profile: React.FC = () => {
             <h3>Your Activity</h3>
             <div className="stats-grid">
               <div className="stat-card">
-                <div className="stat-number">0</div>
-                <div className="stat-label">Events Attended</div>
+                <div className="stat-number">{userEvents.length}</div>
+                <div className="stat-label">Events Created</div>
               </div>
               <div className="stat-card">
                 <div className="stat-number">0</div>
-                <div className="stat-label">Projects Shared</div>
+                <div className="stat-label">Events Attended</div>
               </div>
               <div className="stat-card">
                 <div className="stat-number">0</div>
                 <div className="stat-label">Connections Made</div>
               </div>
             </div>
+          </div>
+
+          {/* User Events Section */}
+          <div className="user-events-section" style={{ marginTop: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3>My Events</h3>
+              <Button 
+                variant="primary" 
+                size="small"
+                onClick={() => router.push('/create-event')}
+              >
+                + Create Event
+              </Button>
+            </div>
+            
+            {eventsLoading ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                Loading your events...
+              </div>
+            ) : userEvents.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '3rem 2rem', 
+                background: 'var(--card)', 
+                borderRadius: '12px',
+                border: '1px solid var(--border)'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎪</div>
+                <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No events yet</h4>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                  Create your first event to start building community!
+                </p>
+                <Button 
+                  variant="primary"
+                  onClick={() => router.push('/create-event')}
+                >
+                  Create Your First Event
+                </Button>
+              </div>
+            ) : (
+              <div className="events-grid" style={{ 
+                display: 'grid', 
+                gap: '1rem',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
+              }}>
+                {userEvents.map((event) => (
+                  <div 
+                    key={event.id} 
+                    style={{
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '12px',
+                      padding: '1.5rem',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => router.push(`/edit-event/${event.id}`)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                      <h4 style={{ margin: 0, color: 'var(--text)', fontSize: '1.1rem' }}>
+                        {event.title}
+                      </h4>
+                      {!event.published && (
+                        <span style={{
+                          background: 'var(--warning)',
+                          color: 'white',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600'
+                        }}>
+                          DRAFT
+                        </span>
+                      )}
+                    </div>
+                    
+                    {event.description && (
+                      <p style={{ 
+                        color: 'var(--text-muted)', 
+                        fontSize: '0.9rem', 
+                        lineHeight: '1.4',
+                        marginBottom: '1rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {event.description}
+                      </p>
+                    )}
+                    
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '1rem',
+                      fontSize: '0.875rem',
+                      color: 'var(--text-muted)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>📅</span>
+                        <span>{new Date(event.date).toLocaleDateString()}</span>
+                      </div>
+                      {event.time && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>⏰</span>
+                          <span>{event.time}</span>
+                        </div>
+                      )}
+                      {event.location && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>📍</span>
+                          <span style={{ 
+                            maxWidth: '120px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {event.location}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
