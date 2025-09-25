@@ -208,14 +208,14 @@ const CreateProject: React.FC = () => {
 
       // Add creator as a contributor with 'creator' role
       await supabase.from('project_contributors').insert({
-        project_id: project.id,
+        project_id: (project as any).id,
         user_id: user.id,
         role: 'creator'
-      })
+      } as any)
 
       setSuccess('Project created successfully!')
       setTimeout(() => {
-        router.push(`/projects/${project.id}`)
+        router.push(`/projects/${(project as any).id}`)
       }, 1500)
 
     } catch (err: any) {
