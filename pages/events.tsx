@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import Card from '@/components/ui/Card'
 import AnimatedSection from '@/components/AnimatedSection'
+import { isEventUpcoming, formatEventDateTime, migrateLegacyDateTime } from '@/utils/dateTime'
 
 const Events: React.FC = () => {
   const { user } = useAuth()
@@ -80,64 +81,33 @@ const Events: React.FC = () => {
     switch (filter) {
       case 'upcoming':
         filtered = filtered.filter((event) => {
-          const now = new Date()
-          let eventDateTime: Date
+          // Handle both new ISO format and legacy separate date/time fields
+          let eventDateTime: string
           
-          // Extract just the date part (YYYY-MM-DD) from the database timestamp
-          const dateOnly = event.date.split('T')[0]
-          
-          if (event.time) {
-            // Handle different time formats
-            let timeIn24Hour = event.time
-            
-            // Convert 12-hour format to 24-hour if needed
-            if (event.time.includes('AM') || event.time.includes('PM') || event.time.includes('am') || event.time.includes('pm')) {
-              const timeStr = event.time.replace(/\s/g, '').toLowerCase()
-              const isPM = timeStr.includes('pm')
-              const timeWithoutPeriod = timeStr.replace(/am|pm/g, '')
-              const [hours, minutes = '00'] = timeWithoutPeriod.split(':')
-              let hour24 = parseInt(hours)
-              
-              if (isPM && hour24 !== 12) hour24 += 12
-              if (!isPM && hour24 === 12) hour24 = 0
-              
-              timeIn24Hour = `${String(hour24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-            }
-            
-            // Ensure time has seconds
-            if (!timeIn24Hour.includes(':')) {
-              timeIn24Hour = `${timeIn24Hour}:00`
-            }
-            if (timeIn24Hour.split(':').length === 2) {
-              timeIn24Hour = `${timeIn24Hour}:00`
-            }
-            
-            eventDateTime = new Date(`${dateOnly}T${timeIn24Hour}`)
+          if (event.date.includes('T')) {
+            // New format: ISO timestamp
+            eventDateTime = event.date
           } else {
-            // If no time, assume end of day
-            eventDateTime = new Date(dateOnly)
-            eventDateTime.setHours(23, 59, 59, 999)
+            // Legacy format: separate date and time fields
+            eventDateTime = migrateLegacyDateTime(event.date, event.time)
           }
           
-          const isUpcoming = eventDateTime >= now
-          console.log(`📅 Event "${event.title}":`)
-          console.log(`   Raw Date: ${event.date}`)
-          console.log(`   Date Only: ${dateOnly}`)
-          console.log(`   Raw Time: ${event.time || 'no-time'}`)
-          console.log(`   Parsed DateTime: ${eventDateTime.toLocaleString()}`)
-          console.log(`   Now: ${now.toLocaleString()}`)
-          console.log(`   → ${isUpcoming ? 'UPCOMING' : 'PAST'}`)
-          console.log('---')
-          
-          return isUpcoming
+          const upcoming = isEventUpcoming(eventDateTime)
+          console.log(`📅 Event "${event.title}": ${upcoming ? 'UPCOMING' : 'PAST'} (${eventDateTime})`)
+          return upcoming
         })
         break
       case 'past':
         filtered = filtered.filter((event) => {
-          const eventDateTime = event.time 
-            ? new Date(`${event.date}T${event.time}`)
-            : new Date(event.date)
-          return eventDateTime < new Date()
+          let eventDateTime: string
+          
+          if (event.date.includes('T')) {
+            eventDateTime = event.date
+          } else {
+            eventDateTime = migrateLegacyDateTime(event.date, event.time)
+          }
+          
+          return !isEventUpcoming(eventDateTime)
         })
         break
       case 'all':
@@ -154,43 +124,43 @@ const Events: React.FC = () => {
 
     // Sort events by date and time
     filtered.sort((a, b) => {
-      const aDateTime = a.time ? new Date(`${a.date}T${a.time}`) : new Date(a.date)
-      const bDateTime = b.time ? new Date(`${b.date}T${b.time}`) : new Date(b.date)
+      const aDateTime = a.date.includes('T') 
+        ? new Date(a.date)
+        : new Date(migrateLegacyDateTime(a.date, a.time))
+      const bDateTime = b.date.includes('T') 
+        ? new Date(b.date)
+        : new Date(migrateLegacyDateTime(b.date, b.time))
       return aDateTime.getTime() - bDateTime.getTime()
     })
     setFilteredEvents(filtered)
   }
 
   const formatDateTime = (dateString: string, timeString?: string) => {
-    const date = new Date(dateString)
-    const dateFormatted = date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    })
-    
-    if (timeString) {
-      // Parse time and format it
-      const [hours, minutes] = timeString.split(':').map(Number)
-      const timeDate = new Date()
-      timeDate.setHours(hours, minutes, 0, 0)
-      const timeFormatted = timeDate.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
+    // Handle both new ISO format and legacy separate date/time fields
+    if (dateString.includes('T')) {
+      // New format: ISO timestamp - use utility function
+      return formatEventDateTime(dateString, undefined, {
+        showTimezone: false,
+        dateStyle: 'medium',
+        timeStyle: 'short'
       })
-      return `${dateFormatted} at ${timeFormatted}`
+    } else {
+      // Legacy format: separate date and time fields
+      const isoDateTime = migrateLegacyDateTime(dateString, timeString)
+      return formatEventDateTime(isoDateTime, undefined, {
+        showTimezone: false,
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      })
     }
-    
-    return dateFormatted
   }
 
   const renderEvent = (event: Event) => {
-    // Check if event is past considering both date and time
-    const eventDateTime = event.time 
-      ? new Date(`${event.date}T${event.time}`)
-      : new Date(event.date)
-    const isPast = eventDateTime < new Date()
+    // Check if event is past using consistent logic
+    const eventDateTime = event.date.includes('T') 
+      ? event.date
+      : migrateLegacyDateTime(event.date, event.time)
+    const isPast = !isEventUpcoming(eventDateTime)
 
     return (
       <Card key={event.id} className={`event ${isPast ? 'past' : ''}`}>
