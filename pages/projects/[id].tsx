@@ -74,11 +74,11 @@ const ProjectDetail: React.FC = () => {
       const { data: creatorData } = await supabase
         .from('profiles')
         .select('id, full_name, email, profile_picture_url')
-        .eq('id', projectData.creator_id)
+        .eq('id', (projectData as any).creator_id)
         .single()
 
       // Get counts
-      const projectIds = [projectData.id]
+      const projectIds = [(projectData as any).id]
       
       // Get contributor count
       const { data: contributorsData } = await supabase
@@ -109,10 +109,10 @@ const ProjectDetail: React.FC = () => {
       }
 
       setProject(projectWithDetails)
-      setIsOwner(user?.id === projectData.creator_id)
+      setIsOwner(user?.id === (projectData as any).creator_id)
 
       // Increment view count
-      if (user && user.id !== projectData.creator_id) {
+      if (user && user.id !== (projectData as any).creator_id) {
         await supabase.rpc('increment_project_views', { project_uuid: id })
       }
 
