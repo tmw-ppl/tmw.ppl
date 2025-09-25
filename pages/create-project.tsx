@@ -193,7 +193,7 @@ const CreateProject: React.FC = () => {
         start_date: formData.start_date || null,
         target_completion_date: formData.target_completion_date || null,
         fundraising_goal: formData.fundraising_enabled ? formData.fundraising_goal : 0,
-        funds_raised: formData.funds_raised
+        funds_raised: 0
       }
 
       const { data: project, error: projectError } = await supabase
