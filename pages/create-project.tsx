@@ -180,17 +180,25 @@ const CreateProject: React.FC = () => {
 
       // Create project
       const projectData = {
-        ...formData,
+        title: formData.title,
+        summary: formData.summary,
+        description: formData.description,
+        category: formData.category,
+        tags: formData.tags,
+        status: formData.status,
+        fundraising_enabled: formData.fundraising_enabled,
+        is_public: formData.is_public,
         creator_id: user.id,
         image_url: imageUrl || null,
         start_date: formData.start_date || null,
         target_completion_date: formData.target_completion_date || null,
-        fundraising_goal: formData.fundraising_enabled ? formData.fundraising_goal : 0
+        fundraising_goal: formData.fundraising_enabled ? formData.fundraising_goal : 0,
+        funds_raised: formData.funds_raised
       }
 
       const { data: project, error: projectError } = await supabase
         .from('projects')
-        .insert(projectData)
+        .insert(projectData as any)
         .select()
         .single()
 
