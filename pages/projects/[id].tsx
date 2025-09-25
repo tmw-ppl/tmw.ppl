@@ -113,7 +113,7 @@ const ProjectDetail: React.FC = () => {
 
       // Increment view count
       if (user && user.id !== (projectData as any).creator_id) {
-        await supabase.rpc('increment_project_views', { project_uuid: id })
+        await (supabase as any).rpc('increment_project_views', { project_uuid: id })
       }
 
     } catch (err: any) {
