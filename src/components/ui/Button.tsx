@@ -44,9 +44,9 @@ const Button: React.FC<ButtonProps> = ({
         color: 'white',
       },
       secondary: {
-        background: 'var(--primary)',
-        border: '1px solid var(--primary)',
-        color: 'white',
+        background: 'var(--card)',
+        border: '1px solid var(--border)',
+        color: 'var(--text)',
       },
       danger: {
         background: 'var(--danger)',
