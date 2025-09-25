@@ -101,7 +101,7 @@ const ProjectDetail: React.FC = () => {
         .eq('is_deleted', false)
 
       const projectWithDetails: Project = {
-        ...projectData,
+        ...(projectData as any),
         creator: creatorData,
         contributor_count: contributorsData?.length || 0,
         likes_count: likesData?.length || 0,
