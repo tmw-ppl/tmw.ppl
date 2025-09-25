@@ -71,7 +71,7 @@ const Projects: React.FC = () => {
       }
 
       // Get creator info for all projects
-      const creatorIds = [...new Set((projectsData || []).map((p: any) => p.creator_id))]
+      const creatorIds = Array.from(new Set((projectsData || []).map((p: any) => p.creator_id)))
       const { data: creatorsData } = await supabase
         .from('profiles')
         .select('id, full_name, email, profile_picture_url')
