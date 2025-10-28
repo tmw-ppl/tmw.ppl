@@ -30,12 +30,29 @@ interface UserEvent {
   created_at: string
 }
 
+interface RSVPEvent {
+  id: string
+  title: string
+  description?: string
+  date: string
+  time: string
+  location?: string
+  image_url?: string
+  rsvp_status: 'going' | 'maybe' | 'not_going'
+  creator?: {
+    full_name: string
+    email: string
+  }
+}
+
 const Profile: React.FC = () => {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [userEvents, setUserEvents] = useState<UserEvent[]>([])
+  const [rsvpEvents, setRsvpEvents] = useState<RSVPEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(true)
+  const [rsvpLoading, setRsvpLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [showEditForm, setShowEditForm] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -56,6 +73,7 @@ const Profile: React.FC = () => {
     }
     loadUserProfile()
     loadUserEvents()
+    loadUserRSVPs()
   }, [user, router])
 
   const loadUserProfile = async () => {
@@ -138,6 +156,62 @@ const Profile: React.FC = () => {
       console.error('Error loading user events:', error)
     } finally {
       setEventsLoading(false)
+    }
+  }
+
+  const loadUserRSVPs = async () => {
+    if (!user) return
+
+    try {
+      setRsvpLoading(true)
+      console.log('🎫 Loading RSVP events for user:', user.id)
+
+      const { data: rsvpData, error } = await supabase
+        .from('event_rsvps')
+        .select(`
+          status,
+          events!inner (
+            id,
+            title,
+            description,
+            date,
+            time,
+            location,
+            image_url,
+            creator:profiles!created_by (
+              full_name,
+              email
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('events.published', true)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading user RSVPs:', error)
+        return
+      }
+
+      // Transform the data to match our interface
+      const transformedRSVPs: RSVPEvent[] = (rsvpData || []).map((rsvp: any) => ({
+        id: rsvp.events.id,
+        title: rsvp.events.title,
+        description: rsvp.events.description,
+        date: rsvp.events.date,
+        time: rsvp.events.time,
+        location: rsvp.events.location,
+        image_url: rsvp.events.image_url,
+        rsvp_status: rsvp.status,
+        creator: rsvp.events.creator
+      }))
+
+      console.log('✅ Loaded user RSVPs:', transformedRSVPs.length)
+      setRsvpEvents(transformedRSVPs)
+    } catch (error) {
+      console.error('Error loading user RSVPs:', error)
+    } finally {
+      setRsvpLoading(false)
     }
   }
 
@@ -507,12 +581,12 @@ const Profile: React.FC = () => {
                 <div className="stat-label">Events Created</div>
               </div>
               <div className="stat-card">
-                <div className="stat-number">0</div>
-                <div className="stat-label">Events Attended</div>
+                <div className="stat-number">{rsvpEvents.filter(e => e.rsvp_status === 'going').length}</div>
+                <div className="stat-label">Events Going To</div>
               </div>
               <div className="stat-card">
-                <div className="stat-number">0</div>
-                <div className="stat-label">Connections Made</div>
+                <div className="stat-number">{rsvpEvents.length}</div>
+                <div className="stat-label">Total RSVPs</div>
               </div>
             </div>
           </div>
@@ -647,6 +721,156 @@ const Profile: React.FC = () => {
                         </div>
                       )}
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* User RSVP Events Section */}
+          <div className="user-rsvp-section" style={{ marginTop: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3>Events You're Attending</h3>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => router.push('/events')}
+              >
+                Browse Events
+              </Button>
+            </div>
+            
+            {rsvpLoading ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                Loading your RSVPs...
+              </div>
+            ) : rsvpEvents.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '3rem 2rem', 
+                background: 'var(--card)', 
+                borderRadius: '12px',
+                border: '1px solid var(--border)'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎫</div>
+                <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No RSVPs yet</h4>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                  RSVP to events to see them here and stay updated!
+                </p>
+                <Button 
+                  variant="primary"
+                  onClick={() => router.push('/events')}
+                >
+                  Browse Events
+                </Button>
+              </div>
+            ) : (
+              <div className="rsvp-events-grid" style={{ 
+                display: 'grid', 
+                gap: '1rem',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
+              }}>
+                {rsvpEvents.map((event) => (
+                  <div 
+                    key={event.id} 
+                    style={{
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '12px',
+                      padding: '1.5rem',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => router.push('/events')}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                      <h4 style={{ margin: 0, color: 'var(--text)', fontSize: '1.1rem' }}>
+                        {event.title}
+                      </h4>
+                      <span style={{
+                        background: event.rsvp_status === 'going' ? 'var(--success)' : 
+                                   event.rsvp_status === 'maybe' ? 'var(--warning)' : 
+                                   'var(--danger)',
+                        color: 'white',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}>
+                        {event.rsvp_status === 'going' ? '✅ GOING' : 
+                         event.rsvp_status === 'maybe' ? '🤔 MAYBE' : 
+                         '❌ NOT GOING'}
+                      </span>
+                    </div>
+                    
+                    {event.description && (
+                      <p style={{ 
+                        color: 'var(--text-muted)', 
+                        fontSize: '0.9rem', 
+                        lineHeight: '1.4',
+                        marginBottom: '1rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {event.description}
+                      </p>
+                    )}
+                    
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '1rem',
+                      fontSize: '0.875rem',
+                      color: 'var(--text-muted)',
+                      marginBottom: '1rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>📅</span>
+                        <span>{new Date(event.date).toLocaleDateString()}</span>
+                      </div>
+                      {event.time && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>⏰</span>
+                          <span>{event.time}</span>
+                        </div>
+                      )}
+                      {event.location && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>📍</span>
+                          <span style={{ 
+                            maxWidth: '120px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {event.location}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {event.creator && (
+                      <div style={{ 
+                        fontSize: '0.875rem',
+                        color: 'var(--text-muted)',
+                        paddingTop: '1rem',
+                        borderTop: '1px solid var(--border)'
+                      }}>
+                        👤 Created by {event.creator.full_name}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
