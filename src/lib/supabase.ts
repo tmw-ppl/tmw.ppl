@@ -69,3 +69,93 @@ export interface Event {
     email: string
   }
 }
+
+// Channel Types
+export interface ChannelCategory {
+  id: string
+  name: string
+  description?: string
+  icon?: string
+  display_order: number
+  created_at: string
+}
+
+export interface Channel {
+  id: string
+  name: string
+  description?: string
+  category_id?: string
+  type: 'public' | 'private' | 'event' | 'project'
+  is_archived: boolean
+  is_read_only: boolean
+  event_id?: string
+  project_id?: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  last_message_at?: string
+  // Joined data
+  category?: ChannelCategory
+  creator?: Profile
+  unread_count?: number
+  member_count?: number
+}
+
+export interface ChannelMember {
+  id: string
+  channel_id: string
+  user_id: string
+  role: 'owner' | 'admin' | 'moderator' | 'member'
+  is_muted: boolean
+  is_banned: boolean
+  muted_until?: string
+  notifications_enabled: boolean
+  joined_at: string
+  last_read_at: string
+  // Joined data
+  profile?: Profile
+}
+
+export interface ChannelMessage {
+  id: string
+  channel_id: string
+  user_id: string
+  content: string
+  message_type: 'text' | 'image' | 'video' | 'file' | 'system'
+  attachments?: Array<{
+    type: string
+    url: string
+    filename?: string
+    size?: number
+    thumbnail?: string
+  }>
+  parent_message_id?: string
+  thread_count?: number
+  mentioned_user_ids?: string[]
+  edited_at?: string
+  deleted_at?: string
+  deleted_by?: string
+  created_at: string
+  updated_at: string
+  // Joined data
+  profile?: Profile
+  reactions?: MessageReaction[]
+  read_receipts?: MessageReadReceipt[]
+}
+
+export interface MessageReaction {
+  id: string
+  message_id: string
+  user_id: string
+  emoji: string
+  created_at: string
+  profile?: Profile
+}
+
+export interface MessageReadReceipt {
+  id: string
+  message_id: string
+  user_id: string
+  read_at: string
+  profile?: Profile
+}
