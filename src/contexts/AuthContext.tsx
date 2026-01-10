@@ -8,6 +8,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string, phone: string) => Promise<{ data: any; error: any }>
   signIn: (email: string, password: string) => Promise<{ data: any; error: any }>
   signOut: () => Promise<{ error: any }>
+  resetPassword: (email: string) => Promise<{ data: any; error: any }>
+  updatePassword: (newPassword: string) => Promise<{ data: any; error: any }>
   isAuthenticated: boolean
 }
 
@@ -24,6 +26,8 @@ export const useAuth = () => {
       signUp: async () => ({ data: null, error: { message: 'Auth not initialized' } }),
       signIn: async () => ({ data: null, error: { message: 'Auth not initialized' } }),
       signOut: async () => ({ error: { message: 'Auth not initialized' } }),
+      resetPassword: async () => ({ data: null, error: { message: 'Auth not initialized' } }),
+      updatePassword: async () => ({ data: null, error: { message: 'Auth not initialized' } }),
       isAuthenticated: false
     }
   }
@@ -130,6 +134,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return { error }
   }
 
+  const resetPassword = async (email: string) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    return { data, error }
+  }
+
+  const updatePassword = async (newPassword: string) => {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    })
+    return { data, error }
+  }
+
   const value = {
     user,
     session,
@@ -137,6 +155,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUp,
     signIn,
     signOut,
+    resetPassword,
+    updatePassword,
     isAuthenticated: !!user
   }
 

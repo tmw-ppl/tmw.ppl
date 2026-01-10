@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import Button from '@/components/ui/Button'
 
 const Auth: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
+  const [activeTab, setActiveTab] = useState<'login' | 'signup' | 'forgot'>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -16,8 +16,9 @@ const Auth: React.FC = () => {
   const [signupPassword, setSignupPassword] = useState('')
   const [signupName, setSignupName] = useState('')
   const [signupPhone, setSignupPhone] = useState('')
+  const [forgotEmail, setForgotEmail] = useState('')
 
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, resetPassword } = useAuth()
   const router = useRouter()
 
   const showError = (message: string) => {
@@ -87,31 +88,61 @@ const Auth: React.FC = () => {
     }
   }
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!forgotEmail) {
+      showError('Please enter your email address')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { error } = await resetPassword(forgotEmail)
+
+      if (error) {
+        showError(error.message)
+      } else {
+        showSuccess('Check your email for a password reset link!')
+        setForgotEmail('')
+      }
+    } catch (err) {
+      showError('An unexpected error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <section className="auth-section">
       <div className="container">
         <div className="auth-container">
           <div className="auth-header">
-            <h1>Welcome back</h1>
+            <h1>{activeTab === 'forgot' ? 'Reset Password' : 'Welcome back'}</h1>
             <p>
-              Sign in to access exclusive events and connect with the community
+              {activeTab === 'forgot' 
+                ? 'Enter your email and we\'ll send you a reset link'
+                : 'Sign in to access exclusive events and connect with the community'
+              }
             </p>
           </div>
 
-          <div className="auth-tabs">
-            <button
-              className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
-              onClick={() => setActiveTab('login')}
-            >
-              Sign In
-            </button>
-            <button
-              className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
-              onClick={() => setActiveTab('signup')}
-            >
-              Sign Up
-            </button>
-          </div>
+          {activeTab !== 'forgot' && (
+            <div className="auth-tabs">
+              <button
+                className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
+                onClick={() => setActiveTab('login')}
+              >
+                Sign In
+              </button>
+              <button
+                className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
+                onClick={() => setActiveTab('signup')}
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
 
           {activeTab === 'login' ? (
             <form onSubmit={handleLogin} className="auth-form">
@@ -137,6 +168,13 @@ const Auth: React.FC = () => {
                   required
                 />
               </div>
+              <button
+                type="button"
+                className="forgot-password-link"
+                onClick={() => setActiveTab('forgot')}
+              >
+                Forgot your password?
+              </button>
               <Button
                 type="submit"
                 variant="primary"
@@ -146,7 +184,7 @@ const Auth: React.FC = () => {
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
-          ) : (
+          ) : activeTab === 'signup' ? (
             <form onSubmit={handleSignup} className="auth-form">
               <div className="form-group">
                 <label htmlFor="signup-email">Email</label>
@@ -200,6 +238,35 @@ const Auth: React.FC = () => {
               >
                 {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="auth-form">
+              <div className="form-group">
+                <label htmlFor="forgot-email">Email</label>
+                <input
+                  type="email"
+                  id="forgot-email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                fullWidth
+                disabled={loading}
+              >
+                {loading ? 'Sending...' : 'Send Reset Link'}
+              </Button>
+              <button
+                type="button"
+                className="back-to-login-link"
+                onClick={() => setActiveTab('login')}
+              >
+                Back to Sign In
+              </button>
             </form>
           )}
 

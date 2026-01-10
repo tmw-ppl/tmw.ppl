@@ -196,6 +196,15 @@ const Header: React.FC = () => {
           >
             Ideas
           </Link>
+          <Link 
+            href="/section" 
+            style={getLinkStyles(isActive('/section'))}
+            onClick={() => setMobileMenuOpen(false)}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = isActive('/section') ? 'var(--text)' : 'var(--muted)'}
+          >
+            Section
+          </Link>
 
           {loading ? (
             <Button variant="primary" style={{ opacity: 0.6 }}>

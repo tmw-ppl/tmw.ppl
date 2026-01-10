@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase, type Event } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import Card from '@/components/ui/Card'
 import AnimatedSection from '@/components/AnimatedSection'
+import EventCalendar from '@/components/EventCalendar'
 import { isEventUpcoming, formatEventDateTime, migrateLegacyDateTime } from '@/utils/dateTime'
 
 type EventStatus = 'draft' | 'scheduled' | 'pending' | 'active' | 'live' | 'completed' | 'cancelled' | 'postponed'
@@ -23,11 +25,15 @@ interface EventWithRSVP extends Event {
   user_waitlist_position?: number | null
 }
 
+type ViewMode = 'list' | 'calendar'
+
 const Events: React.FC = () => {
   const { user } = useAuth()
+  const router = useRouter()
   const [events, setEvents] = useState<EventWithRSVP[]>([])
   const [filteredEvents, setFilteredEvents] = useState<EventWithRSVP[]>([])
   const [activeFilter, setActiveFilter] = useState('upcoming')
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null)
@@ -471,7 +477,12 @@ const Events: React.FC = () => {
     const canUserRSVP = canRSVP(event)
 
     return (
-      <Card key={event.id} className={`event ${isPast ? 'past' : ''}`}>
+      <Link 
+        key={event.id} 
+        href={`/events/${event.id}`}
+        style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+      >
+        <Card className={`event ${isPast ? 'past' : ''}`} style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}>
         <div className="event-content">
           <div className="event-title-row">
             <div className="event-title-section">
@@ -522,7 +533,7 @@ const Events: React.FC = () => {
                 </div>
               )}
 
-              <div className="actions">
+              <div className="actions" onClick={(e) => e.stopPropagation()}>
                 {/* RSVP Actions */}
                 {!isPast && user && canUserRSVP && (
                   <div className="rsvp-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -547,25 +558,50 @@ const Events: React.FC = () => {
                         </Button>
                       </>
                     ) : event.user_rsvp_status ? (
-                      // User has RSVP'd
+                      // User has RSVP'd - show current status and change options
                       <>
                         <span style={{ 
                           fontSize: '0.875rem', 
-                          color: 'var(--text-muted)',
-                          marginRight: '0.5rem'
+                          color: event.user_rsvp_status === 'going' ? 'var(--success)' : 
+                                 event.user_rsvp_status === 'maybe' ? 'var(--warning)' : 
+                                 'var(--danger)',
+                          fontWeight: '600',
+                          marginRight: '0.75rem'
                         }}>
-                          You're {event.user_rsvp_status === 'going' ? '✅ going' : 
-                                  event.user_rsvp_status === 'maybe' ? '🤔 maybe going' : 
-                                  '❌ not going'}
+                          {event.user_rsvp_status === 'going' ? '✅ Going' : 
+                           event.user_rsvp_status === 'maybe' ? '🤔 Maybe' : 
+                           "❌ Can't go"}
                         </span>
-                        <Button
-                          variant="secondary"
-                          size="small"
-                          onClick={() => handleRemoveRSVP(event.id)}
-                          disabled={isLoading}
-                        >
-                          {isLoading ? '⏳' : 'Change'}
-                        </Button>
+                        {event.user_rsvp_status !== 'going' && (
+                          <Button
+                            variant="primary"
+                            size="small"
+                            onClick={() => handleRSVP(event.id, 'going')}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? '⏳' : '✅ Going'}
+                          </Button>
+                        )}
+                        {event.user_rsvp_status !== 'maybe' && (
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => handleRSVP(event.id, 'maybe')}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? '⏳' : '🤔 Maybe'}
+                          </Button>
+                        )}
+                        {event.user_rsvp_status !== 'not_going' && (
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => handleRSVP(event.id, 'not_going')}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? '⏳' : "❌ Can't"}
+                          </Button>
+                        )}
                       </>
                     ) : (
                       // User hasn't RSVP'd
@@ -705,6 +741,7 @@ const Events: React.FC = () => {
           </div>
         )}
       </Card>
+      </Link>
     )
   }
 
@@ -755,42 +792,76 @@ const Events: React.FC = () => {
         </AnimatedSection>
 
         <AnimatedSection animationType="slide-up" delay={200}>
-          <div className="filters" aria-label="Filters">
-            {filters.map((filter) => (
-              <Chip
-                key={filter.key}
-                active={activeFilter === filter.key}
-                onClick={() => filterEvents(filter.key)}
+          <div className="events-controls">
+            {/* View Toggle */}
+            <div className="view-toggle">
+              <button
+                className={viewMode === 'list' ? 'active' : ''}
+                onClick={() => setViewMode('list')}
+                title="List View"
               >
-                {filter.label}
-              </Chip>
-            ))}
+                ☰ List
+              </button>
+              <button
+                className={viewMode === 'calendar' ? 'active' : ''}
+                onClick={() => setViewMode('calendar')}
+                title="Calendar View"
+              >
+                📅 Calendar
+              </button>
+            </div>
+
+            {/* Filters - shown in list view */}
+            {viewMode === 'list' && (
+              <div className="filters" aria-label="Filters">
+                {filters.map((filter) => (
+                  <Chip
+                    key={filter.key}
+                    active={activeFilter === filter.key}
+                    onClick={() => filterEvents(filter.key)}
+                  >
+                    {filter.label}
+                  </Chip>
+                ))}
+              </div>
+            )}
 
             {user && (
               <Link
                 href="/create-event"
-                className="btn primary"
-                style={{ marginLeft: '20px' }}
+                className="btn primary create-event-btn"
               >
-                Create Event
+                + Create Event
               </Link>
             )}
           </div>
         </AnimatedSection>
 
         <AnimatedSection animationType="fade" delay={400}>
-          <div className="events">
-            {filteredEvents.length === 0 ? (
-              <div className="no-events">
-                <h3>No {activeFilter} events found</h3>
-                <p>
-                  Try adjusting your filters or check back later for new events.
-                </p>
-              </div>
-            ) : (
-              filteredEvents.map(renderEvent)
-            )}
-          </div>
+          {viewMode === 'list' ? (
+            <div className="events">
+              {filteredEvents.length === 0 ? (
+                <div className="no-events">
+                  <h3>No {activeFilter} events found</h3>
+                  <p>
+                    Try adjusting your filters or check back later for new events.
+                  </p>
+                </div>
+              ) : (
+                filteredEvents.map(renderEvent)
+              )}
+            </div>
+          ) : (
+            <EventCalendar
+              events={events.filter(e => 
+                e.status !== 'draft' || (user && e.created_by === user.id)
+              )}
+              onEventClick={(event) => {
+                // Navigate to event detail page
+                router.push(`/events/${event.id}`)
+              }}
+            />
+          )}
         </AnimatedSection>
       </div>
     </section>
