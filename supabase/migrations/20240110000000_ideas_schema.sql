@@ -6,7 +6,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Ideas table
-CREATE TABLE ideas (
+CREATE TABLE IF NOT EXISTS ideas (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   description TEXT,
@@ -29,7 +29,7 @@ CREATE TABLE ideas (
 );
 
 -- Votes table
-CREATE TABLE idea_votes (
+CREATE TABLE IF NOT EXISTS idea_votes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   idea_id UUID REFERENCES ideas(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -40,7 +40,7 @@ CREATE TABLE idea_votes (
 );
 
 -- Comments table
-CREATE TABLE idea_comments (
+CREATE TABLE IF NOT EXISTS idea_comments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   idea_id UUID REFERENCES ideas(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -54,7 +54,7 @@ CREATE TABLE idea_comments (
 );
 
 -- Comment reactions table
-CREATE TABLE comment_reactions (
+CREATE TABLE IF NOT EXISTS comment_reactions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   comment_id UUID REFERENCES idea_comments(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -64,7 +64,7 @@ CREATE TABLE comment_reactions (
 );
 
 -- User preferences table
-CREATE TABLE user_idea_preferences (
+CREATE TABLE IF NOT EXISTS user_idea_preferences (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   categories TEXT[], -- Preferred categories
@@ -77,23 +77,23 @@ CREATE TABLE user_idea_preferences (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_ideas_creator_id ON ideas(creator_id);
-CREATE INDEX idx_ideas_category ON ideas(category);
-CREATE INDEX idx_ideas_created_at ON ideas(created_at DESC);
-CREATE INDEX idx_ideas_is_active ON ideas(is_active);
-CREATE INDEX idx_ideas_tags ON ideas USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_ideas_creator_id ON ideas(creator_id);
+CREATE INDEX IF NOT EXISTS idx_ideas_category ON ideas(category);
+CREATE INDEX IF NOT EXISTS idx_ideas_created_at ON ideas(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ideas_is_active ON ideas(is_active);
+CREATE INDEX IF NOT EXISTS idx_ideas_tags ON ideas USING GIN(tags);
 
-CREATE INDEX idx_idea_votes_idea_id ON idea_votes(idea_id);
-CREATE INDEX idx_idea_votes_user_id ON idea_votes(user_id);
-CREATE INDEX idx_idea_votes_vote_type ON idea_votes(vote_type);
+CREATE INDEX IF NOT EXISTS idx_idea_votes_idea_id ON idea_votes(idea_id);
+CREATE INDEX IF NOT EXISTS idx_idea_votes_user_id ON idea_votes(user_id);
+CREATE INDEX IF NOT EXISTS idx_idea_votes_vote_type ON idea_votes(vote_type);
 
-CREATE INDEX idx_idea_comments_idea_id ON idea_comments(idea_id);
-CREATE INDEX idx_idea_comments_user_id ON idea_comments(user_id);
-CREATE INDEX idx_idea_comments_parent_id ON idea_comments(parent_id);
-CREATE INDEX idx_idea_comments_created_at ON idea_comments(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_idea_comments_idea_id ON idea_comments(idea_id);
+CREATE INDEX IF NOT EXISTS idx_idea_comments_user_id ON idea_comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_idea_comments_parent_id ON idea_comments(parent_id);
+CREATE INDEX IF NOT EXISTS idx_idea_comments_created_at ON idea_comments(created_at DESC);
 
-CREATE INDEX idx_comment_reactions_comment_id ON comment_reactions(comment_id);
-CREATE INDEX idx_comment_reactions_user_id ON comment_reactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_comment_reactions_comment_id ON comment_reactions(comment_id);
+CREATE INDEX IF NOT EXISTS idx_comment_reactions_user_id ON comment_reactions(user_id);
 
 -- Row Level Security (RLS) Policies
 ALTER TABLE ideas ENABLE ROW LEVEL SECURITY;
@@ -103,64 +103,83 @@ ALTER TABLE comment_reactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_idea_preferences ENABLE ROW LEVEL SECURITY;
 
 -- Ideas policies
+DROP POLICY IF EXISTS "Anyone can view active ideas" ON ideas;
 CREATE POLICY "Anyone can view active ideas" ON ideas
   FOR SELECT USING (is_active = true);
 
+DROP POLICY IF EXISTS "Users can create ideas" ON ideas;
 CREATE POLICY "Users can create ideas" ON ideas
   FOR INSERT WITH CHECK (auth.uid() = creator_id);
 
+DROP POLICY IF EXISTS "Users can update their own ideas" ON ideas;
 CREATE POLICY "Users can update their own ideas" ON ideas
   FOR UPDATE USING (auth.uid() = creator_id);
 
+DROP POLICY IF EXISTS "Users can delete their own ideas" ON ideas;
 CREATE POLICY "Users can delete their own ideas" ON ideas
   FOR DELETE USING (auth.uid() = creator_id);
 
 -- Idea votes policies
+DROP POLICY IF EXISTS "Users can view all votes" ON idea_votes;
 CREATE POLICY "Users can view all votes" ON idea_votes
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can vote on ideas" ON idea_votes;
 CREATE POLICY "Users can vote on ideas" ON idea_votes
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own votes" ON idea_votes;
 CREATE POLICY "Users can update their own votes" ON idea_votes
   FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own votes" ON idea_votes;
 CREATE POLICY "Users can delete their own votes" ON idea_votes
   FOR DELETE USING (auth.uid() = user_id);
 
 -- Idea comments policies
+DROP POLICY IF EXISTS "Anyone can view comments" ON idea_comments;
 CREATE POLICY "Anyone can view comments" ON idea_comments
   FOR SELECT USING (is_deleted = false);
 
+DROP POLICY IF EXISTS "Users can create comments" ON idea_comments;
 CREATE POLICY "Users can create comments" ON idea_comments
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own comments" ON idea_comments;
 CREATE POLICY "Users can update their own comments" ON idea_comments
   FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own comments" ON idea_comments;
 CREATE POLICY "Users can delete their own comments" ON idea_comments
   FOR DELETE USING (auth.uid() = user_id);
 
 -- Comment reactions policies
+DROP POLICY IF EXISTS "Users can view all reactions" ON comment_reactions;
 CREATE POLICY "Users can view all reactions" ON comment_reactions
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can react to comments" ON comment_reactions;
 CREATE POLICY "Users can react to comments" ON comment_reactions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own reactions" ON comment_reactions;
 CREATE POLICY "Users can update their own reactions" ON comment_reactions
   FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own reactions" ON comment_reactions;
 CREATE POLICY "Users can delete their own reactions" ON comment_reactions
   FOR DELETE USING (auth.uid() = user_id);
 
 -- User preferences policies
+DROP POLICY IF EXISTS "Users can view their own preferences" ON user_idea_preferences;
 CREATE POLICY "Users can view their own preferences" ON user_idea_preferences
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create their own preferences" ON user_idea_preferences;
 CREATE POLICY "Users can create their own preferences" ON user_idea_preferences
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own preferences" ON user_idea_preferences;
 CREATE POLICY "Users can update their own preferences" ON user_idea_preferences
   FOR UPDATE USING (auth.uid() = user_id);
 
@@ -200,6 +219,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for vote count updates
+DROP TRIGGER IF EXISTS trigger_update_idea_vote_counts ON idea_votes;
 CREATE TRIGGER trigger_update_idea_vote_counts
   AFTER INSERT OR UPDATE OR DELETE ON idea_votes
   FOR EACH ROW EXECUTE FUNCTION update_idea_vote_counts();
@@ -232,6 +252,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for comment count updates
+DROP TRIGGER IF EXISTS trigger_update_idea_comment_counts ON idea_comments;
 CREATE TRIGGER trigger_update_idea_comment_counts
   AFTER INSERT OR DELETE ON idea_comments
   FOR EACH ROW EXECUTE FUNCTION update_idea_comment_counts();
@@ -261,6 +282,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for comment reaction count updates
+DROP TRIGGER IF EXISTS trigger_update_comment_reaction_counts ON comment_reactions;
 CREATE TRIGGER trigger_update_comment_reaction_counts
   AFTER INSERT OR UPDATE OR DELETE ON comment_reactions
   FOR EACH ROW EXECUTE FUNCTION update_comment_reaction_counts();

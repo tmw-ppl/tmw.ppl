@@ -9,6 +9,12 @@
 
 ## One-Time Setup
 
+0. **Login to Supabase CLI** (Required first!)
+   ```bash
+   supabase login
+   ```
+   This opens your browser for authentication. Once you see "Logged in as [email]", you're done!
+
 1. **Install Supabase CLI**
    ```bash
    # macOS (Recommended)

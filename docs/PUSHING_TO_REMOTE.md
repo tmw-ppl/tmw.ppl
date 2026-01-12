@@ -2,6 +2,8 @@
 
 Once you've tested your migrations locally, you can push them to your remote Supabase project.
 
+> 💡 **Want to push directly without local testing?** See [PUSH_DIRECTLY_TO_REMOTE.md](./PUSH_DIRECTLY_TO_REMOTE.md)
+
 ## Prerequisites
 
 1. ✅ Local Supabase running and migrations tested

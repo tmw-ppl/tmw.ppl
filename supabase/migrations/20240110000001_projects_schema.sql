@@ -6,7 +6,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Main projects table
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   description TEXT,
@@ -43,7 +43,7 @@ CREATE TABLE projects (
 );
 
 -- Project contributors/collaborators
-CREATE TABLE project_contributors (
+CREATE TABLE IF NOT EXISTS project_contributors (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -55,7 +55,7 @@ CREATE TABLE project_contributors (
 );
 
 -- Project updates/progress posts
-CREATE TABLE project_updates (
+CREATE TABLE IF NOT EXISTS project_updates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   author_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -67,7 +67,7 @@ CREATE TABLE project_updates (
 );
 
 -- Project likes/follows
-CREATE TABLE project_reactions (
+CREATE TABLE IF NOT EXISTS project_reactions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -77,7 +77,7 @@ CREATE TABLE project_reactions (
 );
 
 -- Project comments
-CREATE TABLE project_comments (
+CREATE TABLE IF NOT EXISTS project_comments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -89,7 +89,7 @@ CREATE TABLE project_comments (
 );
 
 -- Project skills/requirements
-CREATE TABLE project_skills (
+CREATE TABLE IF NOT EXISTS project_skills (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   skill_name VARCHAR(100) NOT NULL,
@@ -100,30 +100,30 @@ CREATE TABLE project_skills (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_projects_creator_id ON projects(creator_id);
-CREATE INDEX idx_projects_status ON projects(status);
-CREATE INDEX idx_projects_category ON projects(category);
-CREATE INDEX idx_projects_is_public ON projects(is_public);
-CREATE INDEX idx_projects_created_at ON projects(created_at DESC);
-CREATE INDEX idx_projects_featured ON projects(featured);
-CREATE INDEX idx_projects_tags ON projects USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_projects_creator_id ON projects(creator_id);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+CREATE INDEX IF NOT EXISTS idx_projects_category ON projects(category);
+CREATE INDEX IF NOT EXISTS idx_projects_is_public ON projects(is_public);
+CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_projects_featured ON projects(featured);
+CREATE INDEX IF NOT EXISTS idx_projects_tags ON projects USING GIN(tags);
 
-CREATE INDEX idx_project_contributors_project_id ON project_contributors(project_id);
-CREATE INDEX idx_project_contributors_user_id ON project_contributors(user_id);
-CREATE INDEX idx_project_contributors_role ON project_contributors(role);
+CREATE INDEX IF NOT EXISTS idx_project_contributors_project_id ON project_contributors(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_contributors_user_id ON project_contributors(user_id);
+CREATE INDEX IF NOT EXISTS idx_project_contributors_role ON project_contributors(role);
 
-CREATE INDEX idx_project_updates_project_id ON project_updates(project_id);
-CREATE INDEX idx_project_updates_author_id ON project_updates(author_id);
-CREATE INDEX idx_project_updates_created_at ON project_updates(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_project_updates_project_id ON project_updates(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_updates_author_id ON project_updates(author_id);
+CREATE INDEX IF NOT EXISTS idx_project_updates_created_at ON project_updates(created_at DESC);
 
-CREATE INDEX idx_project_reactions_project_id ON project_reactions(project_id);
-CREATE INDEX idx_project_reactions_user_id ON project_reactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_project_reactions_project_id ON project_reactions(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_reactions_user_id ON project_reactions(user_id);
 
-CREATE INDEX idx_project_comments_project_id ON project_comments(project_id);
-CREATE INDEX idx_project_comments_user_id ON project_comments(user_id);
-CREATE INDEX idx_project_comments_parent_id ON project_comments(parent_id);
+CREATE INDEX IF NOT EXISTS idx_project_comments_project_id ON project_comments(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_comments_user_id ON project_comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_project_comments_parent_id ON project_comments(parent_id);
 
-CREATE INDEX idx_project_skills_project_id ON project_skills(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_skills_project_id ON project_skills(project_id);
 
 -- Row Level Security (RLS) Policies
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
@@ -134,12 +134,15 @@ ALTER TABLE project_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE project_skills ENABLE ROW LEVEL SECURITY;
 
 -- Projects policies
+DROP POLICY IF EXISTS "Anyone can view public projects" ON projects;
 CREATE POLICY "Anyone can view public projects" ON projects
   FOR SELECT USING (is_public = true);
 
+DROP POLICY IF EXISTS "Users can view their own projects" ON projects;
 CREATE POLICY "Users can view their own projects" ON projects
   FOR SELECT USING (auth.uid() = creator_id);
 
+DROP POLICY IF EXISTS "Contributors can view private projects" ON projects;
 CREATE POLICY "Contributors can view private projects" ON projects
   FOR SELECT USING (
     auth.uid() IN (
@@ -148,16 +151,20 @@ CREATE POLICY "Contributors can view private projects" ON projects
     )
   );
 
+DROP POLICY IF EXISTS "Users can create projects" ON projects;
 CREATE POLICY "Users can create projects" ON projects
   FOR INSERT WITH CHECK (auth.uid() = creator_id);
 
+DROP POLICY IF EXISTS "Creators can update their projects" ON projects;
 CREATE POLICY "Creators can update their projects" ON projects
   FOR UPDATE USING (auth.uid() = creator_id);
 
+DROP POLICY IF EXISTS "Creators can delete their projects" ON projects;
 CREATE POLICY "Creators can delete their projects" ON projects
   FOR DELETE USING (auth.uid() = creator_id);
 
 -- Project contributors policies
+DROP POLICY IF EXISTS "Anyone can view contributors for public projects" ON project_contributors;
 CREATE POLICY "Anyone can view contributors for public projects" ON project_contributors
   FOR SELECT USING (
     EXISTS (
@@ -167,6 +174,7 @@ CREATE POLICY "Anyone can view contributors for public projects" ON project_cont
     )
   );
 
+DROP POLICY IF EXISTS "Contributors can view all contributors" ON project_contributors;
 CREATE POLICY "Contributors can view all contributors" ON project_contributors
   FOR SELECT USING (
     auth.uid() IN (
@@ -175,6 +183,7 @@ CREATE POLICY "Contributors can view all contributors" ON project_contributors
     )
   );
 
+DROP POLICY IF EXISTS "Creators and admins can manage contributors" ON project_contributors;
 CREATE POLICY "Creators and admins can manage contributors" ON project_contributors
   FOR ALL USING (
     auth.uid() IN (
@@ -184,10 +193,12 @@ CREATE POLICY "Creators and admins can manage contributors" ON project_contribut
     )
   );
 
+DROP POLICY IF EXISTS "Users can join as contributors" ON project_contributors;
 CREATE POLICY "Users can join as contributors" ON project_contributors
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Project updates policies
+DROP POLICY IF EXISTS "Anyone can view updates for public projects" ON project_updates;
 CREATE POLICY "Anyone can view updates for public projects" ON project_updates
   FOR SELECT USING (
     EXISTS (
@@ -197,6 +208,7 @@ CREATE POLICY "Anyone can view updates for public projects" ON project_updates
     )
   );
 
+DROP POLICY IF EXISTS "Contributors can create updates" ON project_updates;
 CREATE POLICY "Contributors can create updates" ON project_updates
   FOR INSERT WITH CHECK (
     auth.uid() = author_id AND
@@ -206,10 +218,12 @@ CREATE POLICY "Contributors can create updates" ON project_updates
     )
   );
 
+DROP POLICY IF EXISTS "Authors can update their updates" ON project_updates;
 CREATE POLICY "Authors can update their updates" ON project_updates
   FOR UPDATE USING (auth.uid() = author_id);
 
 -- Project reactions policies
+DROP POLICY IF EXISTS "Anyone can view reactions for public projects" ON project_reactions;
 CREATE POLICY "Anyone can view reactions for public projects" ON project_reactions
   FOR SELECT USING (
     EXISTS (
@@ -219,10 +233,12 @@ CREATE POLICY "Anyone can view reactions for public projects" ON project_reactio
     )
   );
 
+DROP POLICY IF EXISTS "Users can manage their own reactions" ON project_reactions;
 CREATE POLICY "Users can manage their own reactions" ON project_reactions
   FOR ALL USING (auth.uid() = user_id);
 
 -- Project comments policies  
+DROP POLICY IF EXISTS "Anyone can view comments for public projects" ON project_comments;
 CREATE POLICY "Anyone can view comments for public projects" ON project_comments
   FOR SELECT USING (
     is_deleted = false AND
@@ -233,13 +249,16 @@ CREATE POLICY "Anyone can view comments for public projects" ON project_comments
     )
   );
 
+DROP POLICY IF EXISTS "Users can create comments" ON project_comments;
 CREATE POLICY "Users can create comments" ON project_comments
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own comments" ON project_comments;
 CREATE POLICY "Users can update their own comments" ON project_comments
   FOR UPDATE USING (auth.uid() = user_id);
 
 -- Project skills policies
+DROP POLICY IF EXISTS "Anyone can view skills for public projects" ON project_skills;
 CREATE POLICY "Anyone can view skills for public projects" ON project_skills
   FOR SELECT USING (
     EXISTS (
@@ -249,6 +268,7 @@ CREATE POLICY "Anyone can view skills for public projects" ON project_skills
     )
   );
 
+DROP POLICY IF EXISTS "Project creators can manage skills" ON project_skills;
 CREATE POLICY "Project creators can manage skills" ON project_skills
   FOR ALL USING (
     auth.uid() IN (
@@ -294,6 +314,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for contributor funding updates
+DROP TRIGGER IF EXISTS trigger_update_project_contributor_counts ON project_contributors;
 CREATE TRIGGER trigger_update_project_contributor_counts
   AFTER INSERT OR UPDATE OR DELETE ON project_contributors
   FOR EACH ROW EXECUTE FUNCTION update_project_contributor_counts();

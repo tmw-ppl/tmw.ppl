@@ -47,6 +47,7 @@ CREATE INDEX IF NOT EXISTS idx_event_waitlist_position ON event_waitlist(event_i
 ALTER TABLE event_waitlist ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for event_waitlist
+DROP POLICY IF EXISTS "Anyone can view waitlist for published events" ON event_waitlist;
 CREATE POLICY "Anyone can view waitlist for published events" ON event_waitlist
   FOR SELECT USING (
     EXISTS (
@@ -56,9 +57,11 @@ CREATE POLICY "Anyone can view waitlist for published events" ON event_waitlist
     )
   );
 
+DROP POLICY IF EXISTS "Users can manage their own waitlist entries" ON event_waitlist;
 CREATE POLICY "Users can manage their own waitlist entries" ON event_waitlist
   FOR ALL USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Event creators can view all waitlist entries for their events" ON event_waitlist;
 CREATE POLICY "Event creators can view all waitlist entries for their events" ON event_waitlist
   FOR SELECT USING (
     EXISTS (
@@ -100,6 +103,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for waitlist count updates
+DROP TRIGGER IF EXISTS trigger_update_event_waitlist_counts ON event_waitlist;
 CREATE TRIGGER trigger_update_event_waitlist_counts
   AFTER INSERT OR DELETE ON event_waitlist
   FOR EACH ROW EXECUTE FUNCTION update_event_waitlist_counts();

@@ -189,10 +189,12 @@ ALTER TABLE channel_typing_indicators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE channel_pinned_messages ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for channel_categories
+DROP POLICY IF EXISTS "Anyone can view categories" ON channel_categories;
 CREATE POLICY "Anyone can view categories" ON channel_categories
   FOR SELECT USING (true);
 
 -- RLS Policies for channels
+DROP POLICY IF EXISTS "Anyone can view public channels" ON channels;
 CREATE POLICY "Anyone can view public channels" ON channels
   FOR SELECT USING (
     type = 'public' AND is_archived = false OR
@@ -204,9 +206,11 @@ CREATE POLICY "Anyone can view public channels" ON channels
     )
   );
 
+DROP POLICY IF EXISTS "Authenticated users can create channels" ON channels;
 CREATE POLICY "Authenticated users can create channels" ON channels
   FOR INSERT WITH CHECK (auth.uid() = created_by);
 
+DROP POLICY IF EXISTS "Channel owners and admins can update channels" ON channels;
 CREATE POLICY "Channel owners and admins can update channels" ON channels
   FOR UPDATE USING (
     created_by = auth.uid() OR
@@ -220,6 +224,7 @@ CREATE POLICY "Channel owners and admins can update channels" ON channels
   );
 
 -- RLS Policies for channel_members
+DROP POLICY IF EXISTS "Users can view members of channels they belong to" ON channel_members;
 CREATE POLICY "Users can view members of channels they belong to" ON channel_members
   FOR SELECT USING (
     channel_id IN (
@@ -229,6 +234,7 @@ CREATE POLICY "Users can view members of channels they belong to" ON channel_mem
     )
   );
 
+DROP POLICY IF EXISTS "Users can join public channels" ON channel_members;
 CREATE POLICY "Users can join public channels" ON channel_members
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -239,6 +245,7 @@ CREATE POLICY "Users can join public channels" ON channel_members
     )
   );
 
+DROP POLICY IF EXISTS "Channel owners/admins can manage members" ON channel_members;
 CREATE POLICY "Channel owners/admins can manage members" ON channel_members
   FOR ALL USING (
     EXISTS (
@@ -250,13 +257,16 @@ CREATE POLICY "Channel owners/admins can manage members" ON channel_members
     )
   );
 
+DROP POLICY IF EXISTS "Users can update their own membership" ON channel_members;
 CREATE POLICY "Users can update their own membership" ON channel_members
   FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can leave channels" ON channel_members;
 CREATE POLICY "Users can leave channels" ON channel_members
   FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for channel_messages
+DROP POLICY IF EXISTS "Users can view messages in channels they belong to" ON channel_messages;
 CREATE POLICY "Users can view messages in channels they belong to" ON channel_messages
   FOR SELECT USING (
     channel_id IN (
@@ -267,6 +277,7 @@ CREATE POLICY "Users can view messages in channels they belong to" ON channel_me
     AND deleted_at IS NULL
   );
 
+DROP POLICY IF EXISTS "Users can send messages to channels they belong to" ON channel_messages;
 CREATE POLICY "Users can send messages to channels they belong to" ON channel_messages
   FOR INSERT WITH CHECK (
     auth.uid() = user_id AND
@@ -281,6 +292,7 @@ CREATE POLICY "Users can send messages to channels they belong to" ON channel_me
     )
   );
 
+DROP POLICY IF EXISTS "Users can edit their own messages" ON channel_messages;
 CREATE POLICY "Users can edit their own messages" ON channel_messages
   FOR UPDATE USING (
     auth.uid() = user_id AND 
@@ -288,6 +300,7 @@ CREATE POLICY "Users can edit their own messages" ON channel_messages
     created_at > NOW() - INTERVAL '15 minutes' -- 15 minute edit window
   );
 
+DROP POLICY IF EXISTS "Users can delete their own messages or admins can delete any" ON channel_messages;
 CREATE POLICY "Users can delete their own messages or admins can delete any" ON channel_messages
   FOR UPDATE USING (
     (auth.uid() = user_id) OR
@@ -301,6 +314,7 @@ CREATE POLICY "Users can delete their own messages or admins can delete any" ON 
   );
 
 -- RLS Policies for message_reactions
+DROP POLICY IF EXISTS "Users can view reactions on messages they can see" ON message_reactions;
 CREATE POLICY "Users can view reactions on messages they can see" ON message_reactions
   FOR SELECT USING (
     message_id IN (
@@ -308,20 +322,25 @@ CREATE POLICY "Users can view reactions on messages they can see" ON message_rea
     )
   );
 
+DROP POLICY IF EXISTS "Users can add reactions" ON message_reactions;
 CREATE POLICY "Users can add reactions" ON message_reactions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can remove their own reactions" ON message_reactions;
 CREATE POLICY "Users can remove their own reactions" ON message_reactions
   FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for message_read_receipts
+DROP POLICY IF EXISTS "Users can view their own read receipts" ON message_read_receipts;
 CREATE POLICY "Users can view their own read receipts" ON message_read_receipts
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create their own read receipts" ON message_read_receipts;
 CREATE POLICY "Users can create their own read receipts" ON message_read_receipts
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policies for channel_typing_indicators
+DROP POLICY IF EXISTS "Users can view typing indicators in their channels" ON channel_typing_indicators;
 CREATE POLICY "Users can view typing indicators in their channels" ON channel_typing_indicators
   FOR SELECT USING (
     channel_id IN (
@@ -331,10 +350,12 @@ CREATE POLICY "Users can view typing indicators in their channels" ON channel_ty
     )
   );
 
+DROP POLICY IF EXISTS "Users can create typing indicators" ON channel_typing_indicators;
 CREATE POLICY "Users can create typing indicators" ON channel_typing_indicators
   FOR ALL WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policies for channel_pinned_messages
+DROP POLICY IF EXISTS "Users can view pinned messages in channels they belong to" ON channel_pinned_messages;
 CREATE POLICY "Users can view pinned messages in channels they belong to" ON channel_pinned_messages
   FOR SELECT USING (
     channel_id IN (
@@ -344,6 +365,7 @@ CREATE POLICY "Users can view pinned messages in channels they belong to" ON cha
     )
   );
 
+DROP POLICY IF EXISTS "Admins can pin/unpin messages" ON channel_pinned_messages;
 CREATE POLICY "Admins can pin/unpin messages" ON channel_pinned_messages
   FOR ALL USING (
     EXISTS (
@@ -369,6 +391,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_channel_last_message ON channel_messages;
 CREATE TRIGGER trigger_update_channel_last_message
   AFTER INSERT ON channel_messages
   FOR EACH ROW EXECUTE FUNCTION update_channel_last_message();
@@ -390,6 +413,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_thread_count ON channel_messages;
 CREATE TRIGGER trigger_update_thread_count
   AFTER INSERT ON channel_messages
   FOR EACH ROW EXECUTE FUNCTION update_thread_count();

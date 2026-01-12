@@ -30,6 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_event_rsvps_status ON event_rsvps(status);
 ALTER TABLE event_rsvps ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for event_rsvps
+DROP POLICY IF EXISTS "Anyone can view RSVPs for published events" ON event_rsvps;
 CREATE POLICY "Anyone can view RSVPs for published events" ON event_rsvps
   FOR SELECT USING (
     EXISTS (
@@ -39,9 +40,11 @@ CREATE POLICY "Anyone can view RSVPs for published events" ON event_rsvps
     )
   );
 
+DROP POLICY IF EXISTS "Users can manage their own RSVPs" ON event_rsvps;
 CREATE POLICY "Users can manage their own RSVPs" ON event_rsvps
   FOR ALL USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Event creators can view all RSVPs for their events" ON event_rsvps;
 CREATE POLICY "Event creators can view all RSVPs for their events" ON event_rsvps
   FOR SELECT USING (
     EXISTS (
@@ -97,6 +100,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for RSVP count updates
+DROP TRIGGER IF EXISTS trigger_update_event_rsvp_counts ON event_rsvps;
 CREATE TRIGGER trigger_update_event_rsvp_counts
   AFTER INSERT OR UPDATE OR DELETE ON event_rsvps
   FOR EACH ROW EXECUTE FUNCTION update_event_rsvp_counts();
