@@ -159,7 +159,9 @@ const CreateEvent: React.FC = () => {
       .eq('created_by', user.id)
       .not('group_name', 'is', null)
     
-    const groups = [...new Set((data || []).map(e => e.group_name).filter(Boolean))]
+    const groups = Array.from(new Set(
+      (data || []).map((e: { group_name: string | null }) => e.group_name).filter((name): name is string => Boolean(name))
+    ))
     setUserGroups(groups as string[])
   }
 
@@ -198,7 +200,7 @@ const CreateEvent: React.FC = () => {
     })
     
     // Combine and dedupe, prioritizing exact starts
-    const combined = [...new Set([...startsWithMatches, ...matches])]
+    const combined = Array.from(new Set([...startsWithMatches, ...matches]))
     
     setFilteredGroups(combined)
     // Show dropdown when there are matches OR when typing a new group name
@@ -223,18 +225,19 @@ const CreateEvent: React.FC = () => {
       .single()
 
     if (event) {
+      const eventData = event as any
       setFormData(prev => ({
         ...prev,
-        title: event.title,
-        description: event.description || '',
-        location: event.location || '',
-        image_url: event.image_url || '',
-        tags: event.tags || [],
-        is_private: event.is_private || false,
-        guest_list_visibility: event.guest_list_visibility || 'rsvp_only',
-        group_name: event.group_name || '',
-        max_capacity: event.max_capacity || null,
-        waitlist_enabled: event.waitlist_enabled || false,
+        title: eventData.title,
+        description: eventData.description || '',
+        location: eventData.location || '',
+        image_url: eventData.image_url || '',
+        tags: eventData.tags || [],
+        is_private: eventData.is_private || false,
+        guest_list_visibility: eventData.guest_list_visibility || 'rsvp_only',
+        group_name: eventData.group_name || '',
+        max_capacity: eventData.max_capacity || null,
+        waitlist_enabled: eventData.waitlist_enabled || false,
       }))
       setShowDuplicateMenu(false)
     }
@@ -390,7 +393,7 @@ const CreateEvent: React.FC = () => {
 
       // Add co-hosts to all created events
       if (formData.co_hosts.length > 0 && createdEvents && createdEvents.length > 0) {
-        const cohostEntries = createdEvents.flatMap(event => 
+        const cohostEntries = (createdEvents as any[]).flatMap((event: any) => 
           formData.co_hosts.map(cohost => ({
             event_id: event.id,
             user_id: cohost.id,
@@ -401,7 +404,7 @@ const CreateEvent: React.FC = () => {
         
         const { error: cohostError } = await supabase
           .from('event_cohosts')
-          .insert(cohostEntries)
+          .insert(cohostEntries as any)
         
         if (cohostError) {
           console.error('Failed to add co-hosts:', cohostError)
