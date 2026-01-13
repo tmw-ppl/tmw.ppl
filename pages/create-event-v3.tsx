@@ -225,18 +225,19 @@ const CreateEvent: React.FC = () => {
       .single()
 
     if (event) {
+      const eventData = event as any
       setFormData(prev => ({
         ...prev,
-        title: event.title,
-        description: event.description || '',
-        location: event.location || '',
-        image_url: event.image_url || '',
-        tags: event.tags || [],
-        is_private: event.is_private || false,
-        guest_list_visibility: event.guest_list_visibility || 'rsvp_only',
-        group_name: event.group_name || '',
-        max_capacity: event.max_capacity || null,
-        waitlist_enabled: event.waitlist_enabled || false,
+        title: eventData.title,
+        description: eventData.description || '',
+        location: eventData.location || '',
+        image_url: eventData.image_url || '',
+        tags: eventData.tags || [],
+        is_private: eventData.is_private || false,
+        guest_list_visibility: eventData.guest_list_visibility || 'rsvp_only',
+        group_name: eventData.group_name || '',
+        max_capacity: eventData.max_capacity || null,
+        waitlist_enabled: eventData.waitlist_enabled || false,
       }))
       setShowDuplicateMenu(false)
     }
