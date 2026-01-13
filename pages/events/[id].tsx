@@ -273,7 +273,8 @@ const EventDetail: React.FC = () => {
       }
 
       if (profileData) {
-        inviteData.user_id = profileData.id
+        const profile = profileData as { id: string }
+        inviteData.user_id = profile.id
       }
 
       const { error } = await supabase
@@ -404,8 +405,8 @@ const EventDetail: React.FC = () => {
 
       // If this is a private event and user is invited but hasn't accepted, accept the invitation
       if (event.is_private && isInvited && user) {
-        const { error: acceptError } = await supabase
-          .from('event_invitations' as any)
+        const { error: acceptError } = await (supabase
+          .from('event_invitations' as any) as any)
           .update({ accepted_at: new Date().toISOString() })
           .eq('event_id', event.id)
           .eq('user_id', user.id)
@@ -668,16 +669,16 @@ const EventDetail: React.FC = () => {
 
     if (existingChannels && existingChannels.length > 0) {
       // Check if any of these channels has both users as members
-      for (const channel of existingChannels) {
+      for (const channel of existingChannels as any[]) {
         const { data: members } = await supabase
           .from('channel_members')
           .select('user_id')
-          .eq('channel_id', channel.id)
+          .eq('channel_id', (channel as any).id)
           .in('user_id', [user.id, otherUserId])
 
         if (members && members.length === 2) {
           // Found existing DM channel
-          return channel.id
+          return (channel as any).id
         }
       }
     }
@@ -689,7 +690,7 @@ const EventDetail: React.FC = () => {
       .eq('id', otherUserId)
       .single()
 
-    const channelName = otherUser?.full_name || otherUser?.email || 'User'
+    const channelName = (otherUser as any)?.full_name || (otherUser as any)?.email || 'User'
 
     const { data: newChannel, error: channelError } = await supabase
       .from('channels')
@@ -710,8 +711,8 @@ const EventDetail: React.FC = () => {
     const { error: memberError } = await supabase
       .from('channel_members')
       .insert([
-        { channel_id: newChannel.id, user_id: user.id, role: 'member' },
-        { channel_id: newChannel.id, user_id: otherUserId, role: 'member' }
+        { channel_id: (newChannel as any).id, user_id: user.id, role: 'member' },
+        { channel_id: (newChannel as any).id, user_id: otherUserId, role: 'member' }
       ] as any)
 
     if (memberError) {
@@ -719,7 +720,7 @@ const EventDetail: React.FC = () => {
       // Don't fail completely - the check in handleInviteUserViaMessage will handle this
     }
 
-    return newChannel.id
+    return (newChannel as any).id
   }
 
   const handleInviteUserViaMessage = async (invitedUserId: string) => {
@@ -781,8 +782,8 @@ const EventDetail: React.FC = () => {
       if (messageError) throw messageError
 
       // Update channel's last_message_at
-      await supabase
-        .from('channels')
+      await (supabase
+        .from('channels') as any)
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', channelId)
 
@@ -1568,7 +1569,7 @@ const EventDetail: React.FC = () => {
                       }}
                     >
                       <Avatar
-                        src={profile.profile_picture_url}
+                        src={(profile as any).profile_picture_url}
                         name={profile.full_name || profile.email}
                         size={40}
                       />
