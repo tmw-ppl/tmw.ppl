@@ -393,7 +393,7 @@ const CreateEvent: React.FC = () => {
 
       // Add co-hosts to all created events
       if (formData.co_hosts.length > 0 && createdEvents && createdEvents.length > 0) {
-        const cohostEntries = createdEvents.flatMap(event => 
+        const cohostEntries = (createdEvents as any[]).flatMap((event: any) => 
           formData.co_hosts.map(cohost => ({
             event_id: event.id,
             user_id: cohost.id,
