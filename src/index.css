@@ -4541,3 +4541,52 @@ gmp-place-autocomplete input:focus {
     font-size: 0.875rem;
   }
 }
+
+/* Popular Events Horizontal Scroll */
+.popular-events-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  padding-left: 0;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.popular-events-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.popular-events-scroll > * {
+  scroll-snap-align: start;
+}
+
+/* Discover Events Page Mobile Styles */
+@media (max-width: 640px) {
+  .popular-events-scroll {
+    gap: 0.75rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .popular-events-scroll > a,
+  .popular-events-scroll > div {
+    min-width: 260px !important;
+    max-width: 260px !important;
+  }
+}
+
+/* Category grid mobile */
+@media (max-width: 480px) {
+  /* Stack filters vertically on very small screens */
+  .events-search-bar {
+    flex-direction: column;
+  }
+  
+  .events-search-bar input,
+  .events-search-bar select {
+    width: 100%;
+  }
+}
