@@ -195,12 +195,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
           parent_message_id: parentMessageId || null
         })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error sharing event:', error)
+        throw new Error(error.message || 'Database error')
+      }
 
       onMessageSent()
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error sharing event:', err)
-      alert('Failed to share event')
+      alert(`Failed to share event: ${err.message || 'Unknown error'}`)
     } finally {
       setUploading(false)
     }

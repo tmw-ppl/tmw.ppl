@@ -37,15 +37,61 @@ const Section: React.FC = () => {
   const lastTypingRef = useRef<number>(0)
   const channelNameInputRef = useRef<HTMLInputElement>(null)
 
+  // Ensure user has a profile before loading channels
+  const ensureProfile = async () => {
+    if (!user) return false
+
+    try {
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      if (existingProfile) return true
+
+      // Create profile if it doesn't exist
+      const { error: insertError } = await (supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }) as any)
+
+      if (insertError) {
+        console.error('Error creating profile:', insertError)
+        return false
+      }
+
+      return true
+    } catch (err) {
+      console.error('Error ensuring profile:', err)
+      return false
+    }
+  }
+
   useEffect(() => {
     if (!user) {
       router.push('/auth')
       return
     }
-    loadChannels()
-    loadCategories()
-    loadEvents()
-    loadProjects()
+
+    // Ensure profile exists before loading data
+    ensureProfile().then((hasProfile) => {
+      if (hasProfile) {
+        loadChannels()
+        loadCategories()
+        loadEvents()
+        loadProjects()
+      } else {
+        setError('Failed to load your profile. Please refresh the page.')
+        setLoading(false)
+      }
+    })
   }, [user])
 
   // Handle channel query parameter from URL (e.g., from DM links)

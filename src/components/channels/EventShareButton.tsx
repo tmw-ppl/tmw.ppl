@@ -45,7 +45,8 @@ const EventShareButton: React.FC<EventShareButtonProps> = ({
 
     setLoading(true)
     try {
-      const now = new Date().toISOString()
+      // Use today's date at midnight for comparison
+      const today = new Date().toISOString().split('T')[0]
 
       // Get events created by the user that are in the future
       const { data: createdEvents, error: createdError } = await supabase
@@ -53,7 +54,7 @@ const EventShareButton: React.FC<EventShareButtonProps> = ({
         .select('id, title, date, location')
         .eq('created_by', user.id)
         .eq('published', true)
-        .gte('date', now)
+        .gte('date', today)
         .order('date', { ascending: true })
 
       if (createdError) {
