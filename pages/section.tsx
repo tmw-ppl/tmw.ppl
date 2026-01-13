@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase, type Channel, type ChannelCategory, type ChannelMessage } from '@/lib/supabase'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import AnimatedSection from '@/components/AnimatedSection'
 import Loading from '@/components/ui/Loading'
 import CreateChannelModal from '@/components/channels/CreateChannelModal'
 import InviteMembersModal from '@/components/channels/InviteMembersModal'
@@ -435,19 +434,6 @@ const Section: React.FC = () => {
 
   return (
     <>
-      <section className="hero" style={{ paddingBottom: '1rem' }}>
-        <div className="container">
-          <AnimatedSection animationType="fade">
-            <div style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
-              <h1>Channels</h1>
-              <p className="lead">
-                Connect and collaborate with the Tomorrow People community
-              </p>
-            </div>
-          </AnimatedSection>
-        </div>
-      </section>
-
       <section style={{ paddingTop: '0' }}>
         <div className="container">
           <div style={{ 

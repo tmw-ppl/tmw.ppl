@@ -702,12 +702,17 @@ const EventDetail: React.FC = () => {
     }
 
     // Add both users as members
-    await supabase
+    const { error: memberError } = await supabase
       .from('channel_members')
       .insert([
         { channel_id: newChannel.id, user_id: user.id, role: 'member' },
         { channel_id: newChannel.id, user_id: otherUserId, role: 'member' }
       ] as any)
+
+    if (memberError) {
+      console.error('Error adding members to channel:', memberError)
+      // Don't fail completely - the check in handleInviteUserViaMessage will handle this
+    }
 
     return newChannel.id
   }
@@ -723,6 +728,30 @@ const EventDetail: React.FC = () => {
       if (!channelId) {
         alert('Failed to create message channel. Please try again.')
         return
+      }
+
+      // Ensure the current user is a member of the channel
+      const { data: existingMember, error: checkError } = await supabase
+        .from('channel_members')
+        .select('id')
+        .eq('channel_id', channelId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!existingMember && !checkError) {
+        // User is not a member, add them
+        const { error: memberError } = await supabase
+          .from('channel_members')
+          .insert({
+            channel_id: channelId,
+            user_id: user.id,
+            role: 'member'
+          } as any)
+
+        if (memberError) {
+          console.error('Error adding user to channel members:', memberError)
+          // Continue anyway - might already exist or RLS might prevent it
+        }
       }
 
       // Format event date/time
