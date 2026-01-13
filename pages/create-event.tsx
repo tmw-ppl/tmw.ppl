@@ -1,188 +1,325 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
+import Head from 'next/head'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import Card from '@/components/ui/Card'
-import Button from '@/components/ui/Button'
-import Chip from '@/components/ui/Chip'
-import DateTimePicker from '@/components/ui/DateTimePicker'
-import AnimatedSection from '@/components/AnimatedSection'
-import LocationAutocomplete from '@/components/ui/LocationAutocomplete'
-import { createEventDateTime, getCurrentLocalDate, getRoundedCurrentTime } from '@/utils/dateTime'
+import { createEventDateTime } from '@/utils/dateTime'
 
-interface CreateEventData {
+interface CoHost {
+  id: string
+  email: string
+  full_name?: string
+}
+
+interface RecurrenceSettings {
+  enabled: boolean
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+  occurrences: number
+}
+
+interface EventFormData {
   title: string
   description: string
   date: string
   time: string
-  end_date: string
   end_time: string
-  timezone: string
   location: string
-  rsvp_url: string
+  is_virtual: boolean
+  virtual_link: string
   image_url: string
   tags: string[]
   published: boolean
   is_private: boolean
+  guest_list_visibility: 'public' | 'rsvp_only' | 'hidden'
+  group_name: string
+  max_capacity: number | null
+  waitlist_enabled: boolean
+  co_hosts: CoHost[]
+  recurrence: RecurrenceSettings
 }
+
+interface PreviousEvent {
+  id: string
+  title: string
+  date: string
+}
+
+const quickTags = [
+  { name: 'Party', emoji: '🎉' },
+  { name: 'Dinner', emoji: '🍽️' },
+  { name: 'Hangout', emoji: '✨' },
+  { name: 'Birthday', emoji: '🎂' },
+  { name: 'Drinks', emoji: '🍻' },
+  { name: 'Brunch', emoji: '🥂' },
+  { name: 'Game Night', emoji: '🎮' },
+  { name: 'Movie', emoji: '🎬' },
+  { name: 'Outdoor', emoji: '🌲' },
+  { name: 'Wellness', emoji: '🧘' },
+  { name: 'Workshop', emoji: '🛠️' },
+  { name: 'Music', emoji: '🎵' },
+]
 
 const CreateEvent: React.FC = () => {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [previousEvents, setPreviousEvents] = useState<PreviousEvent[]>([])
+  const [showDuplicateMenu, setShowDuplicateMenu] = useState(false)
+  const [userGroups, setUserGroups] = useState<string[]>([])
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [coHostSearch, setCoHostSearch] = useState('')
+  const [coHostResults, setCoHostResults] = useState<CoHost[]>([])
+  const [showGroupDropdown, setShowGroupDropdown] = useState(false)
+  const [filteredGroups, setFilteredGroups] = useState<string[]>([])
 
-  const [formData, setFormData] = useState<CreateEventData>({
+  const [formData, setFormData] = useState<EventFormData>({
     title: '',
     description: '',
     date: '',
-    time: '',
-    end_date: '',
+    time: '19:00',
     end_time: '',
-    timezone: 'PT',
     location: '',
-    rsvp_url: '',
+    is_virtual: false,
+    virtual_link: '',
     image_url: '',
     tags: [],
-    published: false,
-    is_private: false
+    published: true,
+    is_private: false,
+    guest_list_visibility: 'rsvp_only',
+    group_name: '',
+    max_capacity: null,
+    waitlist_enabled: false,
+    co_hosts: [],
+    recurrence: {
+      enabled: false,
+      frequency: 'weekly',
+      occurrences: 4
+    }
   })
 
-  const [newTag, setNewTag] = useState('')
-  const [showDateTimePicker, setShowDateTimePicker] = useState(false)
-  const dateTimeRef = useRef<HTMLDivElement>(null)
-
-  const availableTags = [
-    'IRL', 'Virtual', 'Workshop', 'Social', 'Wellness', 'Rager',
-    'Networking', 'Creative', 'Tech', 'Learning', 'Community',
-    'Outdoor', 'Food', 'Art', 'Music', 'Discussion'
-  ]
-
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dateTimeRef.current && !dateTimeRef.current.contains(event.target as Node)) {
-        setShowDateTimePicker(false)
-      }
-    }
-
-    if (showDateTimePicker) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside)
-      }
-    }
-  }, [showDateTimePicker])
-
-  React.useEffect(() => {
-    // Only redirect if auth is done loading and user is still null
     if (!authLoading && !user) {
       router.push('/auth')
     }
   }, [user, authLoading, router])
 
-  // Show loading state while auth is being checked
-  if (authLoading) {
-    return (
-      <section className="auth-section">
-        <div className="container">
-          <div className="create-event-container">
-            <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-              <p>Loading...</p>
-            </div>
-          </div>
-        </div>
-      </section>
+  useEffect(() => {
+    if (user) {
+      loadPreviousEvents()
+      loadUserGroups()
+    }
+  }, [user])
+
+  useEffect(() => {
+    setTimeout(() => titleInputRef.current?.focus(), 100)
+  }, [])
+
+  // Detect virtual meeting links
+  useEffect(() => {
+    const link = formData.location.toLowerCase()
+    const isVirtualLink = 
+      link.includes('zoom.us') ||
+      link.includes('meet.google.com') ||
+      link.includes('teams.microsoft.com') ||
+      link.includes('discord.gg')
+    
+    if (isVirtualLink && !formData.is_virtual) {
+      setFormData(prev => ({ 
+        ...prev, 
+        is_virtual: true,
+        virtual_link: prev.location,
+        location: ''
+      }))
+    }
+  }, [formData.location])
+
+  const loadPreviousEvents = async () => {
+    if (!user) return
+    const { data } = await supabase
+      .from('events')
+      .select('id, title, date')
+      .eq('created_by', user.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+    
+    setPreviousEvents(data || [])
+  }
+
+  const loadUserGroups = async () => {
+    if (!user) return
+    const { data } = await supabase
+      .from('events')
+      .select('group_name')
+      .eq('created_by', user.id)
+      .not('group_name', 'is', null)
+    
+    const groups = [...new Set((data || []).map(e => e.group_name).filter(Boolean))]
+    setUserGroups(groups as string[])
+  }
+
+  const searchCoHosts = async (query: string) => {
+    if (query.length < 2) {
+      setCoHostResults([])
+      return
+    }
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .or(`email.ilike.%${query}%,full_name.ilike.%${query}%`)
+      .neq('id', user?.id)
+      .limit(5)
+    setCoHostResults(data || [])
+  }
+
+  const handleGroupSearch = (query: string) => {
+    setFormData(prev => ({ ...prev, group_name: query }))
+    
+    if (query.length === 0) {
+      setFilteredGroups([])
+      setShowGroupDropdown(false)
+      return
+    }
+    
+    // Fuzzy search: match groups that contain the query (case-insensitive)
+    const matches = userGroups.filter(g => 
+      g.toLowerCase().includes(query.toLowerCase())
     )
+    
+    // Also match groups where words start with the query
+    const startsWithMatches = userGroups.filter(g => {
+      const words = g.toLowerCase().split(/\s+/)
+      return words.some(word => word.startsWith(query.toLowerCase()))
+    })
+    
+    // Combine and dedupe, prioritizing exact starts
+    const combined = [...new Set([...startsWithMatches, ...matches])]
+    
+    setFilteredGroups(combined)
+    // Show dropdown when there are matches OR when typing a new group name
+    setShowGroupDropdown(true)
+  }
+  
+  // Check if current input is a new group (not in existing groups)
+  const isNewGroup = formData.group_name.trim().length > 0 && 
+    !userGroups.some(g => g.toLowerCase() === formData.group_name.toLowerCase())
+
+  const selectGroup = (group: string) => {
+    setFormData(prev => ({ ...prev, group_name: group }))
+    setShowGroupDropdown(false)
+    setFilteredGroups([])
   }
 
-  if (!user) {
-    return null
-  }
+  const duplicateEvent = async (eventId: string) => {
+    const { data: event } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', eventId)
+      .single()
 
-  const handleInputChange = (field: keyof CreateEventData, value: string | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-    setError(null)
-  }
-
-  const addTag = (tag: string) => {
-    if (tag.trim() && !formData.tags.includes(tag.trim())) {
+    if (event) {
       setFormData(prev => ({
         ...prev,
-        tags: [...prev.tags, tag.trim()]
+        title: event.title,
+        description: event.description || '',
+        location: event.location || '',
+        image_url: event.image_url || '',
+        tags: event.tags || [],
+        is_private: event.is_private || false,
+        guest_list_visibility: event.guest_list_visibility || 'rsvp_only',
+        group_name: event.group_name || '',
+        max_capacity: event.max_capacity || null,
+        waitlist_enabled: event.waitlist_enabled || false,
       }))
-      setNewTag('')
+      setShowDuplicateMenu(false)
     }
   }
 
-  const removeTag = (tagToRemove: string) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be smaller than 5MB')
+      return
+    }
+
+    setUploadingImage(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `event-${Date.now()}.${fileExt}`
+      const filePath = `event-covers/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('project-images')
+        .upload(filePath, file, { cacheControl: '3600', upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-images')
+        .getPublicUrl(filePath)
+
+      setFormData(prev => ({ ...prev, image_url: publicUrl }))
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload image')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const toggleTag = (tag: string) => {
     setFormData(prev => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      tags: prev.tags.includes(tag)
+        ? prev.tags.filter(t => t !== tag)
+        : [...prev.tags, tag]
     }))
   }
 
-  const validateForm = (): string | null => {
-    if (!formData.title.trim()) return 'Event title is required'
-    if (!formData.description.trim()) return 'Event description is required'
-    if (!formData.date) return 'Event date is required'
-    if (!formData.time) return 'Event time is required'
-    if (!formData.location.trim()) return 'Event location is required'
-    
-    // Validate date is not in the past using proper ISO datetime
-    try {
-      const eventISODateTime = createEventDateTime(formData.date, formData.time)
-      const eventDateTime = new Date(eventISODateTime)
-      if (eventDateTime <= new Date()) {
-        return 'Event date and time must be in the future'
-      }
-
-      // Validate end date/time is after start date/time if provided
-      if (formData.end_time || formData.end_date) {
-        const endDate = formData.end_date || formData.date
-        const endTime = formData.end_time || '23:59'
-        const endISODateTime = createEventDateTime(endDate, endTime)
-        const endDateTime = new Date(endISODateTime)
-        
-        if (endDateTime <= eventDateTime) {
-          return 'End date and time must be after start date and time'
-        }
-      }
-    } catch (error) {
-      return 'Invalid date or time format'
+  const addCoHost = (cohost: CoHost) => {
+    if (!formData.co_hosts.find(c => c.id === cohost.id)) {
+      setFormData(prev => ({ ...prev, co_hosts: [...prev.co_hosts, cohost] }))
     }
-
-    // Validate URLs if provided
-    if (formData.rsvp_url && !isValidUrl(formData.rsvp_url)) {
-      return 'Please enter a valid RSVP URL'
-    }
-    if (formData.image_url && !isValidUrl(formData.image_url)) {
-      return 'Please enter a valid image URL'
-    }
-
-    return null
+    setCoHostSearch('')
+    setCoHostResults([])
   }
 
-  const isValidUrl = (url: string): boolean => {
-    try {
-      new URL(url)
-      return true
-    } catch {
-      return false
-    }
+  const formatDateForDisplay = () => {
+    if (!formData.date) return null
+    const date = new Date(formData.date + 'T' + (formData.time || '19:00'))
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric'
+    })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const validationError = validateForm()
-    if (validationError) {
-      setError(validationError)
+  const formatTimeForDisplay = () => {
+    if (!formData.time) return null
+    const [hours, minutes] = formData.time.split(':')
+    const hour = parseInt(hours)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour % 12 || 12
+    return `${displayHour}:${minutes} ${ampm}`
+  }
+
+  const handleSubmit = async () => {
+    if (!formData.title) {
+      setError('Give your event a name!')
+      return
+    }
+    if (!formData.date) {
+      setError('When is it happening?')
+      return
+    }
+    if (!formData.location && !formData.virtual_link) {
+      setError('Where should people go?')
       return
     }
 
@@ -190,324 +327,708 @@ const CreateEvent: React.FC = () => {
     setError(null)
 
     try {
-      console.log('Current user:', user)
-      console.log('User ID:', user?.id)
-      
-      console.log('User ID for created_by:', user.id)
-      
-      // Check if user exists in profiles table
-      const { data: profileCheck, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('id')
-        .eq('id', user.id)
+        .eq('id', user!.id)
         .single()
-      
-      console.log('Profile check:', { profileCheck, profileError })
-      
-      if (profileError || !profileCheck) {
-        console.error('User profile not found in database. Creating profile...')
-        
-        // Try to create the profile first
-        const { error: createProfileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            email: user.email,
-            created_at: new Date().toISOString()
-          } as any)
-        
-        if (createProfileError) {
-          console.error('Failed to create profile:', createProfileError)
-          setError('User profile setup failed. Please try signing out and back in.')
-          return
-        }
-        
-        console.log('Profile created successfully')
-      }
-      
-      // Create ISO timestamps for proper storage
-      const startDateTime = createEventDateTime(formData.date, formData.time)
-      const endDateTime = (formData.end_date || formData.end_time) 
-        ? createEventDateTime(formData.end_date || formData.date, formData.end_time || '23:59')
-        : null
 
-      console.log('Attempting to create event with data:', {
+      if (!profile) {
+        await supabase.from('profiles').insert({
+          id: user!.id,
+          email: user!.email,
+          created_at: new Date().toISOString()
+        } as any)
+      }
+
+      const startDateTime = createEventDateTime(formData.date, formData.time || '19:00')
+
+      const eventData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        date: startDateTime, // Now storing as ISO timestamp
-        end_date: endDateTime,
-        location: formData.location.trim(),
-        rsvp_url: formData.rsvp_url.trim() || null,
+        date: startDateTime,
+        location: formData.is_virtual ? 'Virtual Event' : formData.location.trim(),
+        rsvp_url: formData.is_virtual ? formData.virtual_link : null,
         image_url: formData.image_url.trim() || null,
         tags: formData.tags,
         published: formData.published,
-        created_by: user.id
-      })
-
-      const { data, error } = await (supabase as any)
-        .from('events')
-        .insert({
-          title: formData.title.trim(),
-          description: formData.description.trim(),
-          date: startDateTime, // Store as ISO timestamp instead of separate date/time
-          end_date: endDateTime, // Store end as ISO timestamp too
-          location: formData.location.trim(),
-          rsvp_url: formData.rsvp_url.trim() || null,
-          image_url: formData.image_url.trim() || null,
-          tags: formData.tags,
-          published: formData.published,
-          is_private: formData.is_private,
-          created_by: user.id
-        })
-        .select()
-
-      console.log('Supabase response:', { data, error })
-
-      if (error) {
-        console.error('Error creating event:', error)
-        setError(`Failed to create event: ${error.message || 'Unknown error'}`)
-        return
+        is_private: formData.is_private,
+        guest_list_visibility: formData.guest_list_visibility,
+        group_name: formData.group_name.trim() || null,
+        max_capacity: formData.max_capacity,
+        waitlist_enabled: formData.waitlist_enabled,
+        created_by: user!.id
       }
 
-      setSuccess(true)
-      setTimeout(() => {
-        router.push('/events')
-      }, 2000)
+      // Handle recurrence
+      const eventsToCreate = []
+      if (formData.recurrence.enabled) {
+        const baseDate = new Date(formData.date)
+        for (let i = 0; i < formData.recurrence.occurrences; i++) {
+          const eventDate = new Date(baseDate)
+          switch (formData.recurrence.frequency) {
+            case 'daily': eventDate.setDate(baseDate.getDate() + i); break
+            case 'weekly': eventDate.setDate(baseDate.getDate() + (i * 7)); break
+            case 'biweekly': eventDate.setDate(baseDate.getDate() + (i * 14)); break
+            case 'monthly': eventDate.setMonth(baseDate.getMonth() + i); break
+          }
+          eventsToCreate.push({
+            ...eventData,
+            date: createEventDateTime(eventDate.toISOString().split('T')[0], formData.time || '19:00')
+          })
+        }
+      } else {
+        eventsToCreate.push(eventData)
+      }
 
-    } catch (err) {
-      console.error('Error creating event:', err)
-      setError('An unexpected error occurred. Please try again.')
+      const { data: createdEvents, error: insertError } = await supabase
+        .from('events')
+        .insert(eventsToCreate as any)
+        .select('id')
+
+      if (insertError) throw insertError
+
+      // Add co-hosts to all created events
+      if (formData.co_hosts.length > 0 && createdEvents && createdEvents.length > 0) {
+        const cohostEntries = createdEvents.flatMap(event => 
+          formData.co_hosts.map(cohost => ({
+            event_id: event.id,
+            user_id: cohost.id,
+            added_by: user!.id,
+            role: 'cohost'
+          }))
+        )
+        
+        const { error: cohostError } = await supabase
+          .from('event_cohosts')
+          .insert(cohostEntries)
+        
+        if (cohostError) {
+          console.error('Failed to add co-hosts:', cohostError)
+          // Don't throw - event was created successfully
+        }
+      }
+
+      router.push('/events')
+    } catch (err: any) {
+      setError(err.message || 'Failed to create event')
     } finally {
       setLoading(false)
     }
   }
 
-  if (success) {
+  if (authLoading) {
     return (
-      <section className="auth-section">
-        <div className="container">
-          <div className="create-event-container">
-            <AnimatedSection animationType="scale">
-              <Card>
-                <div style={{ textAlign: 'center', padding: '2rem' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
-                  <h2 style={{ color: 'var(--accent)', marginBottom: '1rem' }}>Event Created!</h2>
-                  <p>Your event has been successfully created. Redirecting to events page...</p>
-                </div>
-              </Card>
-            </AnimatedSection>
-          </div>
-        </div>
-      </section>
+      <div className="loading-message" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        Loading...
+      </div>
     )
   }
 
+  if (!user) return null
+
+  // Live Preview Component
+  const LivePreview = () => (
+    <div className="card" style={{ 
+      padding: 0, 
+      overflow: 'hidden',
+      position: 'sticky',
+      top: '100px'
+    }}>
+      {/* Preview Header */}
+      <div style={{
+        padding: '0.75rem 1rem',
+        background: 'var(--bg-2)',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem'
+      }}>
+        <span>👁️</span>
+        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)' }}>Live Preview</span>
+      </div>
+      
+      {/* Cover Image */}
+      <div style={{
+        height: '160px',
+        background: formData.image_url 
+          ? `url(${formData.image_url}) center/cover` 
+          : 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        padding: '1rem'
+      }}>
+        {formData.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {formData.tags.slice(0, 3).map(tag => (
+              <span key={tag} style={{
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(8px)',
+                color: 'white',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '999px',
+                fontSize: '0.75rem',
+                fontWeight: 500
+              }}>
+                {quickTags.find(t => t.name === tag)?.emoji} {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Event Content */}
+      <div style={{ padding: '1.25rem' }}>
+        {/* Title */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
+          <h3 style={{ 
+            fontSize: '1.5rem', 
+            fontWeight: 700, 
+            color: 'var(--text)',
+            margin: 0,
+            lineHeight: 1.2,
+            flex: 1
+          }}>
+            {formData.title || 'Your Event Title'}
+          </h3>
+          {formData.is_private && (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              padding: '0.25rem 0.5rem',
+              background: 'rgba(139, 92, 246, 0.15)',
+              borderRadius: '6px',
+              fontSize: '0.75rem',
+              color: 'var(--primary)',
+              fontWeight: 500,
+              whiteSpace: 'nowrap'
+            }}>
+              🔒 Private
+            </span>
+          )}
+        </div>
+        
+        {/* Date & Time */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.75rem',
+          marginBottom: '0.75rem',
+          color: 'var(--muted)',
+          fontSize: '0.9rem'
+        }}>
+          <span style={{ fontSize: '1.25rem' }}>📅</span>
+          <div>
+            {formData.date ? (
+              <>
+                <div style={{ color: 'var(--text)', fontWeight: 500 }}>
+                  {formatDateForDisplay()}
+                </div>
+                <div style={{ fontSize: '0.8rem' }}>
+                  {formatTimeForDisplay() || '7:00 PM'}
+                </div>
+              </>
+            ) : (
+              <span style={{ fontStyle: 'italic' }}>Date & time</span>
+            )}
+          </div>
+        </div>
+        
+        {/* Location */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.75rem',
+          marginBottom: '1rem',
+          color: 'var(--muted)',
+          fontSize: '0.9rem'
+        }}>
+          <span style={{ fontSize: '1.25rem' }}>{formData.is_virtual ? '💻' : '📍'}</span>
+          <span style={{ color: 'var(--text)' }}>
+            {formData.is_virtual 
+              ? (formData.virtual_link ? 'Virtual Event' : 'Online location')
+              : (formData.location || 'Event location')}
+          </span>
+        </div>
+        
+        {/* Description Preview */}
+        {formData.description && (
+          <div style={{
+            padding: '1rem',
+            background: 'var(--bg-2)',
+            borderRadius: '8px',
+            marginBottom: '1rem'
+          }}>
+            <p style={{ 
+              fontSize: '0.875rem', 
+              color: 'var(--muted)',
+              margin: 0,
+              lineHeight: 1.5,
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}>
+              {formData.description}
+            </p>
+          </div>
+        )}
+        
+        {/* Group Badge */}
+        {formData.group_name && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 0.75rem',
+            background: 'rgba(139, 92, 246, 0.15)',
+            borderRadius: '8px',
+            marginBottom: '1rem'
+          }}>
+            <span>📁</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 500 }}>
+              {formData.group_name}
+            </span>
+          </div>
+        )}
+        
+        {/* RSVP Buttons Preview */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '0.5rem',
+          paddingTop: '1rem',
+          borderTop: '1px solid var(--border)'
+        }}>
+          <button className="btn primary" style={{ flex: 1, pointerEvents: 'none' }}>
+            ✓ Going
+          </button>
+          <button className="btn" style={{ flex: 1, pointerEvents: 'none' }}>
+            Maybe
+          </button>
+        </div>
+        
+        {/* Capacity indicator */}
+        {formData.max_capacity && (
+          <div style={{
+            marginTop: '0.75rem',
+            fontSize: '0.8rem',
+            color: 'var(--muted)',
+            textAlign: 'center'
+          }}>
+            👥 {formData.max_capacity} spots available
+            {formData.waitlist_enabled && ' • Waitlist enabled'}
+          </div>
+        )}
+        
+        {/* Recurring indicator */}
+        {formData.recurrence.enabled && (
+          <div style={{
+            marginTop: '0.75rem',
+            padding: '0.5rem 0.75rem',
+            background: 'var(--bg-2)',
+            borderRadius: '6px',
+            fontSize: '0.8rem',
+            color: 'var(--muted)',
+            textAlign: 'center'
+          }}>
+            🔄 Repeats {formData.recurrence.frequency} × {formData.recurrence.occurrences}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
   return (
-    <section className="auth-section">
-      <div className="container">
-        <div className="create-event-container">
-
-          <AnimatedSection animationType="fade">
-          <Card>
-              <form onSubmit={handleSubmit} className="create-event-form">
-                {error && (
-                  <div className="error-message" style={{ marginBottom: '1.5rem' }}>
-                    {error}
+    <>
+      <Head>
+        <title>Create Event | TMW</title>
+      </Head>
+      
+      <section className="container" style={{ paddingTop: '2rem', paddingBottom: '6rem' }}>
+        {/* Header with back and duplicate */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <Link href="/events" className="btn" style={{ gap: '0.5rem' }}>
+            ← Back to Events
+          </Link>
+          
+          {previousEvents.length > 0 && (
+            <div style={{ position: 'relative' }}>
+              <button 
+                onClick={() => setShowDuplicateMenu(!showDuplicateMenu)}
+                className="btn"
+              >
+                📋 Duplicate Event
+              </button>
+              {showDuplicateMenu && (
+                <div className="card" style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '0.5rem',
+                  minWidth: '250px',
+                  zIndex: 100,
+                  padding: 0,
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ 
+                    padding: '0.75rem 1rem', 
+                    borderBottom: '1px solid var(--border)',
+                    color: 'var(--muted)',
+                    fontSize: '0.875rem',
+                    fontWeight: 600
+                  }}>
+                    Duplicate from...
                   </div>
-                )}
+                  {previousEvents.map(event => (
+                    <button
+                      key={event.id}
+                      onClick={() => duplicateEvent(event.id)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: '1px solid var(--border)',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        color: 'var(--text)',
+                        fontSize: '0.9rem',
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-2)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      {event.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-                {/* Event Title - Styled Input */}
+        {/* Two Column Layout: Form + Preview */}
+        <div className="create-layout">
+          {/* Main Form Card */}
+          <div className="card" style={{ padding: '2rem' }}>
+            <div className="kicker">Create New Event</div>
+            
+            {/* Cover Image Section */}
+            <div className="form-section" style={{ paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+              <h3 style={{ marginBottom: '1rem' }}>📷 Cover Image</h3>
+              
+              {formData.image_url ? (
+                <div style={{ position: 'relative', marginBottom: '1rem' }}>
+                  <img 
+                    src={formData.image_url} 
+                    alt="Cover preview"
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      objectFit: 'cover',
+                      borderRadius: '12px',
+                      border: '1px solid var(--border)'
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                    <button 
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="btn small"
+                    >
+                      {uploadingImage ? '⏳ Uploading...' : '🔄 Change'}
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
+                      className="btn small danger"
+                    >
+                      ✕ Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn"
+                  disabled={uploadingImage}
+                  style={{ marginBottom: '0.5rem' }}
+                >
+                  {uploadingImage ? '⏳ Uploading...' : '📷 Add Cover Photo'}
+                </button>
+              )}
+              
+              <p className="form-help">Recommended: 1200x630px. Max 5MB.</p>
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
+              />
+            </div>
+
+            {/* Title */}
+            <div className="form-section">
+              <div className="form-group title-group">
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="What's the event?"
+                  className="title-input"
+                />
+              </div>
+            </div>
+
+            {/* Quick Tags */}
+            <div className="form-section" style={{ borderBottom: 'none', marginBottom: '1rem', paddingBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600, color: 'var(--text)' }}>
+                Quick Tags
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {quickTags.map(tag => (
+                  <button
+                    key={tag.name}
+                    type="button"
+                    onClick={() => toggleTag(tag.name)}
+                    className={`chip ${formData.tags.includes(tag.name) ? 'active' : ''}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <span>{tag.emoji}</span>
+                    <span>{tag.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Date & Time */}
+            <div className="form-section">
+              <h3>📅 When</h3>
+              <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <div className="form-group">
+                  <label>Date</label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                  {formData.date && (
+                    <p className="form-help" style={{ marginTop: '0.5rem', color: 'var(--primary)' }}>
+                      {formatDateForDisplay()}
+                    </p>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label>Time</label>
+                  <input
+                    type="time"
+                    value={formData.time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                  />
+                  {formData.time && (
+                    <p className="form-help" style={{ marginTop: '0.5rem', color: 'var(--primary)' }}>
+                      {formatTimeForDisplay()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="form-section">
+              <h3>📍 Where</h3>
+              
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, is_virtual: false }))}
+                  className={`chip ${!formData.is_virtual ? 'active' : ''}`}
+                >
+                  📍 In Person
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, is_virtual: true }))}
+                  className={`chip ${formData.is_virtual ? 'active' : ''}`}
+                >
+                  💻 Online
+                </button>
+              </div>
+
+              <div className="form-group">
+                <input
+                  type="text"
+                  value={formData.is_virtual ? formData.virtual_link : formData.location}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    [formData.is_virtual ? 'virtual_link' : 'location']: e.target.value 
+                  }))}
+                  placeholder={formData.is_virtual ? 'Paste meeting link (Zoom, Meet, etc.)' : 'Add location or address'}
+                />
+                <p className="form-help">
+                  {formData.is_virtual 
+                    ? 'Paste your Zoom, Google Meet, or Teams link' 
+                    : 'Enter an address or venue name'}
+                </p>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="form-section">
+              <h3>✏️ Details</h3>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Tell people what your event is about..."
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            {/* Advanced Options Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="btn"
+              style={{ 
+                width: '100%', 
+                justifyContent: 'center',
+                marginBottom: showAdvanced ? '1.5rem' : 0
+              }}
+            >
+              {showAdvanced ? '▼ Hide' : '▶ Show'} Advanced Options
+            </button>
+
+            {showAdvanced && (
+              <div style={{ marginTop: '1.5rem' }}>
+                {/* Event Group */}
                 <div className="form-section">
-                  <div className="form-group title-group">
+                  <h3>📁 Event Group</h3>
+                  <div className="form-group" style={{ position: 'relative' }}>
+                    <label>Group Name</label>
                     <input
                       type="text"
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => handleInputChange('title', e.target.value)}
-                      placeholder="Event Title"
-                      className="title-input"
-                      required
+                      value={formData.group_name}
+                      onChange={(e) => handleGroupSearch(e.target.value)}
+                      onFocus={() => {
+                        if (formData.group_name && filteredGroups.length > 0) {
+                          setShowGroupDropdown(true)
+                        }
+                      }}
+                      onBlur={() => {
+                        // Delay to allow click on dropdown
+                        setTimeout(() => setShowGroupDropdown(false), 150)
+                      }}
+                      placeholder="e.g., Weekly Dinners, Book Club"
+                      autoComplete="off"
                     />
-                  </div>
-                </div>
-
-                {/* Date & Time Picker with Preview */}
-                <div className="form-section">
-                  <div className="datetime-preview-section" ref={dateTimeRef}>
-                    <div 
-                      className="datetime-preview-button"
-                      onClick={() => setShowDateTimePicker(!showDateTimePicker)}
-                    >
-                      {formData.date && formData.time ? (
-                        <div className="preview-content">
-                          <div className="preview-time">
-                            {new Date(formData.date + 'T00:00:00').toLocaleDateString('en-US', { 
-                              weekday: 'short', 
-                              month: 'short', 
-                              day: 'numeric'
-                            })} · {new Date(`2000-01-01T${formData.time}`).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true
-                            }).toLowerCase()}{formData.end_time ? ' —' : ''}
-                          </div>
-                          {formData.end_time && (
-                            <div className="preview-time">
-                              {formData.end_date && formData.end_date !== formData.date ? 
-                                new Date(formData.end_date + 'T00:00:00').toLocaleDateString('en-US', { 
-                                  weekday: 'short', 
-                                  month: 'short', 
-                                  day: 'numeric'
-                                }) :
-                                new Date(formData.date + 'T00:00:00').toLocaleDateString('en-US', { 
-                                  weekday: 'short', 
-                                  month: 'short', 
-                                  day: 'numeric'
-                                })
-                              } · {new Date(`2000-01-01T${formData.end_time}`).toLocaleTimeString('en-US', {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                hour12: true
-                              }).toLowerCase()}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="preview-default">
-                          Select Date and Time
-                        </div>
-                      )}
-                      <span className="dropdown-arrow">{showDateTimePicker ? '▲' : '▼'}</span>
-                    </div>
-
-                    {showDateTimePicker && (
-                      <div className="datetime-dropdown">
-                        <DateTimePicker
-                          startDate={formData.date}
-                          startTime={formData.time}
-                          endDate={formData.end_date}
-                          endTime={formData.end_time}
-                          timezone={formData.timezone}
-                          onStartChange={(date, time) => {
-                            handleInputChange('date', date)
-                            handleInputChange('time', time)
-                          }}
-                          onEndChange={(date, time) => {
-                            handleInputChange('end_date', date)
-                            handleInputChange('end_time', time)
-                          }}
-                          onTimezoneChange={(tz) => handleInputChange('timezone', tz)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Details */}
-                <div className="form-section">
-                  <h3>Details</h3>
-                  
-                  <div className="form-group">
-                    <label htmlFor="description">Description *</label>
-                    <textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
-                      placeholder="Tell us about your event. What will happen? Who should attend?"
-                      rows={4}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="location">Location *</label>
-                    <LocationAutocomplete
-                      value={formData.location}
-                      onChange={(value) => handleInputChange('location', value)}
-                      placeholder="e.g., WeWork Downtown or Zoom (link in RSVP)"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="rsvp_url">RSVP URL</label>
-                    <input
-                      type="url"
-                      id="rsvp_url"
-                      value={formData.rsvp_url}
-                      onChange={(e) => handleInputChange('rsvp_url', e.target.value)}
-                      placeholder="https://eventbrite.com/... or https://forms.gle/..."
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="image_url">Event Image URL</label>
-                    <input
-                      type="url"
-                      id="image_url"
-                      value={formData.image_url}
-                      onChange={(e) => handleInputChange('image_url', e.target.value)}
-                      placeholder="https://example.com/event-image.jpg"
-                    />
-                  </div>
-                </div>
-
-                {/* Tags */}
-                <div className="form-section">
-                  <h3>Tags</h3>
-                  <p className="form-help">Help people find your event by adding relevant tags</p>
-                  
-                  <div className="tags-input-section">
-                    <div className="form-row">
-                      <input
-                        type="text"
-                        value={newTag}
-                        onChange={(e) => setNewTag(e.target.value)}
-                        placeholder="Add a custom tag"
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            addTag(newTag)
-                          }
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => addTag(newTag)}
-                        disabled={!newTag.trim()}
-                      >
-                        Add
-                      </Button>
-                    </div>
-
-                    <div className="available-tags">
-                      <p className="form-help">Or select from popular tags:</p>
-                      <div className="tags-grid">
-                        {availableTags.map(tag => (
-                          <Chip
-                            key={tag}
-                            onClick={() => addTag(tag)}
-                            className={formData.tags.includes(tag) ? 'selected' : ''}
+                    
+                    {/* Fuzzy search dropdown */}
+                    {showGroupDropdown && (filteredGroups.length > 0 || isNewGroup) && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+                        zIndex: 50,
+                        marginTop: '4px',
+                        overflow: 'hidden'
+                      }}>
+                        {/* Create new group option */}
+                        {isNewGroup && (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              setShowGroupDropdown(false)
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem 1rem',
+                              background: 'rgba(139, 92, 246, 0.1)',
+                              border: 'none',
+                              borderBottom: filteredGroups.length > 0 ? '1px solid var(--border)' : 'none',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              color: 'var(--primary)',
+                              fontSize: '0.9rem',
+                              fontWeight: 600,
+                              transition: 'background 0.15s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)'}
                           >
-                            {tag}
-                          </Chip>
+                            <span>✨</span>
+                            <span>Create &quot;{formData.group_name}&quot;</span>
+                          </button>
+                        )}
+                        
+                        {/* Existing group matches */}
+                        {filteredGroups.map((g, idx) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              selectGroup(g)
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem 1rem',
+                              background: 'none',
+                              border: 'none',
+                              borderBottom: idx < filteredGroups.length - 1 ? '1px solid var(--border)' : 'none',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              color: 'var(--text)',
+                              fontSize: '0.9rem',
+                              transition: 'background 0.15s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-2)'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                          >
+                            {g}
+                          </button>
                         ))}
                       </div>
-                    </div>
-
-                    {formData.tags.length > 0 && (
-                      <div className="selected-tags">
-                        <p className="form-help">Selected tags:</p>
-                        <div className="tags-list">
-                          {formData.tags.map(tag => (
-                            <Chip
-                              key={tag}
-                              onClick={() => removeTag(tag)}
-                              className="selected removable"
+                    )}
+                    
+                    <p className="form-help">Start typing to search your groups, or enter a new one</p>
+                    
+                    {userGroups.length > 0 && !showGroupDropdown && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <label style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: '0.5rem', display: 'block' }}>
+                          All your groups:
+                        </label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          {userGroups.map(g => (
+                            <button
+                              key={g}
+                              type="button"
+                              onClick={() => selectGroup(g)}
+                              className={`chip ${formData.group_name === g ? 'active' : ''}`}
                             >
-                              {tag} ×
-                            </Chip>
+                              {g}
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -515,75 +1036,290 @@ const CreateEvent: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Publishing Options */}
+                {/* Recurring */}
                 <div className="form-section">
-                  <h3>Publishing</h3>
-                  
-                  <div className="form-group checkbox-group">
-                    <label htmlFor="published" className="checkbox-label">
+                  <h3>🔄 Recurring Event</h3>
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
                       <input
                         type="checkbox"
-                        id="published"
-                        checked={formData.published}
-                        onChange={(e) => handleInputChange('published', e.target.checked)}
+                        checked={formData.recurrence.enabled}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          recurrence: { ...prev.recurrence, enabled: e.target.checked }
+                        }))}
                       />
-                      <div className="custom-checkbox"></div>
-                      <div className="checkbox-text">
-                        <span className="checkbox-title">Publish event immediately</span>
-                        <span className="checkbox-description">
-                          {formData.published 
-                            ? 'Your event will be visible to all community members' 
-                            : 'Save as draft - you can publish later'}
-                        </span>
-                      </div>
+                      <span className="custom-checkbox"></span>
+                      <span className="checkbox-text">
+                        <span className="checkbox-title">Make this a recurring event</span>
+                        <span className="checkbox-description">Create multiple instances of this event</span>
+                      </span>
                     </label>
                   </div>
+                  
+                  {formData.recurrence.enabled && (
+                    <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '1rem' }}>
+                      <div className="form-group">
+                        <label>Frequency</label>
+                        <select
+                          value={formData.recurrence.frequency}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            recurrence: { ...prev.recurrence, frequency: e.target.value as any }
+                          }))}
+                        >
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="biweekly">Every 2 weeks</option>
+                          <option value="monthly">Monthly</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Number of occurrences</label>
+                        <input
+                          type="number"
+                          value={formData.recurrence.occurrences}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            recurrence: { ...prev.recurrence, occurrences: parseInt(e.target.value) || 1 }
+                          }))}
+                          min={2}
+                          max={52}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                  <div className="form-group checkbox-group">
-                    <label htmlFor="is_private" className="checkbox-label">
+                {/* Capacity */}
+                <div className="form-section">
+                  <h3>👥 Capacity</h3>
+                  <div className="form-group">
+                    <label>Maximum guests</label>
+                    <input
+                      type="number"
+                      value={formData.max_capacity || ''}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        max_capacity: e.target.value ? parseInt(e.target.value) : null 
+                      }))}
+                      placeholder="Leave empty for unlimited"
+                      min={1}
+                    />
+                  </div>
+
+                  {formData.max_capacity && (
+                    <div className="checkbox-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={formData.waitlist_enabled}
+                          onChange={(e) => setFormData(prev => ({ ...prev, waitlist_enabled: e.target.checked }))}
+                        />
+                        <span className="custom-checkbox"></span>
+                        <span className="checkbox-text">
+                          <span className="checkbox-title">Enable waitlist</span>
+                          <span className="checkbox-description">Allow guests to join a waitlist when full</span>
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Co-hosts */}
+                <div className="form-section">
+                  <h3>👯 Co-hosts</h3>
+                  <div className="form-group">
+                    <label>Search co-hosts</label>
+                    <input
+                      type="text"
+                      value={coHostSearch}
+                      onChange={(e) => {
+                        setCoHostSearch(e.target.value)
+                        searchCoHosts(e.target.value)
+                      }}
+                      placeholder="Search by name or email"
+                    />
+                  </div>
+                  
+                  {coHostResults.length > 0 && (
+                    <div className="card" style={{ padding: 0, marginBottom: '1rem', overflow: 'hidden' }}>
+                      {coHostResults.map(result => (
+                        <button
+                          key={result.id}
+                          type="button"
+                          onClick={() => addCoHost(result)}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem 1rem',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: '1px solid var(--border)',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            color: 'var(--text)',
+                            fontSize: '0.9rem',
+                            transition: 'background 0.15s'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-2)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                        >
+                          {result.full_name || result.email}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {formData.co_hosts.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {formData.co_hosts.map(c => (
+                        <span 
+                          key={c.id} 
+                          className="chip active"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        >
+                          {c.full_name || c.email}
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              co_hosts: prev.co_hosts.filter(x => x.id !== c.id)
+                            }))}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'inherit',
+                              cursor: 'pointer',
+                              padding: 0,
+                              marginLeft: '0.25rem'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Private Event */}
+                <div className="form-section">
+                  <h3>🔒 Privacy</h3>
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
                       <input
                         type="checkbox"
-                        id="is_private"
                         checked={formData.is_private}
-                        onChange={(e) => handleInputChange('is_private', e.target.checked)}
+                        onChange={(e) => setFormData(prev => ({ ...prev, is_private: e.target.checked }))}
                       />
-                      <div className="custom-checkbox"></div>
-                      <div className="checkbox-text">
-                        <span className="checkbox-title">🔒 Make this event private</span>
-                        <span className="checkbox-description">
-                          {formData.is_private 
-                            ? 'Only invited users or those with the link can RSVP' 
-                            : 'Anyone can RSVP to this event'}
-                        </span>
-                      </div>
+                      <span className="custom-checkbox"></span>
+                      <span className="checkbox-text">
+                        <span className="checkbox-title">Private Event</span>
+                        <span className="checkbox-description">Only invited users or those with the direct link can view and RSVP</span>
+                      </span>
                     </label>
                   </div>
                 </div>
 
-                {/* Form Actions */}
-                <div className="form-actions">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                onClick={() => router.push('/events')}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={loading}
-                  >
-                    {loading ? 'Creating...' : formData.published ? 'Create & Publish Event' : 'Save as Draft'}
-                  </Button>
+                {/* Guest List Visibility */}
+                <div className="form-section" style={{ borderBottom: 'none' }}>
+                  <h3>👁️ Guest List Visibility</h3>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {[
+                      { value: 'public', label: 'Public', desc: 'Anyone can see' },
+                      { value: 'rsvp_only', label: 'Guests Only', desc: 'Only RSVPs can see' },
+                      { value: 'hidden', label: 'Hidden', desc: 'Only you can see' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ 
+                          ...prev, 
+                          guest_list_visibility: opt.value as any 
+                        }))}
+                        className={`chip ${formData.guest_list_visibility === opt.value ? 'active' : ''}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <div className="error-message" style={{ marginTop: '1.5rem' }}>
+                {error}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="form-actions" style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginTop: '2rem',
+              paddingTop: '1.5rem',
+              borderTop: '1px solid var(--border)'
+            }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.75rem', 
+                cursor: 'pointer',
+                color: 'var(--muted)'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={!formData.published}
+                  onChange={(e) => setFormData(prev => ({ ...prev, published: !e.target.checked }))}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+                />
+                Save as draft
+              </label>
+
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="btn primary"
+                style={{ padding: '0.875rem 2rem' }}
+              >
+                {loading ? '✨ Creating...' : formData.recurrence.enabled 
+                  ? `Create ${formData.recurrence.occurrences} Events` 
+                  : 'Create Event'}
+              </button>
             </div>
-              </form>
-          </Card>
-          </AnimatedSection>
+          </div>
+
+          {/* Live Preview Column */}
+          <div className="preview-column">
+            <LivePreview />
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+      
+      {/* Responsive styles for preview */}
+      <style jsx>{`
+        .create-layout {
+          display: grid;
+          grid-template-columns: 1fr 380px;
+          gap: 2rem;
+          align-items: start;
+        }
+        .preview-column {
+          display: block;
+        }
+        @media (max-width: 1024px) {
+          .create-layout {
+            grid-template-columns: 1fr;
+          }
+          .preview-column {
+            display: none;
+          }
+        }
+      `}</style>
+    </>
   )
 }
 

@@ -60,7 +60,7 @@ const quickTags = [
   { name: 'Music', emoji: '🎵' },
 ]
 
-const CreateEventV3: React.FC = () => {
+const CreateEvent: React.FC = () => {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -1323,4 +1323,4 @@ const CreateEventV3: React.FC = () => {
   )
 }
 
-export default CreateEventV3
+export default CreateEvent
