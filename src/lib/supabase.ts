@@ -17,6 +17,8 @@ export const supabase = (() => {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        storageKey: 'tmw-ppl-auth',
       },
     })
   }
@@ -60,6 +62,7 @@ export interface Event {
   image_url?: string
   tags?: string[]
   published: boolean
+  guest_list_visibility?: 'public' | 'rsvp_only' | 'hidden'
   created_by: string
   created_at: string
   updated_at: string
@@ -68,6 +71,17 @@ export interface Event {
     full_name: string
     email: string
   }
+}
+
+export interface EventComment {
+  id: string
+  event_id: string
+  user_id: string
+  content: string
+  created_at: string
+  updated_at: string
+  // Joined data
+  profile?: Profile
 }
 
 // Channel Types

@@ -657,24 +657,30 @@ const Events: React.FC = () => {
                 
                 {/* External RSVP Link */}
                 {event.rsvp_url && (
-                  <a
-                    href={event.rsvp_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      window.open(event.rsvp_url, '_blank', 'noopener,noreferrer')
+                    }}
                     className="btn primary"
                   >
                     External RSVP
-                  </a>
+                  </button>
                 )}
                 
                 {/* Edit Button for Event Creators */}
                 {user && event.created_by === user.id && (
-                  <Link
-                    href={`/edit-event/${event.id}`}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      router.push(`/edit-event/${event.id}`)
+                    }}
                     className="btn secondary"
                   >
                     Edit
-                  </Link>
+                  </button>
                 )}
               </div>
             </div>

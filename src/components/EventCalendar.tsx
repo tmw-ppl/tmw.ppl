@@ -8,6 +8,9 @@ interface CalendarEvent {
   location?: string
   tags?: string[]
   status?: string
+  rsvp_count?: number
+  maybe_count?: number
+  max_capacity?: number
 }
 
 interface EventCalendarProps {
@@ -237,6 +240,19 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
                     {event.location && (
                       <div className="event-location">📍 {event.location}</div>
                     )}
+                    <div className="event-rsvp-stats">
+                      <span className="rsvp-going">✅ {event.rsvp_count || 0}</span>
+                      {(event.maybe_count || 0) > 0 && (
+                        <span className="rsvp-maybe">🤔 {event.maybe_count}</span>
+                      )}
+                      {event.max_capacity && (
+                        <span className={`rsvp-capacity ${(event.rsvp_count || 0) >= event.max_capacity ? 'full' : ''}`}>
+                          👥 {(event.rsvp_count || 0) >= event.max_capacity 
+                            ? 'FULL' 
+                            : `${event.max_capacity - (event.rsvp_count || 0)} left`}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="event-arrow">→</div>
                 </button>

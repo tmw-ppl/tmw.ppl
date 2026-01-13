@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
+import EventShareButton from './EventShareButton'
 
 interface MessageInputProps {
   channelId: string
@@ -166,6 +167,45 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   }
 
+  const handleEventShare = async (event: { id: string; title: string; date: string; location?: string }) => {
+    if (!user) return
+
+    try {
+      setUploading(true)
+
+      const eventDate = new Date(event.date)
+      const formattedDate = eventDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      })
+
+      // Create a rich message with the event details
+      const eventMessage = `📅 **${event.title}**\n🕐 ${formattedDate}${event.location ? `\n📍 ${event.location}` : ''}\n\n👉 Check it out: /events/${event.id}`
+
+      const { error } = await supabase
+        .from('channel_messages')
+        .insert({
+          channel_id: channelId,
+          user_id: user.id,
+          content: eventMessage,
+          message_type: 'text',
+          parent_message_id: parentMessageId || null
+        })
+
+      if (error) throw error
+
+      onMessageSent()
+    } catch (err) {
+      console.error('Error sharing event:', err)
+      alert('Failed to share event')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   return (
     <div style={{
       padding: '1rem 1.5rem',
@@ -289,6 +329,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
         >
           📎
         </button>
+
+        <EventShareButton
+          onEventSelect={handleEventShare}
+          disabled={uploading}
+        />
 
         <input
           ref={fileInputRef}

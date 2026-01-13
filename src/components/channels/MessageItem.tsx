@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase, type ChannelMessage, type MessageReaction } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
+import EventMessageCard from './EventMessageCard'
 
 interface MessageItemProps {
   message: ChannelMessage
@@ -120,6 +121,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
     })
   }
 
+  // Check if message contains an event link
+  const extractEventId = (content: string): string | null => {
+    const eventLinkMatch = content.match(/\/events\/([a-f0-9-]{36})/i)
+    return eventLinkMatch ? eventLinkMatch[1] : null
+  }
+
+  const eventId = extractEventId(message.content)
+  const isEventMessage = eventId !== null
+
   if (message.deleted_at) {
     return (
       <div style={{
@@ -234,6 +244,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 Cancel
               </Button>
             </div>
+          </div>
+        ) : isEventMessage && eventId ? (
+          <div style={{ marginTop: '0.5rem' }}>
+            <EventMessageCard eventId={eventId} />
           </div>
         ) : (
           <div style={{
@@ -429,7 +443,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         )}
 
         {/* Thread indicator */}
-        {showThread && message.thread_count && message.thread_count > 0 && (
+        {showThread && message.thread_count > 0 && (
           <button
             onClick={() => {/* TODO: Open thread view */}}
             style={{

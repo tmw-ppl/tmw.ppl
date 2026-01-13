@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import AnimatedSection from '@/components/AnimatedSection'
 import Loading from '@/components/ui/Loading'
 import CreateChannelModal from '@/components/channels/CreateChannelModal'
+import InviteMembersModal from '@/components/channels/InviteMembersModal'
 import MessageItem from '@/components/channels/MessageItem'
 import MessageInput from '@/components/channels/MessageInput'
 import TypingIndicator from '@/components/channels/TypingIndicator'
@@ -24,12 +25,17 @@ const Section: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [subscription, setSubscription] = useState<any>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [replyingTo, setReplyingTo] = useState<ChannelMessage | null>(null)
   const [editingMessage, setEditingMessage] = useState<ChannelMessage | null>(null)
   const [events, setEvents] = useState<Array<{ id: string; title: string }>>([])
   const [projects, setProjects] = useState<Array<{ id: string; title: string }>>([])
+  const [isEditingChannelName, setIsEditingChannelName] = useState(false)
+  const [editedChannelName, setEditedChannelName] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const lastTypingRef = useRef<number>(0)
+  const channelNameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) {
@@ -41,6 +47,17 @@ const Section: React.FC = () => {
     loadEvents()
     loadProjects()
   }, [user])
+
+  // Handle channel query parameter from URL (e.g., from DM links)
+  useEffect(() => {
+    const channelId = router.query.channel as string
+    if (channelId && channels.length > 0) {
+      const targetChannel = channels.find(c => c.id === channelId)
+      if (targetChannel) {
+        setSelectedChannel(targetChannel)
+      }
+    }
+  }, [router.query.channel, channels])
 
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
@@ -232,6 +249,11 @@ const Section: React.FC = () => {
   const handleTyping = async () => {
     if (!selectedChannel || !user) return
 
+    // Throttle: only send typing indicator every 5 seconds
+    const now = Date.now()
+    if (now - lastTypingRef.current < 5000) return
+    lastTypingRef.current = now
+
     try {
       // Set typing indicator
       await supabase
@@ -260,6 +282,90 @@ const Section: React.FC = () => {
 
   const handleCancelReply = () => {
     setReplyingTo(null)
+  }
+
+  const startEditingChannelName = () => {
+    if (selectedChannel) {
+      setEditedChannelName(selectedChannel.name)
+      setIsEditingChannelName(true)
+      setTimeout(() => channelNameInputRef.current?.focus(), 50)
+    }
+  }
+
+  const saveChannelName = async () => {
+    if (!selectedChannel || !editedChannelName.trim()) {
+      setIsEditingChannelName(false)
+      return
+    }
+
+    const newName = editedChannelName.trim().toLowerCase().replace(/\s+/g, '-')
+    
+    try {
+      const { error } = await supabase
+        .from('channels')
+        .update({ name: newName, updated_at: new Date().toISOString() })
+        .eq('id', selectedChannel.id)
+
+      if (error) throw error
+
+      // Update local state
+      const updatedChannel = { ...selectedChannel, name: newName }
+      setSelectedChannel(updatedChannel)
+      setChannels(channels.map(c => c.id === selectedChannel.id ? updatedChannel : c))
+    } catch (err) {
+      console.error('Error updating channel name:', err)
+      alert('Failed to update channel name')
+    } finally {
+      setIsEditingChannelName(false)
+    }
+  }
+
+  const handleChannelNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      saveChannelName()
+    } else if (e.key === 'Escape') {
+      setIsEditingChannelName(false)
+    }
+  }
+
+  const handleLeaveChannel = async () => {
+    if (!selectedChannel || !user) return
+
+    const confirmed = window.confirm(
+      `Are you sure you want to leave #${selectedChannel.name}? You will no longer see messages from this channel.`
+    )
+
+    if (!confirmed) return
+
+    try {
+      // Remove user from channel_members
+      const { error } = await supabase
+        .from('channel_members')
+        .delete()
+        .eq('channel_id', selectedChannel.id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Remove channel from local state
+      const updatedChannels = channels.filter(c => c.id !== selectedChannel.id)
+      setChannels(updatedChannels)
+
+      // Select next available channel or null
+      if (updatedChannels.length > 0) {
+        setSelectedChannel(updatedChannels[0])
+      } else {
+        setSelectedChannel(null)
+      }
+
+      // Clear the URL query param if it was set
+      if (router.query.channel === selectedChannel.id) {
+        router.replace('/section', undefined, { shallow: true })
+      }
+    } catch (err) {
+      console.error('Error leaving channel:', err)
+      alert('Failed to leave channel. Please try again.')
+    }
   }
 
   const getChannelsByCategory = (categoryId?: string) => {
@@ -455,11 +561,67 @@ const Section: React.FC = () => {
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem' }}>
-                      #{selectedChannel.name}
-                    </h3>
-                    {selectedChannel.description && (
+                  <div style={{ flex: 1 }}>
+                    {isEditingChannelName ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1.25rem', color: 'var(--muted)' }}>#</span>
+                        <input
+                          ref={channelNameInputRef}
+                          type="text"
+                          value={editedChannelName}
+                          onChange={(e) => setEditedChannelName(e.target.value)}
+                          onKeyDown={handleChannelNameKeyDown}
+                          onBlur={saveChannelName}
+                          style={{
+                            fontSize: '1.25rem',
+                            fontWeight: 600,
+                            background: 'var(--bg)',
+                            border: '1px solid var(--primary)',
+                            borderRadius: '6px',
+                            padding: '0.25rem 0.5rem',
+                            color: 'var(--text)',
+                            outline: 'none',
+                            flex: 1,
+                            maxWidth: '300px'
+                          }}
+                        />
+                        <Button
+                          variant="primary"
+                          size="small"
+                          onClick={saveChannelName}
+                        >
+                          ✓
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="small"
+                          onClick={() => setIsEditingChannelName(false)}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ) : (
+                      <h3 
+                        style={{ 
+                          margin: 0, 
+                          fontSize: '1.25rem',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}
+                        onClick={startEditingChannelName}
+                        title="Click to rename"
+                      >
+                        #{selectedChannel.name}
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          opacity: 0.5,
+                          transition: 'opacity 0.2s'
+                        }}>✏️</span>
+                      </h3>
+                    )}
+                    {selectedChannel.description && !isEditingChannelName && (
                       <p style={{ 
                         margin: '0.25rem 0 0 0',
                         fontSize: '0.875rem',
@@ -478,6 +640,16 @@ const Section: React.FC = () => {
                     >
                       🔍
                     </Button>
+                    {selectedChannel.type === 'private' && (
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => setShowInviteModal(true)}
+                        title="Invite members"
+                      >
+                        👥+
+                      </Button>
+                    )}
                     <Button
                       variant="secondary"
                       size="small"
@@ -485,6 +657,15 @@ const Section: React.FC = () => {
                       title="Channel settings"
                     >
                       ⚙️
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={handleLeaveChannel}
+                      title="Leave channel"
+                      style={{ color: 'var(--danger)' }}
+                    >
+                      🚪
                     </Button>
                   </div>
                 </div>
@@ -615,6 +796,18 @@ const Section: React.FC = () => {
           onMessageSelect={(message) => {
             // Scroll to message (could implement scroll to message ID)
             console.log('Selected message:', message)
+          }}
+        />
+      )}
+
+      {showInviteModal && selectedChannel && (
+        <InviteMembersModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          channel={selectedChannel}
+          onMembersAdded={() => {
+            // Optionally reload channel data
+            loadChannels()
           }}
         />
       )}

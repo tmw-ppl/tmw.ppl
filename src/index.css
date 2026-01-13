@@ -766,6 +766,39 @@ footer a:hover {
   text-decoration: underline;
 }
 
+/* Form Options Row */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--muted);
+  user-select: none;
+}
+
+.remember-me input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.remember-me span {
+  transition: color 0.2s ease;
+}
+
+.remember-me:hover span {
+  color: var(--text);
+}
+
 /* Forgot Password Link */
 .forgot-password-link {
   background: none;
@@ -775,7 +808,6 @@ footer a:hover {
   cursor: pointer;
   text-align: right;
   padding: 0;
-  margin-bottom: 0.5rem;
   transition: color 0.2s ease;
 }
 
@@ -4255,6 +4287,31 @@ gmp-place-autocomplete input:focus {
 .event-calendar .event-info .event-location {
   font-size: 0.875rem;
   color: var(--muted);
+}
+
+.event-calendar .event-rsvp-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.event-calendar .event-rsvp-stats .rsvp-going {
+  color: var(--success);
+}
+
+.event-calendar .event-rsvp-stats .rsvp-maybe {
+  color: var(--warning);
+}
+
+.event-calendar .event-rsvp-stats .rsvp-capacity {
+  color: var(--muted);
+}
+
+.event-calendar .event-rsvp-stats .rsvp-capacity.full {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .event-calendar .event-arrow {
