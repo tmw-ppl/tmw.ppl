@@ -159,8 +159,10 @@ const CreateEvent: React.FC = () => {
       .eq('created_by', user.id)
       .not('group_name', 'is', null)
     
-    const groups = Array.from(new Set((data || []).map(e => e.group_name).filter(Boolean)))
-    setUserGroups(groups as string[])
+    const groups = Array.from(new Set(
+      (data || []).map((e: { group_name: string | null }) => e.group_name).filter((name): name is string => Boolean(name))
+    ))
+    setUserGroups(groups)
   }
 
   const searchCoHosts = async (query: string) => {
