@@ -82,8 +82,13 @@ const EventDetail: React.FC = () => {
         return
       }
 
+      if (!data) {
+        setError('Event not found')
+        return
+      }
+
       let eventWithRSVP = {
-        ...data,
+        ...(data as any),
         is_private: (data as any).is_private || false // Handle case where column doesn't exist yet
       } as EventWithRSVP
 
