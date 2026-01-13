@@ -159,7 +159,7 @@ const CreateEvent: React.FC = () => {
       .eq('created_by', user.id)
       .not('group_name', 'is', null)
     
-    const groups = [...new Set((data || []).map(e => e.group_name).filter(Boolean))]
+    const groups = Array.from(new Set((data || []).map(e => e.group_name).filter(Boolean)))
     setUserGroups(groups as string[])
   }
 
@@ -198,7 +198,7 @@ const CreateEvent: React.FC = () => {
     })
     
     // Combine and dedupe, prioritizing exact starts
-    const combined = [...new Set([...startsWithMatches, ...matches])]
+    const combined = Array.from(new Set([...startsWithMatches, ...matches]))
     
     setFilteredGroups(combined)
     // Show dropdown when there are matches OR when typing a new group name
