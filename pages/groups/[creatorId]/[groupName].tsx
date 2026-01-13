@@ -103,7 +103,7 @@ export default function GroupPage() {
         .eq('group_name', decodedGroupName)
         .eq('published', true)
         .lt('date', today)
-        .order('date', { descending: true })
+        .order('date', { ascending: false })
         .limit(20) as any)
 
       if (!pastError && pastEventsData) {
