@@ -128,9 +128,9 @@ const PublicProfilePage: React.FC = () => {
       setEventsLoading(true)
 
       // Load published events created by this user
-      const { data: userEvents, error: eventsError } = await supabase
+      const { data: userEventsData, error: eventsError } = await supabase
         .from('events')
-        .select('id, title, description, date, time, location, image_url, max_capacity, group_name')
+        .select('id, title, description, date, time, location, image_url, max_capacity, group_name, is_private, created_by')
         .eq('created_by', userId)
         .eq('published', true)
         .gte('date', new Date().toISOString().split('T')[0])
@@ -141,9 +141,51 @@ const PublicProfilePage: React.FC = () => {
         return
       }
 
+      // Filter out private events unless viewing user is the creator or is invited
+      let visibleEvents = (userEventsData || []).filter((event: any) => {
+        const isPrivate = event.is_private || false
+        if (!isPrivate) return true // Public events are always visible
+        
+        // If viewing own profile, show all events
+        if (user?.id === userId) return true
+        
+        // For other users' profiles, check if current user is invited
+        return false // Will check invitations below
+      })
+
+      // Check invitations for private events if viewing someone else's profile
+      if (user && user.id !== userId && visibleEvents.some((e: any) => e.is_private)) {
+        const privateEventIds = visibleEvents
+          .filter((e: any) => e.is_private)
+          .map((e: any) => e.id)
+        
+        if (privateEventIds.length > 0) {
+          const { data: invitations } = await supabase
+            .from('event_invitations')
+            .select('event_id')
+            .eq('user_id', user.id)
+            .in('event_id', privateEventIds)
+          
+          const invitedEventIds = new Set(invitations?.map((inv: any) => inv.event_id) || [])
+          
+          // Filter to only show private events where user is invited
+          visibleEvents = visibleEvents.filter((event: any) => {
+            const isPrivate = event.is_private || false
+            if (!isPrivate) return true
+            return invitedEventIds.has(event.id)
+          })
+        } else {
+          // No private events to check
+          visibleEvents = visibleEvents.filter((e: any) => !e.is_private)
+        }
+      } else if (!user || user.id !== userId) {
+        // Not logged in or viewing someone else's profile - filter out all private events
+        visibleEvents = visibleEvents.filter((e: any) => !e.is_private)
+      }
+
       // Fetch RSVP counts for each event
       const eventsWithCounts = await Promise.all(
-        (userEvents || []).map(async (event: any) => {
+        (visibleEvents || []).map(async (event: any) => {
           const { data: rsvpData } = await supabase
             .from('event_rsvps')
             .select('status')

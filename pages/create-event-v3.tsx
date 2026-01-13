@@ -30,6 +30,7 @@ interface EventFormData {
   image_url: string
   tags: string[]
   published: boolean
+  is_private: boolean
   guest_list_visibility: 'public' | 'rsvp_only' | 'hidden'
   group_name: string
   max_capacity: number | null
@@ -89,6 +90,7 @@ const CreateEventV3: React.FC = () => {
     image_url: '',
     tags: [],
     published: true,
+    is_private: false,
     guest_list_visibility: 'rsvp_only',
     group_name: '',
     max_capacity: null,
@@ -228,6 +230,7 @@ const CreateEventV3: React.FC = () => {
         location: event.location || '',
         image_url: event.image_url || '',
         tags: event.tags || [],
+        is_private: event.is_private || false,
         guest_list_visibility: event.guest_list_visibility || 'rsvp_only',
         group_name: event.group_name || '',
         max_capacity: event.max_capacity || null,
@@ -349,6 +352,7 @@ const CreateEventV3: React.FC = () => {
         image_url: formData.image_url.trim() || null,
         tags: formData.tags,
         published: formData.published,
+        is_private: formData.is_private,
         guest_list_visibility: formData.guest_list_visibility,
         group_name: formData.group_name.trim() || null,
         max_capacity: formData.max_capacity,
@@ -476,15 +480,34 @@ const CreateEventV3: React.FC = () => {
       {/* Event Content */}
       <div style={{ padding: '1.25rem' }}>
         {/* Title */}
-        <h3 style={{ 
-          fontSize: '1.5rem', 
-          fontWeight: 700, 
-          color: 'var(--text)',
-          marginBottom: '1rem',
-          lineHeight: 1.2
-        }}>
-          {formData.title || 'Your Event Title'}
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
+          <h3 style={{ 
+            fontSize: '1.5rem', 
+            fontWeight: 700, 
+            color: 'var(--text)',
+            margin: 0,
+            lineHeight: 1.2,
+            flex: 1
+          }}>
+            {formData.title || 'Your Event Title'}
+          </h3>
+          {formData.is_private && (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              padding: '0.25rem 0.5rem',
+              background: 'rgba(139, 92, 246, 0.15)',
+              borderRadius: '6px',
+              fontSize: '0.75rem',
+              color: 'var(--primary)',
+              fontWeight: 500,
+              whiteSpace: 'nowrap'
+            }}>
+              🔒 Private
+            </span>
+          )}
+        </div>
         
         {/* Date & Time */}
         <div style={{ 
@@ -1177,6 +1200,25 @@ const CreateEventV3: React.FC = () => {
                       ))}
                     </div>
                   )}
+                </div>
+
+                {/* Private Event */}
+                <div className="form-section">
+                  <h3>🔒 Privacy</h3>
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_private}
+                        onChange={(e) => setFormData(prev => ({ ...prev, is_private: e.target.checked }))}
+                      />
+                      <span className="custom-checkbox"></span>
+                      <span className="checkbox-text">
+                        <span className="checkbox-title">Private Event</span>
+                        <span className="checkbox-description">Only invited users or those with the direct link can view and RSVP</span>
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
                 {/* Guest List Visibility */}

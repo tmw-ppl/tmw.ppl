@@ -266,12 +266,14 @@ const Section: React.FC = () => {
     try {
       const { data } = await supabase
         .from('events')
-        .select('id, title')
+        .select('id, title, is_private, created_by')
         .eq('published', true)
         .order('date', { ascending: false })
         .limit(50)
 
-      setEvents(data || [])
+      // Filter out private events (only show public events in section search)
+      const publicEvents = (data || []).filter((event: any) => !event.is_private)
+      setEvents(publicEvents)
     } catch (err) {
       console.error('Error loading events:', err)
     }

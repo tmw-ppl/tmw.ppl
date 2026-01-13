@@ -62,6 +62,7 @@ export interface Event {
   image_url?: string
   tags?: string[]
   published: boolean
+  is_private?: boolean
   guest_list_visibility?: 'public' | 'rsvp_only' | 'hidden'
   created_by: string
   created_at: string
@@ -71,6 +72,18 @@ export interface Event {
     full_name: string
     email: string
   }
+}
+
+export interface EventInvitation {
+  id: string
+  event_id: string
+  user_id?: string
+  email?: string
+  invited_by: string
+  created_at: string
+  accepted_at?: string
+  // Joined data
+  profile?: Profile
 }
 
 export interface EventComment {

@@ -23,6 +23,7 @@ interface CreateEventData {
   image_url: string
   tags: string[]
   published: boolean
+  is_private: boolean
 }
 
 const CreateEvent: React.FC = () => {
@@ -44,7 +45,8 @@ const CreateEvent: React.FC = () => {
     rsvp_url: '',
     image_url: '',
     tags: [],
-    published: false
+    published: false,
+    is_private: false
   })
 
   const [newTag, setNewTag] = useState('')
@@ -254,6 +256,7 @@ const CreateEvent: React.FC = () => {
           image_url: formData.image_url.trim() || null,
           tags: formData.tags,
           published: formData.published,
+          is_private: formData.is_private,
           created_by: user.id
         })
         .select()
@@ -531,6 +534,26 @@ const CreateEvent: React.FC = () => {
                           {formData.published 
                             ? 'Your event will be visible to all community members' 
                             : 'Save as draft - you can publish later'}
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="form-group checkbox-group">
+                    <label htmlFor="is_private" className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        id="is_private"
+                        checked={formData.is_private}
+                        onChange={(e) => handleInputChange('is_private', e.target.checked)}
+                      />
+                      <div className="custom-checkbox"></div>
+                      <div className="checkbox-text">
+                        <span className="checkbox-title">🔒 Make this event private</span>
+                        <span className="checkbox-description">
+                          {formData.is_private 
+                            ? 'Only invited users or those with the link can RSVP' 
+                            : 'Anyone can RSVP to this event'}
                         </span>
                       </div>
                     </label>

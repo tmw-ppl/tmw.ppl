@@ -23,7 +23,7 @@ interface RSVPUser {
   profile?: Profile & { profile_picture_url?: string }
 }
 
-const EventDetailV2: React.FC = () => {
+const EventDetail: React.FC = () => {
   const router = useRouter()
   const { id } = router.query
   const { user } = useAuth()
@@ -1511,4 +1511,4 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 }
 
-export default EventDetailV2
+export default EventDetail

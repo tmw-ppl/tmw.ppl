@@ -258,30 +258,79 @@ const Events: React.FC = () => {
         .order('date', { ascending: true })
 
       if (error) {
-        setError('Failed to load events. Please try again.')
+        console.error('Error loading events:', error)
+        setError(`Failed to load events: ${error.message || 'Please try again.'}`)
         return
       }
 
-      const eventIds = (eventsData || []).map((e: any) => e.id)
-      const rsvpCounts = await loadRSVPCounts(eventIds)
-
-      let eventsWithRSVP = (eventsData || []).map((event: any) => {
-        const counts = rsvpCounts.get(event.id) || { going: 0, maybe: 0, not_going: 0 }
-        return { ...event, rsvp_count: counts.going, maybe_count: counts.maybe, not_going_count: counts.not_going }
+      // Filter out private events unless user is invited or is the creator
+      let visibleEvents = (eventsData || []).filter((event: any) => {
+        const isPrivate = event.is_private || false
+        if (!isPrivate) return true // Public events are always visible
+        
+        // Private events: only visible if user is creator or invited
+        if (!user) return false // Not logged in, can't see private events
+        
+        // Creator can always see their own events
+        if (event.created_by === user.id) return true
+        
+        // Check if user is invited (will check below)
+        return false // Will be filtered after checking invitations
       })
 
-      if (user && eventsData) {
+      const eventIds = visibleEvents.map((e: any) => e.id)
+      const rsvpCounts = await loadRSVPCounts(eventIds)
+
+      // Check invitations for private events if user is logged in
+      let invitedEventIds = new Set<string>()
+      if (user && visibleEvents.some((e: any) => e.is_private)) {
+        const privateEventIds = visibleEvents
+          .filter((e: any) => e.is_private && e.created_by !== user.id)
+          .map((e: any) => e.id)
+        
+        if (privateEventIds.length > 0) {
+          const { data: invitations } = await supabase
+            .from('event_invitations')
+            .select('event_id')
+            .eq('user_id', user.id)
+            .in('event_id', privateEventIds)
+          
+          invitations?.forEach((inv: any) => invitedEventIds.add(inv.event_id))
+        }
+      }
+
+      // Final filter: remove private events where user is not invited
+      visibleEvents = visibleEvents.filter((event: any) => {
+        const isPrivate = event.is_private || false
+        if (!isPrivate) return true
+        if (event.created_by === user?.id) return true // Creator can see
+        return invitedEventIds.has(event.id) // Only if invited
+      })
+
+      let eventsWithRSVP = visibleEvents.map((event: any) => {
+        const counts = rsvpCounts.get(event.id) || { going: 0, maybe: 0, not_going: 0 }
+        return { 
+          ...event, 
+          rsvp_count: counts.going, 
+          maybe_count: counts.maybe, 
+          not_going_count: counts.not_going,
+          is_private: event.is_private || false // Handle case where column doesn't exist yet
+        }
+      })
+
+      if (user && eventsWithRSVP.length > 0) {
+        const visibleEventIds = eventsWithRSVP.map((e: any) => e.id)
         const { data: rsvpData } = await supabase
           .from('event_rsvps')
           .select('event_id, status')
           .eq('user_id', user.id)
-          .in('event_id', eventIds)
+          .in('event_id', visibleEventIds)
 
         const { data: waitlistData } = await supabase
           .from('event_waitlist')
           .select('event_id, position')
           .eq('user_id', user.id)
-          .in('event_id', eventIds)
+          .in('event_id', visibleEventIds)
 
         const rsvpMap = new Map()
         const waitlistMap = new Map()
