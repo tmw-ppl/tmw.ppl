@@ -404,7 +404,7 @@ const CreateEvent: React.FC = () => {
         
         const { error: cohostError } = await supabase
           .from('event_cohosts')
-          .insert(cohostEntries)
+          .insert(cohostEntries as any)
         
         if (cohostError) {
           console.error('Failed to add co-hosts:', cohostError)
