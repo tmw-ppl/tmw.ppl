@@ -318,16 +318,16 @@ const Profile: React.FC = () => {
       }
 
       // Get creator profiles
-      const creatorIds = [...new Set(subsData.map(s => s.creator_id))]
+      const creatorIds = Array.from(new Set(subsData.map((s: any) => s.creator_id)))
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', creatorIds)
 
-      const profileMap = new Map(profilesData?.map(p => [p.id, p.full_name]) || [])
+      const profileMap = new Map((profilesData?.map((p: any) => [p.id, p.full_name]) || []) as [string, string][])
 
       // Build subscriptions list with creator names
-      const subs: Subscription[] = subsData.map(s => ({
+      const subs: Subscription[] = subsData.map((s: any) => ({
         group_name: s.group_name,
         creator_id: s.creator_id,
         creator_name: profileMap.get(s.creator_id) || 'Unknown'
@@ -341,7 +341,7 @@ const Profile: React.FC = () => {
       // Now fetch events for each subscription
       const allEvents: SubscribedEvent[] = []
 
-      for (const sub of subsData) {
+      for (const sub of subsData as any[]) {
         const { data: eventsData } = await supabase
           .from('events')
           .select('id, title, description, date, time, location, image_url, max_capacity, group_name')
@@ -353,7 +353,7 @@ const Profile: React.FC = () => {
 
         if (eventsData) {
           // Fetch RSVP counts for each event
-          for (const event of eventsData) {
+          for (const event of eventsData as any[]) {
             const { data: rsvpData } = await supabase
               .from('event_rsvps')
               .select('status')
@@ -365,7 +365,15 @@ const Profile: React.FC = () => {
             }, {})
 
             allEvents.push({
-              ...event,
+              id: event.id,
+              title: event.title,
+              description: event.description,
+              date: event.date,
+              time: event.time,
+              location: event.location,
+              image_url: event.image_url,
+              max_capacity: event.max_capacity,
+              group_name: event.group_name,
               rsvp_count: counts.going || 0,
               maybe_count: counts.maybe || 0,
               creator_id: sub.creator_id,
@@ -560,7 +568,7 @@ const Profile: React.FC = () => {
     const groups = userEvents
       .map(e => e.group_name)
       .filter((g): g is string => !!g)
-    return [...new Set(groups)].sort()
+    return Array.from(new Set(groups)).sort()
   }
 
   // Group events by group_name
@@ -622,7 +630,7 @@ const Profile: React.FC = () => {
     }))
     
     // Combine and dedupe (in case user created an event they're also attending)
-    const combined = [...myEvents]
+    const combined: (typeof myEvents[0] | typeof attending[0])[] = [...myEvents]
     attending.forEach(a => {
       if (!combined.find(e => e.id === a.id)) {
         combined.push(a)
@@ -636,13 +644,13 @@ const Profile: React.FC = () => {
   const handleSaveEventGroup = async (eventId: string, groupName: string) => {
     setSavingGroup(true)
     try {
-      const { error } = await supabase
-        .from('events')
+      const { error } = await ((supabase
+        .from('events') as any)
         .update({ 
           group_name: groupName.trim() || null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', eventId)
+        .eq('id', eventId))
 
       if (error) throw error
 

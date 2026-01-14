@@ -51,7 +51,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
         .eq('channel_id', channel.id)
 
       if (error) throw error
-      setExistingMemberIds((data || []).map(m => m.user_id))
+      setExistingMemberIds((data || []).map((m: any) => m.user_id))
     } catch (err) {
       console.error('Error loading existing members:', err)
     }
@@ -74,7 +74,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
       if (error) throw error
 
       // Filter out existing members and current user
-      const filtered = (data || []).filter(p => 
+      const filtered = (data || []).filter((p: any) => 
         p.id !== user?.id && 
         !existingMemberIds.includes(p.id) &&
         !selectedUsers.some(s => s.id === p.id)
@@ -118,9 +118,9 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
         role: 'member'
       }))
 
-      const { error: insertError } = await supabase
-        .from('channel_members')
-        .insert(membersToAdd)
+      const { error: insertError } = await ((supabase
+        .from('channel_members') as any)
+        .insert(membersToAdd))
 
       if (insertError) throw insertError
 

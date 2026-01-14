@@ -61,13 +61,15 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
       if (createError) throw createError
 
       // Add creator as owner member
-      await supabase
-        .from('channel_members')
+      const channelId = (data as any)?.id
+      if (!channelId) throw new Error('Failed to get channel ID')
+      await ((supabase
+        .from('channel_members') as any)
         .insert({
-          channel_id: data.id,
+          channel_id: channelId,
           user_id: user.id,
           role: 'owner'
-        })
+        }))
 
       // Join public channels automatically
       if (type === 'public') {

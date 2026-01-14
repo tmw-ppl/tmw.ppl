@@ -207,13 +207,14 @@ const Profiles: React.FC = () => {
 
       if (existingChannel) {
         // Channel exists, navigate to it
-        router.push(`/section?channel=${existingChannel.id}`)
+        const channel = existingChannel as { id: string }
+        router.push(`/section?channel=${channel.id}`)
         return
       }
 
       // Create new DM channel
-      const { data: newChannel, error: createError } = await supabase
-        .from('channels')
+      const { data: newChannel, error: createError } = await ((supabase
+        .from('channels') as any)
         .insert({
           name: dmChannelName,
           description: `Direct message with ${profileName}`,
@@ -223,7 +224,7 @@ const Profiles: React.FC = () => {
           is_read_only: false
         })
         .select()
-        .single()
+        .single())
 
       if (createError) {
         console.error('Error creating DM channel:', createError)
@@ -232,11 +233,16 @@ const Profiles: React.FC = () => {
       }
 
       // Add both users as members
-      const { error: memberError } = await supabase
-        .from('channel_members')
+      const channelId = (newChannel as any)?.id
+      if (!channelId) {
+        console.error('Failed to get channel ID')
+        return
+      }
+      const { error: memberError } = await ((supabase
+        .from('channel_members') as any)
         .insert([
           {
-            channel_id: newChannel.id,
+            channel_id: channelId,
             user_id: user.id,
             role: 'owner',
             is_muted: false,
@@ -246,7 +252,7 @@ const Profiles: React.FC = () => {
             last_read_at: new Date().toISOString()
           },
           {
-            channel_id: newChannel.id,
+            channel_id: channelId,
             user_id: profileId,
             role: 'member',
             is_muted: false,
@@ -255,14 +261,14 @@ const Profiles: React.FC = () => {
             joined_at: new Date().toISOString(),
             last_read_at: new Date().toISOString()
           }
-        ])
+        ]))
 
       if (memberError) {
         console.error('Error adding members to DM channel:', memberError)
       }
 
       // Navigate to the new channel
-      router.push(`/section?channel=${newChannel.id}`)
+      router.push(`/section?channel=${channelId}`)
     } catch (err) {
       console.error('Error setting up DM:', err)
       alert('Failed to set up messaging. Please try again.')

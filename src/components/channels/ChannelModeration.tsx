@@ -45,15 +45,15 @@ const ChannelModeration: React.FC<ChannelModerationProps> = ({
 
   const handleMute = async (memberId: string, muted: boolean, duration?: number) => {
     try {
-      await supabase
-        .from('channel_members')
+      await ((supabase
+        .from('channel_members') as any)
         .update({
           is_muted: !muted,
           muted_until: muted ? null : (duration 
             ? new Date(Date.now() + duration * 60 * 1000).toISOString()
             : null)
         })
-        .eq('id', memberId)
+        .eq('id', memberId))
 
       loadMembers()
     } catch (err) {
@@ -70,12 +70,12 @@ const ChannelModeration: React.FC<ChannelModerationProps> = ({
     }
 
     try {
-      await supabase
-        .from('channel_members')
+      await ((supabase
+        .from('channel_members') as any)
         .update({
           is_banned: !banned
         })
-        .eq('id', memberId)
+        .eq('id', memberId))
 
       loadMembers()
       onUpdate()
@@ -87,12 +87,12 @@ const ChannelModeration: React.FC<ChannelModerationProps> = ({
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     try {
-      await supabase
-        .from('channel_members')
+      await ((supabase
+        .from('channel_members') as any)
         .update({
           role: newRole
         })
-        .eq('id', memberId)
+        .eq('id', memberId))
 
       loadMembers()
     } catch (err) {

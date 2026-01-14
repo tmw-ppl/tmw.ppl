@@ -49,8 +49,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
         setReactions(reactions.filter(r => r.id !== existingReaction.id))
       } else {
         // Add reaction
-        const { data, error } = await supabase
-          .from('message_reactions')
+        const { data, error } = await ((supabase
+          .from('message_reactions') as any)
           .insert({
             message_id: message.id,
             user_id: user.id,
@@ -60,7 +60,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
             *,
             profile:profiles!user_id(full_name)
           `)
-          .single()
+          .single())
 
         if (!error && data) {
           setReactions([...reactions, data as MessageReaction])
@@ -75,12 +75,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
     if (!confirm('Are you sure you want to delete this message?')) return
 
     try {
-      await supabase
-        .from('channel_messages')
+      await ((supabase
+        .from('channel_messages') as any)
         .update({
           deleted_at: new Date().toISOString(),
           deleted_by: user?.id
-        })
+        }))
         .eq('id', message.id)
 
       // Message will be filtered out by parent component
@@ -93,13 +93,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
     if (!editContent.trim()) return
 
     try {
-      await supabase
-        .from('channel_messages')
+      await ((supabase
+        .from('channel_messages') as any)
         .update({
           content: editContent.trim(),
           edited_at: new Date().toISOString()
         })
-        .eq('id', message.id)
+        .eq('id', message.id))
 
       setEditing(false)
     } catch (err) {
@@ -443,7 +443,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         )}
 
         {/* Thread indicator */}
-        {showThread && message.thread_count > 0 && (
+        {showThread && (message.thread_count ?? 0) > 0 && (
           <button
             onClick={() => {/* TODO: Open thread view */}}
             style={{

@@ -126,12 +126,15 @@ export default function GroupPage() {
           .in('id', subscriberIds)
 
         const subscribersWithDates = subsData.map((sub: any) => {
-          const profile = profilesData?.find((p: any) => p.id === sub.subscriber_id)
+          const profile = profilesData?.find((p: any) => p.id === sub.subscriber_id) as { id: string; full_name: string; profile_picture_url?: string } | undefined
+          if (!profile) return null
           return {
-            ...profile,
+            id: profile.id,
+            full_name: profile.full_name,
+            profile_picture_url: profile.profile_picture_url,
             subscribed_at: sub.created_at
           }
-        }).filter((s: any) => s.id)
+        }).filter((s: any) => s && s.id)
 
         setSubscribers(subscribersWithDates as Subscriber[])
 
@@ -178,7 +181,7 @@ export default function GroupPage() {
             subscriber_id: user.id,
             creator_id: creatorId as string,
             group_name: decodedGroupName
-          }) as any)
+          } as any) as any)
 
         if (error) throw error
 
@@ -191,8 +194,11 @@ export default function GroupPage() {
           .single()
 
         if (userProfile) {
+          const profile = userProfile as { id: string; full_name: string; profile_picture_url?: string }
           setSubscribers(prev => [...prev, {
-            ...userProfile,
+            id: profile.id,
+            full_name: profile.full_name,
+            profile_picture_url: profile.profile_picture_url,
             subscribed_at: new Date().toISOString()
           }])
         }

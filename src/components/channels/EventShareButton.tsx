@@ -85,7 +85,7 @@ const EventShareButton: React.FC<EventShareButtonProps> = ({
       const eventMap = new Map<string, EventForShare>()
 
       // Add created events
-      ;(createdEvents || []).forEach(event => {
+      ;(createdEvents || []).forEach((event: any) => {
         eventMap.set(event.id, {
           id: event.id,
           title: event.title,

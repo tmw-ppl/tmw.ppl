@@ -92,16 +92,16 @@ const EventComments: React.FC<EventCommentsProps> = ({ eventId, canAccess }) => 
       }
 
       // Fetch profiles for comment authors
-      const userIds = [...new Set(commentsData.map(c => c.user_id))]
+      const userIds = Array.from(new Set(commentsData.map((c: any) => c.user_id)))
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, full_name, email, profile_picture_url')
         .in('id', userIds)
 
       // Merge profiles with comments
-      const commentsWithProfiles = commentsData.map(comment => ({
+      const commentsWithProfiles = commentsData.map((comment: any) => ({
         ...comment,
-        profile: profilesData?.find(p => p.id === comment.user_id) || null
+        profile: profilesData?.find((p: any) => p.id === comment.user_id) || null
       }))
 
       console.log('Comments with profiles:', commentsWithProfiles)
@@ -123,13 +123,13 @@ const EventComments: React.FC<EventCommentsProps> = ({ eventId, canAccess }) => 
     try {
       console.log('Posting comment to event:', eventId)
       
-      const { error } = await supabase
-        .from('event_comments')
+      const { error } = await ((supabase
+        .from('event_comments') as any)
         .insert({
           event_id: eventId,
           user_id: user.id,
           content: newComment.trim()
-        })
+        }))
 
       if (error) {
         console.error('Error posting comment:', error)
@@ -159,10 +159,10 @@ const EventComments: React.FC<EventCommentsProps> = ({ eventId, canAccess }) => 
     if (!editContent.trim()) return
 
     try {
-      const { error } = await supabase
-        .from('event_comments')
+      const { error } = await ((supabase
+        .from('event_comments') as any)
         .update({ content: editContent.trim() })
-        .eq('id', commentId)
+        .eq('id', commentId))
 
       if (error) throw error
       setEditingId(null)

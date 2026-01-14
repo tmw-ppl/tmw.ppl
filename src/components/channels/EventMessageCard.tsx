@@ -71,7 +71,7 @@ const EventMessageCard: React.FC<EventMessageCardProps> = ({ eventId }) => {
         .single()
 
       if (data) {
-        setRsvpStatus(data.status as 'going' | 'maybe' | 'not_going')
+        setRsvpStatus((data as any).status as 'going' | 'maybe' | 'not_going')
       }
     } catch (err) {
       // No RSVP found, that's fine
@@ -96,8 +96,8 @@ const EventMessageCard: React.FC<EventMessageCardProps> = ({ eventId }) => {
         setRsvpStatus(null)
       } else {
         // Upsert RSVP
-        await supabase
-          .from('event_rsvps')
+        await ((supabase
+          .from('event_rsvps') as any)
           .upsert({
             event_id: eventId,
             user_id: user.id,
@@ -105,7 +105,7 @@ const EventMessageCard: React.FC<EventMessageCardProps> = ({ eventId }) => {
             updated_at: new Date().toISOString()
           }, {
             onConflict: 'event_id,user_id'
-          })
+          }))
         setRsvpStatus(status)
       }
       // Reload event to get updated counts

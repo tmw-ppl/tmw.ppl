@@ -86,7 +86,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           .from('channel-attachments')
           .getPublicUrl(filePath)
 
-        const attachment = {
+        const attachment: any = {
           type: file.type.startsWith('image/') ? 'image' :
                 file.type.startsWith('video/') ? 'video' : 'file',
           url: publicUrl,
@@ -130,8 +130,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
            attachments[0].type === 'video' ? 'video' : 'file')
         : 'text'
 
-      const { error } = await supabase
-        .from('channel_messages')
+      const { error } = await ((supabase
+        .from('channel_messages') as any)
         .insert({
           channel_id: channelId,
           user_id: user.id,
@@ -139,7 +139,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           message_type: messageType,
           attachments: attachments.length > 0 ? attachments : null,
           parent_message_id: parentMessageId || null
-        })
+        }))
 
       if (error) throw error
 
@@ -185,15 +185,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
       // Create a rich message with the event details
       const eventMessage = `📅 **${event.title}**\n🕐 ${formattedDate}${event.location ? `\n📍 ${event.location}` : ''}\n\n👉 Check it out: /events/${event.id}`
 
-      const { error } = await supabase
-        .from('channel_messages')
+      const { error } = await ((supabase
+        .from('channel_messages') as any)
         .insert({
           channel_id: channelId,
           user_id: user.id,
           content: eventMessage,
           message_type: 'text',
           parent_message_id: parentMessageId || null
-        })
+        }))
 
       if (error) {
         console.error('Supabase error sharing event:', error)

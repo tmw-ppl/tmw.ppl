@@ -51,15 +51,15 @@ const Section: React.FC = () => {
       if (existingProfile) return true
 
       // Create profile if it doesn't exist
-      const { error: insertError } = await (supabase
-        .from('profiles')
+      const { error: insertError } = await ((supabase
+        .from('profiles') as any)
         .insert({
           id: user.id,
           email: user.email,
           full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }) as any)
+        }))
 
       if (insertError) {
         console.error('Error creating profile:', insertError)
@@ -218,17 +218,17 @@ const Section: React.FC = () => {
 
       // Mark messages as read
       if (data && data.length > 0) {
-        const messageIds = data.map(m => m.id)
-        await supabase
-          .from('message_read_receipts')
+        const messageIds = (data as any[]).map((m: any) => m.id)
+        await ((supabase
+          .from('message_read_receipts') as any)
           .upsert(
-            messageIds.map(msgId => ({
+            messageIds.map((msgId: any) => ({
               message_id: msgId,
               user_id: user?.id!,
               read_at: new Date().toISOString()
             })),
             { onConflict: 'message_id,user_id' }
-          )
+          ))
       }
     } catch (err) {
       console.error('Error loading messages:', err)
@@ -303,15 +303,15 @@ const Section: React.FC = () => {
 
     try {
       // Set typing indicator
-      await supabase
-        .from('channel_typing_indicators')
+      await ((supabase
+        .from('channel_typing_indicators') as any)
         .upsert({
           channel_id: selectedChannel.id,
           user_id: user.id,
           expires_at: new Date(Date.now() + 10000).toISOString() // 10 seconds
         }, {
           onConflict: 'channel_id,user_id'
-        })
+        }))
     } catch (err) {
       // Ignore errors for typing indicators
     }
@@ -348,10 +348,10 @@ const Section: React.FC = () => {
     const newName = editedChannelName.trim().toLowerCase().replace(/\s+/g, '-')
     
     try {
-      const { error } = await supabase
-        .from('channels')
+      const { error } = await ((supabase
+        .from('channels') as any)
         .update({ name: newName, updated_at: new Date().toISOString() })
-        .eq('id', selectedChannel.id)
+        .eq('id', selectedChannel.id))
 
       if (error) throw error
 
