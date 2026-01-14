@@ -56,7 +56,7 @@ const generateFunChatName = (id1: string, id2: string): string => {
 }
 
 const Profiles: React.FC = () => {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [messagingUserId, setMessagingUserId] = useState<string | null>(null)
@@ -67,6 +67,13 @@ const Profiles: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
+
   // Handle search query param from URL
   useEffect(() => {
     if (router.isReady && router.query.search) {
@@ -74,10 +81,12 @@ const Profiles: React.FC = () => {
     }
   }, [router.isReady, router.query.search])
 
-  // Load profiles from database
+  // Load profiles from database (only if logged in)
   useEffect(() => {
-    loadProfiles()
-  }, [])
+    if (user && !authLoading) {
+      loadProfiles()
+    }
+  }, [user, authLoading])
 
   // Reload profiles when sort changes
   useEffect(() => {
@@ -110,10 +119,16 @@ const Profiles: React.FC = () => {
           break
       }
       
+      if (!user) {
+        setError('You must be logged in to view profiles.')
+        setLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .or(`private.is.null,private.eq.false${user ? `,id.eq.${user.id}` : ''}`)
+        .or(`private.is.null,private.eq.false,id.eq.${user.id}`)
         .order(orderBy, { ascending })
 
       console.log('📊 Profiles response:', { data, error, count: data?.length })
@@ -288,6 +303,24 @@ const Profiles: React.FC = () => {
     } catch (err) {
       console.log('Copy failed')
     }
+  }
+
+  // Show loading or redirect if not authenticated
+  if (authLoading || !user) {
+    return (
+      <section className="hero">
+        <div className="container">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <h1>Community Profiles</h1>
+          </div>
+          <p className="lead">
+            Discover creative minds, connect with collaborators, and find your
+            next project partner in the Tomorrow People community.
+          </p>
+          <Loading message={authLoading ? "Loading..." : "Redirecting to sign in..."} />
+        </div>
+      </section>
+    )
   }
 
   if (loading) {
