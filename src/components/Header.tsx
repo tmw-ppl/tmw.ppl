@@ -238,6 +238,15 @@ const Header: React.FC = () => {
           >
             Events
           </Link>
+          <Link
+            href="/sections"
+            style={getLinkStyles(isActive('/sections'))}
+            onClick={() => setMobileMenuOpen(false)}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = isActive('/sections') ? 'var(--text)' : 'var(--muted)'}
+          >
+            Sections
+          </Link>
           <Link 
             href="/profiles" 
             style={getLinkStyles(isActive('/profiles'))}
