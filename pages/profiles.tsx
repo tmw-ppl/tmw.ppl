@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
@@ -19,15 +20,59 @@ interface Profile {
   updated_at: string
 }
 
+// Fun word lists for generating chat names
+const adjectives = [
+  'cosmic', 'sunny', 'swift', 'cozy', 'bright', 'gentle', 'happy', 'wild',
+  'calm', 'brave', 'clever', 'dreamy', 'eager', 'fancy', 'golden', 'jazzy',
+  'lucky', 'mellow', 'noble', 'quirky', 'radiant', 'stellar', 'vibrant', 'witty',
+  'zesty', 'serene', 'vivid', 'mystic', 'cosmic', 'electric', 'groovy', 'retro'
+]
+
+const nouns = [
+  'butterfly', 'meadow', 'falcon', 'river', 'mountain', 'forest', 'sunset',
+  'moonlight', 'thunder', 'whisper', 'voyage', 'garden', 'crystal', 'phoenix',
+  'nebula', 'aurora', 'horizon', 'oasis', 'cascade', 'echo', 'spark', 'wave',
+  'breeze', 'comet', 'prism', 'twilight', 'ember', 'velvet', 'zephyr', 'bloom'
+]
+
+// Generate a deterministic fun name based on two user IDs
+const generateFunChatName = (id1: string, id2: string): string => {
+  const sortedIds = [id1, id2].sort()
+  const combined = sortedIds.join('')
+  
+  // Create a simple hash from the combined string
+  let hash = 0
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32-bit integer
+  }
+  hash = Math.abs(hash)
+  
+  const adjective = adjectives[hash % adjectives.length]
+  const noun = nouns[(hash >> 8) % nouns.length]
+  
+  return `${adjective}-${noun}`
+}
+
 const Profiles: React.FC = () => {
   const { user } = useAuth()
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
+  const [messagingUserId, setMessagingUserId] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState('all')
   const [sortBy, setSortBy] = useState('latest') // 'latest', 'first', 'alphabetical'
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Handle search query param from URL
+  useEffect(() => {
+    if (router.isReady && router.query.search) {
+      setSearchTerm(router.query.search as string)
+    }
+  }, [router.isReady, router.query.search])
 
   // Load profiles from database
   useEffect(() => {
@@ -135,25 +180,105 @@ const Profiles: React.FC = () => {
     setFilteredProfiles(filtered)
   }
 
-  const handleConnect = (profileName: string) => {
-    if (user) {
-      alert(`Connection request sent to ${profileName}! 🤝`)
-    } else {
-      // In a real app, this would redirect to auth
-      alert('Please sign in to connect with community members!')
-    }
-  }
-
-  const handleMessage = (profileName: string) => {
-    if (user) {
-      alert(`Message feature coming soon! You wanted to message ${profileName} 💬`)
-    } else {
+  const handleMessage = async (profileId: string, profileName: string) => {
+    if (!user) {
       alert('Please sign in to message community members.')
+      return
+    }
+
+    if (profileId === user.id) {
+      alert("You can't message yourself!")
+      return
+    }
+
+    setMessagingUserId(profileId)
+
+    try {
+      // Generate a fun, deterministic chat name based on both user IDs
+      const dmChannelName = generateFunChatName(user.id, profileId)
+
+      // Check if DM channel already exists
+      const { data: existingChannel, error: searchError } = await supabase
+        .from('channels')
+        .select('id')
+        .eq('name', dmChannelName)
+        .eq('type', 'private')
+        .single()
+
+      if (existingChannel) {
+        // Channel exists, navigate to it
+        const channel = existingChannel as { id: string }
+        router.push(`/section?channel=${channel.id}`)
+        return
+      }
+
+      // Create new DM channel
+      const { data: newChannel, error: createError } = await ((supabase
+        .from('channels') as any)
+        .insert({
+          name: dmChannelName,
+          description: `Direct message with ${profileName}`,
+          type: 'private',
+          created_by: user.id,
+          is_archived: false,
+          is_read_only: false
+        })
+        .select()
+        .single())
+
+      if (createError) {
+        console.error('Error creating DM channel:', createError)
+        alert('Failed to create message channel. Please try again.')
+        return
+      }
+
+      // Add both users as members
+      const channelId = (newChannel as any)?.id
+      if (!channelId) {
+        console.error('Failed to get channel ID')
+        return
+      }
+      const { error: memberError } = await ((supabase
+        .from('channel_members') as any)
+        .insert([
+          {
+            channel_id: channelId,
+            user_id: user.id,
+            role: 'owner',
+            is_muted: false,
+            is_banned: false,
+            notifications_enabled: true,
+            joined_at: new Date().toISOString(),
+            last_read_at: new Date().toISOString()
+          },
+          {
+            channel_id: channelId,
+            user_id: profileId,
+            role: 'member',
+            is_muted: false,
+            is_banned: false,
+            notifications_enabled: true,
+            joined_at: new Date().toISOString(),
+            last_read_at: new Date().toISOString()
+          }
+        ]))
+
+      if (memberError) {
+        console.error('Error adding members to DM channel:', memberError)
+      }
+
+      // Navigate to the new channel
+      router.push(`/section?channel=${channelId}`)
+    } catch (err) {
+      console.error('Error setting up DM:', err)
+      alert('Failed to set up messaging. Please try again.')
+    } finally {
+      setMessagingUserId(null)
     }
   }
 
-  const handleViewProfile = (profileName: string) => {
-    alert(`Viewing ${profileName}'s detailed profile - coming soon! 👤`)
+  const handleViewProfile = (profileId: string) => {
+    router.push(`/profiles/${profileId}`)
   }
 
   const copySkill = async (skill: string) => {
@@ -307,7 +432,20 @@ const Profiles: React.FC = () => {
 
         <div className="profiles" id="profiles-container">
           {filteredProfiles.map((profile) => (
-            <Card key={profile.id} className="profile-card">
+            <Card 
+              key={profile.id} 
+              className="profile-card"
+              style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+              onClick={() => handleViewProfile(profile.id)}
+              onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
+                e.currentTarget.style.borderColor = 'var(--primary)'
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
+                e.currentTarget.style.borderColor = 'var(--border)'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                 <Avatar 
                   src={profile.profile_picture_url} 
@@ -358,16 +496,23 @@ const Profiles: React.FC = () => {
                   <div className="profile-actions" style={{ display: 'flex', gap: '0.5rem' }}>
                     <Button
                       size="small"
-                      onClick={() => handleConnect(profile.full_name)}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation()
+                        handleMessage(profile.id, profile.full_name)
+                      }}
+                      disabled={messagingUserId === profile.id}
                     >
-                      Connect
+                      {messagingUserId === profile.id ? 'Opening...' : 'Message'}
                     </Button>
                     <Button
                       variant="secondary"
                       size="small"
-                      onClick={() => handleMessage(profile.full_name)}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation()
+                        handleViewProfile(profile.id)
+                      }}
                     >
-                      Message
+                      View Profile
                     </Button>
                   </div>
                 </div>

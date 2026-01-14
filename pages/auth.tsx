@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Button from '@/components/ui/Button'
 
@@ -12,10 +13,20 @@ const Auth: React.FC = () => {
   // Form states
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
   const [signupName, setSignupName] = useState('')
   const [signupPhone, setSignupPhone] = useState('')
+
+  // Load remembered email on mount
+  React.useEffect(() => {
+    const rememberedEmail = localStorage.getItem('tmw-ppl-remembered-email')
+    if (rememberedEmail) {
+      setLoginEmail(rememberedEmail)
+      setRememberMe(true)
+    }
+  }, [])
 
   const { signIn, signUp } = useAuth()
   const router = useRouter()
@@ -46,6 +57,12 @@ const Auth: React.FC = () => {
       if (error) {
         showError(error.message)
       } else {
+        // Save or clear remembered email based on checkbox
+        if (rememberMe) {
+          localStorage.setItem('tmw-ppl-remembered-email', loginEmail)
+        } else {
+          localStorage.removeItem('tmw-ppl-remembered-email')
+        }
         console.log('Sign in successful, redirecting to profile...')
         setTimeout(() => {
           router.push('/profile')
@@ -93,25 +110,23 @@ const Auth: React.FC = () => {
         <div className="auth-container">
           <div className="auth-header">
             <h1>Welcome back</h1>
-            <p>
-              Sign in to access exclusive events and connect with the community
-            </p>
+            <p>Sign in to access exclusive events and connect with the community</p>
           </div>
 
           <div className="auth-tabs">
-            <button
-              className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
-              onClick={() => setActiveTab('login')}
-            >
-              Sign In
-            </button>
-            <button
-              className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
-              onClick={() => setActiveTab('signup')}
-            >
-              Sign Up
-            </button>
-          </div>
+              <button
+                className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
+                onClick={() => setActiveTab('login')}
+              >
+                Sign In
+              </button>
+              <button
+                className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
+                onClick={() => setActiveTab('signup')}
+              >
+                Sign Up
+              </button>
+            </div>
 
           {activeTab === 'login' ? (
             <form onSubmit={handleLogin} className="auth-form">
@@ -136,6 +151,19 @@ const Auth: React.FC = () => {
                   placeholder="Your password"
                   required
                 />
+              </div>
+              <div className="form-options">
+                <label className="remember-me">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span>Remember me</span>
+                </label>
+                <Link href="/forgot-password" className="forgot-password-link">
+                  Forgot password?
+                </Link>
               </div>
               <Button
                 type="submit"

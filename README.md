@@ -65,7 +65,7 @@ src/
    ```bash
    npm run dev
    ```
-
+ 
 4. Open your browser to `http://localhost:5173`
 
 ### Environment Setup

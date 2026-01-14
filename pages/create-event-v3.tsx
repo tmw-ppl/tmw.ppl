@@ -162,7 +162,7 @@ const CreateEvent: React.FC = () => {
     const groups = Array.from(new Set(
       (data || []).map((e: { group_name: string | null }) => e.group_name).filter((name): name is string => Boolean(name))
     ))
-    setUserGroups(groups as string[])
+    setUserGroups(groups)
   }
 
   const searchCoHosts = async (query: string) => {

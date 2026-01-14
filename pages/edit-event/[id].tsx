@@ -21,6 +21,7 @@ const EditEvent: React.FC = () => {
   const [rsvpUrl, setRsvpUrl] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [published, setPublished] = useState(true)
+  const [isPrivate, setIsPrivate] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -60,6 +61,7 @@ const EditEvent: React.FC = () => {
       setRsvpUrl(eventData.rsvp_url || '')
       setTags(eventData.tags || [])
       setPublished(eventData.published)
+      setIsPrivate(eventData.is_private || false)
     } catch (error) {
       console.error('Error loading event:', error)
       setError('Failed to load event.')
@@ -86,6 +88,7 @@ const EditEvent: React.FC = () => {
         rsvp_url: rsvpUrl || null,
         tags: tags.length > 0 ? tags : null,
         published,
+        is_private: isPrivate,
         updated_at: new Date().toISOString(),
       }
 
@@ -254,6 +257,17 @@ const EditEvent: React.FC = () => {
                   onChange={(e) => setPublished(e.target.checked)}
                 />{' '}
                 Published (visible to everyone)
+              </label>
+            </div>
+
+            <div className="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={isPrivate}
+                  onChange={(e) => setIsPrivate(e.target.checked)}
+                />{' '}
+                🔒 Private Event (only invited users or those with the link can RSVP)
               </label>
             </div>
 
