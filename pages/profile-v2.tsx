@@ -72,6 +72,28 @@ interface Notification {
   created_at: string
 }
 
+interface SubscribedEvent {
+  id: string
+  title: string
+  description?: string
+  date: string
+  time: string
+  location?: string
+  image_url?: string
+  max_capacity?: number
+  rsvp_count?: number
+  maybe_count?: number
+  group_name: string
+  creator_id: string
+  creator_name: string
+}
+
+interface Subscription {
+  group_name: string
+  creator_id: string
+  creator_name: string
+}
+
 interface SocialStats {
   eventsCreated: number
   eventsAttended: number
@@ -87,6 +109,11 @@ const ProfileV2: React.FC = () => {
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [userEvents, setUserEvents] = useState<UserEvent[]>([])
   const [rsvpEvents, setRsvpEvents] = useState<RSVPEvent[]>([])
+  const [subscribedEvents, setSubscribedEvents] = useState<SubscribedEvent[]>([])
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
+  const [selectedSubscriptionGroups, setSelectedSubscriptionGroups] = useState<Set<string>>(new Set())
+  const [rsvpLoading, setRsvpLoading] = useState(true)
+  const [subscribedLoading, setSubscribedLoading] = useState(true)
   const [socialStats, setSocialStats] = useState<SocialStats>({
     eventsCreated: 0,
     eventsAttended: 0,
@@ -126,6 +153,7 @@ const ProfileV2: React.FC = () => {
     loadUserProfile()
     loadUserEvents()
     loadUserRSVPs()
+    loadSubscribedEvents()
     loadNotifications()
   }, [user, authLoading, router])
 
@@ -236,6 +264,7 @@ const ProfileV2: React.FC = () => {
     if (!user) return
 
     try {
+      setRsvpLoading(true)
       const { data: rsvpData, error } = await supabase
         .from('event_rsvps')
         .select(`
@@ -292,6 +321,131 @@ const ProfileV2: React.FC = () => {
       updateSocialStats(userEvents, transformedRSVPs)
     } catch (error) {
       console.error('Error loading user RSVPs:', error)
+    } finally {
+      setRsvpLoading(false)
+    }
+  }
+
+  const loadSubscribedEvents = async () => {
+    if (!user) return
+
+    try {
+      setSubscribedLoading(true)
+
+      // First, get all subscriptions for this user
+      const { data: subsData, error: subsError } = await supabase
+        .from('event_group_subscriptions')
+        .select('group_name, creator_id')
+        .eq('subscriber_id', user.id)
+
+      if (subsError) {
+        console.error('Error loading subscriptions:', subsError)
+        return
+      }
+
+      if (!subsData || subsData.length === 0) {
+        setSubscriptions([])
+        setSubscribedEvents([])
+        return
+      }
+
+      // Get creator profiles
+      const creatorIds = Array.from(new Set(subsData.map((s: any) => s.creator_id)))
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', creatorIds)
+
+      const profileMap = new Map((profilesData?.map((p: any) => [p.id, p.full_name]) || []) as [string, string][])
+
+      // Build subscriptions list with creator names
+      const subs: Subscription[] = subsData.map((s: any) => ({
+        group_name: s.group_name,
+        creator_id: s.creator_id,
+        creator_name: profileMap.get(s.creator_id) || 'Unknown'
+      }))
+      setSubscriptions(subs)
+
+      // Initialize all subscription groups as selected
+      const allGroupKeys = subs.map(s => `${s.creator_id}:${s.group_name}`)
+      setSelectedSubscriptionGroups(new Set(allGroupKeys))
+
+      // Now fetch events for each subscription
+      const allEvents: SubscribedEvent[] = []
+
+      for (const sub of subsData as any[]) {
+        const { data: eventsData } = await supabase
+          .from('events')
+          .select('id, title, description, date, time, location, image_url, max_capacity, group_name')
+          .eq('created_by', sub.creator_id)
+          .eq('group_name', sub.group_name)
+          .eq('published', true)
+          .gte('date', new Date().toISOString().split('T')[0])
+          .order('date', { ascending: true })
+
+        if (eventsData) {
+          // Fetch RSVP counts for each event
+          for (const event of eventsData as any[]) {
+            const { data: rsvpData } = await supabase
+              .from('event_rsvps')
+              .select('status')
+              .eq('event_id', event.id)
+
+            const counts = (rsvpData || []).reduce((acc: any, r: any) => {
+              acc[r.status] = (acc[r.status] || 0) + 1
+              return acc
+            }, {})
+
+            allEvents.push({
+              id: event.id,
+              title: event.title,
+              description: event.description,
+              date: event.date,
+              time: event.time,
+              location: event.location,
+              image_url: event.image_url,
+              max_capacity: event.max_capacity,
+              group_name: event.group_name,
+              rsvp_count: counts.going || 0,
+              maybe_count: counts.maybe || 0,
+              creator_id: sub.creator_id,
+              creator_name: profileMap.get(sub.creator_id) || 'Unknown'
+            })
+          }
+        }
+      }
+
+      // Sort by date
+      allEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      setSubscribedEvents(allEvents)
+    } catch (error) {
+      console.error('Error loading subscribed events:', error)
+    } finally {
+      setSubscribedLoading(false)
+    }
+  }
+
+  const handleUnsubscribe = async (creatorId: string, groupName: string) => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from('event_group_subscriptions')
+        .delete()
+        .eq('subscriber_id', user.id)
+        .eq('creator_id', creatorId)
+        .eq('group_name', groupName)
+
+      if (error) {
+        console.error('Error unsubscribing:', error)
+        alert('Failed to unsubscribe. Please try again.')
+        return
+      }
+
+      // Refresh subscriptions
+      loadSubscribedEvents()
+    } catch (err) {
+      console.error('Error unsubscribing:', err)
     }
   }
 
@@ -574,6 +728,7 @@ const ProfileV2: React.FC = () => {
       } else {
         const { error } = await supabase
           .from('events')
+          // @ts-expect-error - Supabase types don't include all event fields
           .update({ published: action === 'publish' })
           .in('id', eventIds)
         
@@ -1374,6 +1529,573 @@ const ProfileV2: React.FC = () => {
                 ))}
               </div>
             )}
+
+            {/* Events You're Attending Section */}
+            <div style={{ marginTop: '3rem' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: '1.5rem' 
+              }}>
+                <h3 style={{ 
+                  fontSize: '1.5rem',
+                  fontWeight: '700',
+                  color: 'var(--text)',
+                  margin: 0,
+                }}>
+                  🎫 Events You're Attending
+                </h3>
+                <Button 
+                  variant="secondary" 
+                  size="small"
+                  onClick={() => router.push('/events')}
+                >
+                  Browse Events
+                </Button>
+              </div>
+              
+              {rsvpLoading ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  Loading your RSVPs...
+                </div>
+              ) : rsvpEvents.length === 0 ? (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '3rem 2rem', 
+                  background: 'var(--bg-2)', 
+                  borderRadius: '12px',
+                  border: '1px solid var(--border)'
+                }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎫</div>
+                  <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No RSVPs yet</h4>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                    RSVP to events to see them here and stay updated!
+                  </p>
+                  <Button 
+                    variant="primary"
+                    onClick={() => router.push('/events')}
+                  >
+                    Browse Events
+                  </Button>
+                </div>
+              ) : (
+                <div style={{ 
+                  display: 'grid', 
+                  gap: '1.5rem',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
+                }}>
+                  {rsvpEvents.map((event) => (
+                    <div 
+                      key={event.id} 
+                      style={{
+                        background: 'var(--bg-2)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '16px',
+                        padding: '1.5rem',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => router.push(`/events/${event.id}`)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary)'
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border)'
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                        <h4 style={{ margin: 0, color: 'var(--text)', fontSize: '1.1rem' }}>
+                          {event.title}
+                        </h4>
+                        <span style={{
+                          background: event.rsvp_status === 'going' ? 'var(--success)' : 
+                                     event.rsvp_status === 'maybe' ? 'var(--warning)' : 
+                                     'var(--danger)',
+                          color: 'white',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600'
+                        }}>
+                          {event.rsvp_status === 'going' ? '✅ GOING' : 
+                           event.rsvp_status === 'maybe' ? '🤔 MAYBE' : 
+                           '❌ NOT GOING'}
+                        </span>
+                      </div>
+                      
+                      {event.description && (
+                        <p style={{ 
+                          color: 'var(--text-muted)', 
+                          fontSize: '0.9rem', 
+                          lineHeight: '1.4',
+                          marginBottom: '1rem',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {event.description}
+                        </p>
+                      )}
+                      
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '1rem',
+                        fontSize: '0.875rem',
+                        color: 'var(--text-muted)',
+                        marginBottom: '1rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>📅</span>
+                          <span>{new Date(event.date).toLocaleDateString()}</span>
+                        </div>
+                        {event.time && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span>⏰</span>
+                            <span>{event.time}</span>
+                          </div>
+                        )}
+                        {event.location && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span>📍</span>
+                            <span style={{ 
+                              maxWidth: '120px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {event.location}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        fontSize: '0.875rem',
+                        flexWrap: 'wrap',
+                        paddingTop: '1rem',
+                        borderTop: '1px solid var(--border)',
+                      }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '0.5rem',
+                          color: 'var(--success)'
+                        }}>
+                          <span>✅</span>
+                          <span>{event.rsvp_count || 0} going</span>
+                        </div>
+                        {(event.maybe_count || 0) > 0 && (
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem',
+                            color: 'var(--warning)'
+                          }}>
+                            <span>🤔</span>
+                            <span>{event.maybe_count} maybe</span>
+                          </div>
+                        )}
+                        {event.max_capacity && (
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem',
+                            color: (event.rsvp_count || 0) >= event.max_capacity ? 'var(--danger)' : 'var(--muted)',
+                            marginLeft: 'auto'
+                          }}>
+                            <span>👥</span>
+                            <span>
+                              {(event.rsvp_count || 0) >= event.max_capacity 
+                                ? 'FULL' 
+                                : `${event.max_capacity - (event.rsvp_count || 0)} spots left`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {event.creator && (
+                        <div style={{ 
+                          fontSize: '0.875rem',
+                          color: 'var(--text-muted)',
+                          paddingTop: '1rem',
+                          borderTop: '1px solid var(--border)',
+                          marginTop: '1rem',
+                        }}>
+                          👤 Created by {event.creator.full_name}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Subscribed Events Section */}
+            <div style={{ marginTop: '3rem' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: '1.5rem' 
+              }}>
+                <h3 style={{ 
+                  fontSize: '1.5rem',
+                  fontWeight: '700',
+                  color: 'var(--text)',
+                  margin: 0,
+                }}>
+                  🔔 Subscribed Events
+                </h3>
+                {subscriptions.length > 0 && (
+                  <span style={{ 
+                    background: 'var(--success)', 
+                    color: 'white',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '20px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600'
+                  }}>
+                    {subscriptions.length} subscription{subscriptions.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              {subscribedLoading ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  Loading subscribed events...
+                </div>
+              ) : subscriptions.length === 0 ? (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '3rem 2rem', 
+                  background: 'var(--bg-2)', 
+                  borderRadius: '12px',
+                  border: '1px solid var(--border)'
+                }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔔</div>
+                  <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No subscriptions yet</h4>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                    Subscribe to event groups from other members to get updates on their events!
+                  </p>
+                  <Button 
+                    variant="primary"
+                    onClick={() => router.push('/profiles')}
+                  >
+                    Browse Profiles
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Subscription Group Toggles */}
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    marginBottom: '1.5rem',
+                    padding: '1rem',
+                    background: 'var(--bg-2)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border)'
+                  }}>
+                    <span style={{ 
+                      color: 'var(--muted)', 
+                      fontSize: '0.875rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      marginRight: '0.5rem'
+                    }}>
+                      Filter:
+                    </span>
+                    
+                    {subscriptions.map((sub) => {
+                      const groupKey = `${sub.creator_id}:${sub.group_name}`
+                      const isSelected = selectedSubscriptionGroups.has(groupKey)
+                      const eventCount = subscribedEvents.filter(
+                        e => e.creator_id === sub.creator_id && e.group_name === sub.group_name
+                      ).length
+                      
+                      return (
+                        <div key={groupKey} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <button
+                            onClick={() => {
+                              const newGroups = new Set(selectedSubscriptionGroups)
+                              if (isSelected) {
+                                newGroups.delete(groupKey)
+                              } else {
+                                newGroups.add(groupKey)
+                              }
+                              setSelectedSubscriptionGroups(newGroups)
+                            }}
+                            style={{
+                              padding: '0.375rem 0.75rem',
+                              borderRadius: '20px 0 0 20px',
+                              border: '1px solid var(--border)',
+                              borderRight: 'none',
+                              background: isSelected ? 'var(--primary)' : 'transparent',
+                              color: isSelected ? 'white' : 'var(--muted)',
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem'
+                            }}
+                          >
+                            {isSelected ? '✓' : ''} {sub.group_name}
+                            <span style={{ 
+                              opacity: 0.7,
+                              fontSize: '0.7rem'
+                            }}>
+                              by {sub.creator_name}
+                            </span>
+                            <span style={{ 
+                              background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--border)',
+                              padding: '0.125rem 0.375rem',
+                              borderRadius: '10px',
+                              fontSize: '0.7rem'
+                            }}>
+                              {eventCount}
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => handleUnsubscribe(sub.creator_id, sub.group_name)}
+                            title="Unsubscribe from this group"
+                            style={{
+                              padding: '0.375rem 0.5rem',
+                              borderRadius: '0 20px 20px 0',
+                              border: '1px solid var(--border)',
+                              background: 'var(--bg-2)',
+                              color: 'var(--danger)',
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )
+                    })}
+                    
+                    {/* Select All / Deselect All */}
+                    <button
+                      onClick={() => {
+                        const allKeys = subscriptions.map(s => `${s.creator_id}:${s.group_name}`)
+                        const allSelected = allKeys.every(k => selectedSubscriptionGroups.has(k))
+                        if (allSelected) {
+                          setSelectedSubscriptionGroups(new Set())
+                        } else {
+                          setSelectedSubscriptionGroups(new Set(allKeys))
+                        }
+                      }}
+                      style={{
+                        padding: '0.375rem 0.75rem',
+                        borderRadius: '20px',
+                        border: '1px dashed var(--border)',
+                        background: 'transparent',
+                        color: 'var(--muted)',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        transition: 'all 0.2s',
+                        marginLeft: '0.5rem'
+                      }}
+                    >
+                      {subscriptions.every(s => selectedSubscriptionGroups.has(`${s.creator_id}:${s.group_name}`)) 
+                        ? 'Deselect All' 
+                        : 'Select All'}
+                    </button>
+                  </div>
+
+                  {/* Filtered Subscribed Events */}
+                  {(() => {
+                    const filteredSubEvents = subscribedEvents.filter(e => 
+                      selectedSubscriptionGroups.has(`${e.creator_id}:${e.group_name}`)
+                    )
+                    
+                    if (filteredSubEvents.length === 0) {
+                      return (
+                        <div style={{ 
+                          textAlign: 'center', 
+                          padding: '2rem',
+                          color: 'var(--text-muted)'
+                        }}>
+                          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+                          <p>No events match the selected filters</p>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div style={{ 
+                        display: 'grid', 
+                        gap: '1.5rem',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
+                      }}>
+                        {filteredSubEvents.map((event) => (
+                          <div 
+                            key={event.id} 
+                            style={{
+                              background: 'var(--bg-2)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '16px',
+                              padding: '1.5rem',
+                              transition: 'all 0.2s ease',
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => router.push(`/events/${event.id}`)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--primary)'
+                              e.currentTarget.style.transform = 'translateY(-2px)'
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--border)'
+                              e.currentTarget.style.transform = 'translateY(0)'
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                          >
+                            <div style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'flex-start', 
+                              marginBottom: '0.75rem' 
+                            }}>
+                              <h4 style={{ margin: 0, color: 'var(--text)', fontSize: '1.1rem' }}>
+                                {event.title}
+                              </h4>
+                              <span style={{
+                                background: 'var(--primary)',
+                                color: 'white',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '12px',
+                                fontSize: '0.7rem',
+                                fontWeight: '600',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {event.group_name}
+                              </span>
+                            </div>
+                            
+                            {event.description && (
+                              <p style={{ 
+                                color: 'var(--text-muted)', 
+                                fontSize: '0.9rem', 
+                                lineHeight: '1.4',
+                                marginBottom: '1rem',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}>
+                                {event.description}
+                              </p>
+                            )}
+                            
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '1rem',
+                              fontSize: '0.875rem',
+                              color: 'var(--text-muted)',
+                              marginBottom: '0.75rem',
+                              flexWrap: 'wrap'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span>📅</span>
+                                <span>{new Date(event.date).toLocaleDateString()}</span>
+                              </div>
+                              {event.time && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span>⏰</span>
+                                  <span>{event.time}</span>
+                                </div>
+                              )}
+                              {event.location && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span>📍</span>
+                                  <span style={{ 
+                                    maxWidth: '120px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {event.location}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '1rem',
+                              fontSize: '0.875rem',
+                              flexWrap: 'wrap',
+                              marginBottom: '0.75rem',
+                              paddingTop: '0.75rem',
+                              borderTop: '1px solid var(--border)'
+                            }}>
+                              <span style={{ color: 'var(--success)' }}>
+                                ✅ {event.rsvp_count || 0} going
+                              </span>
+                              {(event.maybe_count || 0) > 0 && (
+                                <span style={{ color: 'var(--warning)' }}>
+                                  🤔 {event.maybe_count} maybe
+                                </span>
+                              )}
+                              {event.max_capacity && (
+                                <span style={{ 
+                                  color: (event.rsvp_count || 0) >= event.max_capacity 
+                                    ? 'var(--danger)' 
+                                    : 'var(--muted)',
+                                  marginLeft: 'auto'
+                                }}>
+                                  👥 {(event.rsvp_count || 0) >= event.max_capacity 
+                                    ? 'FULL' 
+                                    : `${event.max_capacity - (event.rsvp_count || 0)} left`}
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{ 
+                              fontSize: '0.875rem',
+                              color: 'var(--text-muted)',
+                              paddingTop: '0.75rem',
+                              borderTop: '1px solid var(--border)'
+                            }}>
+                              👤 By{' '}
+                              <span 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  router.push(`/profiles/${event.creator_id}`)
+                                }}
+                                style={{ 
+                                  color: 'var(--primary)', 
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline'
+                                }}
+                              >
+                                {event.creator_name}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </>
+              )}
+            </div>
           </div>
         )}
 

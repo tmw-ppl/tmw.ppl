@@ -225,15 +225,27 @@ const EditEvent: React.FC = () => {
         return
       }
 
+      // Type assertion to fix TypeScript inference issue
+      const event = eventData as Event & {
+        group_name?: string
+        max_capacity?: number | null
+        waitlist_enabled?: boolean
+      }
+
       // Load RSVP stats
       const { data: rsvpData } = await supabase
         .from('event_rsvps')
         .select('status')
         .eq('event_id', eventId as string)
 
-      const going = rsvpData?.filter(r => r.status === 'going').length || 0
-      const maybe = rsvpData?.filter(r => r.status === 'maybe').length || 0
-      const notGoing = rsvpData?.filter(r => r.status === 'not_going').length || 0
+      interface RSVPStatus {
+        status: 'going' | 'maybe' | 'not_going'
+      }
+
+      const rsvpStatuses = (rsvpData as RSVPStatus[]) || []
+      const going = rsvpStatuses.filter(r => r.status === 'going').length || 0
+      const maybe = rsvpStatuses.filter(r => r.status === 'maybe').length || 0
+      const notGoing = rsvpStatuses.filter(r => r.status === 'not_going').length || 0
 
       setRsvpStats({
         going,
@@ -264,27 +276,27 @@ const EditEvent: React.FC = () => {
       }
 
       // Parse date/time
-      const parsedDateTime = parseEventDateTime(eventData.date)
-      const isVirtual = eventData.location === 'Virtual Event' || !!eventData.rsvp_url
-      const virtualLink = isVirtual ? (eventData.rsvp_url || '') : ''
+      const parsedDateTime = parseEventDateTime(event.date)
+      const isVirtual = event.location === 'Virtual Event' || !!event.rsvp_url
+      const virtualLink = isVirtual ? (event.rsvp_url || '') : ''
 
       const loadedFormData: EventFormData = {
-        title: eventData.title || '',
-        description: eventData.description || '',
+        title: event.title || '',
+        description: event.description || '',
         date: parsedDateTime.date,
         time: parsedDateTime.time,
-        end_time: eventData.end_time ? parseEventDateTime(eventData.end_time).time : '',
-        location: isVirtual ? '' : (eventData.location || ''),
+        end_time: event.end_time ? parseEventDateTime(event.end_time).time : '',
+        location: isVirtual ? '' : (event.location || ''),
         is_virtual: isVirtual,
         virtual_link: virtualLink,
-        image_url: eventData.image_url || '',
-        tags: eventData.tags || [],
-        published: eventData.published ?? true,
-        is_private: eventData.is_private || false,
-        guest_list_visibility: eventData.guest_list_visibility || 'rsvp_only',
-        group_name: eventData.group_name || '',
-        max_capacity: eventData.max_capacity || null,
-        waitlist_enabled: eventData.waitlist_enabled || false,
+        image_url: event.image_url || '',
+        tags: event.tags || [],
+        published: event.published ?? true,
+        is_private: event.is_private || false,
+        guest_list_visibility: event.guest_list_visibility || 'rsvp_only',
+        group_name: event.group_name || '',
+        max_capacity: event.max_capacity || null,
+        waitlist_enabled: event.waitlist_enabled || false,
         co_hosts: cohosts,
         recurrence: {
           enabled: false, // Recurring events can't be edited as recurring
@@ -467,11 +479,15 @@ const EditEvent: React.FC = () => {
         .single()
 
       if (insertError) throw insertError
+      if (!newEvent) return
+
+      // Type assertion to fix TypeScript inference
+      const createdEvent = newEvent as { id: string }
 
       // Copy co-hosts
-      if (formData.co_hosts.length > 0 && newEvent) {
+      if (formData.co_hosts.length > 0) {
         const cohostEntries = formData.co_hosts.map(cohost => ({
-          event_id: newEvent.id,
+          event_id: createdEvent.id,
           user_id: cohost.id,
           added_by: user.id,
           role: 'cohost'
@@ -482,7 +498,7 @@ const EditEvent: React.FC = () => {
           .insert(cohostEntries as any)
       }
 
-      router.push(`/edit-event/${newEvent.id}`)
+      router.push(`/edit-event/${createdEvent.id}`)
     } catch (err: any) {
       setError(err.message || 'Failed to duplicate event')
     }
@@ -537,6 +553,7 @@ const EditEvent: React.FC = () => {
 
       const { error: updateError } = await supabase
         .from('events')
+        // @ts-expect-error - Supabase types don't include all event fields
         .update(updateData)
         .eq('id', eventId as string)
         .eq('created_by', user?.id!)
@@ -549,7 +566,7 @@ const EditEvent: React.FC = () => {
         .select('user_id')
         .eq('event_id', eventId as string)
 
-      const existingIds = (existingCohosts || []).map(c => c.user_id)
+      const existingIds = (existingCohosts || []).map((c: any) => c.user_id)
       const newIds = formData.co_hosts.map(c => c.id)
 
       // Remove co-hosts that are no longer in the list
