@@ -50,7 +50,34 @@ const Header: React.FC = () => {
         return
       }
 
-      const target = event.target as Node
+      const target = event.target as HTMLElement
+      
+      // Ignore clicks on Vercel toolbar (common selectors)
+      if (
+        target.closest('[data-vercel-toolbar]') ||
+        target.closest('#__vercel_toolbar') ||
+        target.closest('[id*="vercel"]') ||
+        target.closest('[class*="vercel"]') ||
+        target.closest('[class*="VercelToolbar"]')
+      ) {
+        return
+      }
+
+      // Ignore clicks on fixed-position elements at the bottom (likely toolbars)
+      // Check if the element or its parent is fixed and near the bottom of viewport
+      let element: HTMLElement | null = target
+      while (element && element !== document.body) {
+        const style = window.getComputedStyle(element)
+        if (style.position === 'fixed' || style.position === 'sticky') {
+          const rect = element.getBoundingClientRect()
+          // If it's in the bottom 100px of viewport, likely a toolbar
+          if (rect.bottom > window.innerHeight - 100) {
+            return
+          }
+        }
+        element = element.parentElement
+      }
+
       if (
         mobileMenuRef.current &&
         menuToggleRef.current &&

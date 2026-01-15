@@ -50,7 +50,6 @@ const Events: React.FC = () => {
   const [featuredGroups, setFeaturedGroups] = useState<FeaturedGroup[]>([])
   const [activeFilter, setActiveFilter] = useState('upcoming')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
-  const [upcomingViewMode, setUpcomingViewMode] = useState<'carousel' | 'calendar'>('carousel')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null)
@@ -979,58 +978,18 @@ const Events: React.FC = () => {
             <div style={styles.section}>
               <div style={styles.sectionHeader}>
                 <h2 style={styles.sectionTitle}>Upcoming Events</h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={styles.viewToggle}>
-                    <button
-                      style={{ 
-                        ...styles.toggleBtn, 
-                        ...(upcomingViewMode === 'carousel' ? styles.toggleBtnActive : {}) 
-                      }}
-                      onClick={() => setUpcomingViewMode('carousel')}
-                    >
-                      Cards
-                    </button>
-                    <button
-                      style={{ 
-                        ...styles.toggleBtn, 
-                        ...(upcomingViewMode === 'calendar' ? styles.toggleBtnActive : {}) 
-                      }}
-                      onClick={() => setUpcomingViewMode('calendar')}
-                    >
-                      Calendar
-                    </button>
-                  </div>
-                  <Link href="#all-events" style={styles.viewAllLink}>View All →</Link>
-                </div>
+                <Link href="#all-events" style={styles.viewAllLink}>View All →</Link>
               </div>
               
-              {upcomingViewMode === 'carousel' ? (
-                <div 
-                  className="upcoming-events-scroll" 
-                  style={{
-                    ...styles.horizontalScroll,
-                    paddingBottom: '1rem'
-                  }}
-                >
-                  {popularEvents.map(renderUpcomingCard)}
-                </div>
-              ) : (
-                <div style={{ marginTop: '1rem' }}>
-                  <EventCalendar
-                    events={popularEvents.map(e => ({
-                      id: e.id,
-                      title: e.title,
-                      date: e.date,
-                      time: e.time,
-                      location: e.location,
-                      rsvp_count: e.rsvp_count,
-                      maybe_count: e.maybe_count,
-                      max_capacity: e.max_capacity
-                    }))}
-                    onEventClick={(event) => router.push(`/events/${event.id}`)}
-                  />
-                </div>
-              )}
+              <div 
+                className="upcoming-events-scroll" 
+                style={{
+                  ...styles.horizontalScroll,
+                  paddingBottom: '1rem'
+                }}
+              >
+                {popularEvents.map(renderUpcomingCard)}
+              </div>
             </div>
           </AnimatedSection>
         )}
