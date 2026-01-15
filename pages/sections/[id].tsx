@@ -1730,19 +1730,23 @@ function InviteMembersModal({ section, onInvite, onClose }: {
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+      background: 'rgba(0, 0, 0, 0.75)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1000,
-      padding: '1rem'
+      zIndex: 10000,
+      padding: '1rem',
+      backdropFilter: 'none'
     }} onClick={onClose}>
       <Card style={{
         maxWidth: '600px',
         width: '100%',
         maxHeight: '90vh',
         overflow: 'auto',
-        padding: '2rem'
+        padding: '2rem',
+        backgroundColor: 'var(--section-card, #121a2b)',
+        background: 'var(--section-card, #121a2b)'
       }} onClick={(e) => e.stopPropagation()}>
         <h2 style={{ marginTop: 0 }}>Invite Members to {section.name}</h2>
         

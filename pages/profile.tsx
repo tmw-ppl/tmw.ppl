@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -130,14 +130,28 @@ const Profile: React.FC = () => {
   const [sectionInvitations, setSectionInvitations] = useState<any[]>([])
   const [invitationsLoading, setInvitationsLoading] = useState(true)
 
-  // Determine which user's profile to show
-  const viewingUserId = (id && typeof id === 'string') ? id : (user?.id || null)
-  const isOwnProfile = !id || (user && id === user.id)
+  // Determine which user's profile to show - wait for router to be ready
+  const viewingUserId = useMemo(() => {
+    if (router.isReady && id && typeof id === 'string') {
+      return id
+    }
+    return user?.id || null
+  }, [router.isReady, id, user?.id])
+  
+  const isOwnProfile = useMemo(() => {
+    if (!router.isReady) return true // Default to own profile until router is ready
+    if (!id) return true // No id param means own profile
+    return user && id === user.id
+  }, [router.isReady, id, user?.id])
 
   // Require authentication
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/auth')
+      return
+    }
+    // Wait for router to be ready before loading profile data
+    if (!router.isReady) {
       return
     }
     if (user && viewingUserId) {
@@ -150,7 +164,7 @@ const Profile: React.FC = () => {
         loadSectionInvitations()
       }
     }
-  }, [user, authLoading, router, viewingUserId, isOwnProfile])
+  }, [user, authLoading, router.isReady, router.query.id, viewingUserId, isOwnProfile])
 
   const loadUserProfile = async () => {
     if (!user || !viewingUserId) return
