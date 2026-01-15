@@ -43,18 +43,19 @@ const SectionFieldsPage: React.FC = () => {
         return
       }
 
-      setSection(sectionData as Section)
+      const section = sectionData as any
+      setSection(section as Section)
 
       // Check if user is admin
-      const { data: memberData } = await supabase
-        .from('section_members')
+      const { data: memberData } = await (supabase
+        .from('section_members') as any)
         .select('is_admin')
         .eq('section_id', id)
         .eq('user_id', user!.id)
         .eq('status', 'approved')
         .single()
 
-      const userIsAdmin = memberData?.is_admin || sectionData.creator_id === user!.id
+      const userIsAdmin = (memberData as any)?.is_admin || section.creator_id === user!.id
       setIsAdmin(userIsAdmin)
 
       if (!userIsAdmin) {
@@ -63,8 +64,8 @@ const SectionFieldsPage: React.FC = () => {
       }
 
       // Load existing fields
-      const { data: fieldsData, error: fieldsError } = await supabase
-        .from('section_profile_fields')
+      const { data: fieldsData, error: fieldsError } = await (supabase
+        .from('section_profile_fields') as any)
         .select('*')
         .eq('section_id', id)
         .order('display_order', { ascending: true })
@@ -96,8 +97,8 @@ const SectionFieldsPage: React.FC = () => {
 
       // Delete removed fields
       for (const field of deletedFields) {
-        await supabase
-          .from('section_profile_fields')
+        await (supabase
+          .from('section_profile_fields') as any)
           .delete()
           .eq('id', (field as any).id)
       }
@@ -105,8 +106,8 @@ const SectionFieldsPage: React.FC = () => {
       // Insert new fields
       for (const field of newFields) {
         const { _tempId, _isNew, _isDeleted, id: fieldId, ...fieldData } = field as any
-        await supabase
-          .from('section_profile_fields')
+        await (supabase
+          .from('section_profile_fields') as any)
           .insert({
             ...fieldData,
             section_id: id,
@@ -118,8 +119,8 @@ const SectionFieldsPage: React.FC = () => {
       // Update existing fields
       for (const field of existingFields) {
         const { _tempId, _isNew, _isDeleted, id: fieldId, created_at, created_by, ...fieldData } = field as any
-        await supabase
-          .from('section_profile_fields')
+        await (supabase
+          .from('section_profile_fields') as any)
           .update({
             ...fieldData,
             updated_at: new Date().toISOString()

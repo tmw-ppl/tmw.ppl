@@ -65,27 +65,28 @@ const SectionMembersPage: React.FC = () => {
         return
       }
 
-      setSection(sectionData as Section)
+      const section = sectionData as any
+      setSection(section as Section)
 
       // Check if user is a member
-      const { data: membershipData } = await supabase
-        .from('section_members')
+      const { data: membershipData } = await (supabase
+        .from('section_members') as any)
         .select('status')
         .eq('section_id', id)
         .eq('user_id', user!.id)
         .single()
 
-      const userIsMember = membershipData?.status === 'approved'
+      const userIsMember = (membershipData as any)?.status === 'approved'
       setIsMember(userIsMember)
 
-      if (!userIsMember && !sectionData.is_public) {
+      if (!userIsMember && !section.is_public) {
         setError('You must be a member to view the member directory')
         return
       }
 
       // Load profile fields for this section
-      const { data: fieldsData } = await supabase
-        .from('section_profile_fields')
+      const { data: fieldsData } = await (supabase
+        .from('section_profile_fields') as any)
         .select('*')
         .eq('section_id', id)
         .eq('is_active', true)
@@ -94,8 +95,8 @@ const SectionMembersPage: React.FC = () => {
       setFields((fieldsData || []) as SectionProfileField[])
 
       // Load members
-      const { data: membersData, error: membersError } = await supabase
-        .from('section_members')
+      const { data: membersData, error: membersError } = await (supabase
+        .from('section_members') as any)
         .select('id, user_id, is_admin, joined_at')
         .eq('section_id', id)
         .eq('status', 'approved')
@@ -112,19 +113,19 @@ const SectionMembersPage: React.FC = () => {
       }
 
       // Load profiles for all members
-      const userIds = membersData.map(m => m.user_id)
+      const userIds = (membersData as any[]).map((m: any) => m.user_id)
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, full_name, bio, profile_picture_url')
         .in('id', userIds)
 
       const profileMap = new Map(
-        (profilesData || []).map(p => [p.id, p])
+        (profilesData || []).map((p: any) => [p.id, p])
       )
 
       // Load section profile data for all members
-      const { data: sectionProfileData } = await supabase
-        .from('section_profile_data')
+      const { data: sectionProfileData } = await (supabase
+        .from('section_profile_data') as any)
         .select('user_id, field_id, value')
         .eq('section_id', id)
         .in('user_id', userIds)
@@ -138,7 +139,7 @@ const SectionMembersPage: React.FC = () => {
       })
 
       // Combine data
-      const membersWithProfiles: MemberWithProfile[] = membersData.map(member => ({
+      const membersWithProfiles: MemberWithProfile[] = (membersData as any[]).map((member: any) => ({
         id: member.id,
         user_id: member.user_id,
         is_admin: member.is_admin,

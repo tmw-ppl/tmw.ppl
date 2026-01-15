@@ -124,8 +124,8 @@ const ProfileV3: React.FC = () => {
       setSectionsLoading(true)
 
       // Get all sections where user is an approved member
-      const { data: membersData, error: membersError } = await supabase
-        .from('section_members')
+      const { data: membersData, error: membersError } = await (supabase
+        .from('section_members') as any)
         .select('section_id, is_admin, status, joined_at')
         .eq('user_id', user.id)
         .eq('status', 'approved')
@@ -154,31 +154,31 @@ const ProfileV3: React.FC = () => {
       }
 
       // Get visibility settings
-      const { data: visibilityData } = await supabase
-        .from('section_membership_visibility')
+      const { data: visibilityData } = await (supabase
+        .from('section_membership_visibility') as any)
         .select('*')
         .eq('user_id', user.id)
         .in('section_id', sectionIds)
 
       // Get profile fields for each section
-      const { data: fieldsData } = await supabase
-        .from('section_profile_fields')
+      const { data: fieldsData } = await (supabase
+        .from('section_profile_fields') as any)
         .select('*')
         .in('section_id', sectionIds)
         .eq('is_active', true)
         .order('display_order', { ascending: true })
 
       // Get user's profile data for each section
-      const { data: profileDataResults } = await supabase
-        .from('section_profile_data')
+      const { data: profileDataResults } = await (supabase
+        .from('section_profile_data') as any)
         .select('*')
         .eq('user_id', user.id)
         .in('section_id', sectionIds)
 
       // Get member counts for each section
       const memberCountPromises = sectionIds.map(async (sectionId: string) => {
-        const { count } = await supabase
-          .from('section_members')
+        const { count } = await (supabase
+          .from('section_members') as any)
           .select('*', { count: 'exact', head: true })
           .eq('section_id', sectionId)
           .eq('status', 'approved')
@@ -227,8 +227,8 @@ const ProfileV3: React.FC = () => {
     if (!user) return
 
     try {
-      const { error } = await supabase
-        .from('section_membership_visibility')
+      const { error } = await (supabase
+        .from('section_membership_visibility') as any)
         .upsert({
           user_id: user.id,
           section_id: sectionId,

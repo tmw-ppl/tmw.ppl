@@ -47,14 +47,14 @@ const EditSectionProfilePage: React.FC = () => {
       setSection(sectionData as Section)
 
       // Check if user is a member
-      const { data: memberData } = await supabase
-        .from('section_members')
+      const { data: memberData } = await (supabase
+        .from('section_members') as any)
         .select('status')
         .eq('section_id', id)
         .eq('user_id', user!.id)
         .single()
 
-      if (memberData?.status !== 'approved') {
+      if ((memberData as any)?.status !== 'approved') {
         setError('You must be an approved member to edit your section profile')
         return
       }
@@ -62,8 +62,8 @@ const EditSectionProfilePage: React.FC = () => {
       setIsMember(true)
 
       // Load profile fields
-      const { data: fieldsData, error: fieldsError } = await supabase
-        .from('section_profile_fields')
+      const { data: fieldsData, error: fieldsError } = await (supabase
+        .from('section_profile_fields') as any)
         .select('*')
         .eq('section_id', id)
         .eq('is_active', true)
@@ -76,8 +76,8 @@ const EditSectionProfilePage: React.FC = () => {
       setFields((fieldsData || []) as SectionProfileField[])
 
       // Load user's existing profile data
-      const { data: profileDataResults } = await supabase
-        .from('section_profile_data')
+      const { data: profileDataResults } = await (supabase
+        .from('section_profile_data') as any)
         .select('field_id, value')
         .eq('section_id', id)
         .eq('user_id', user!.id)
@@ -105,8 +105,8 @@ const EditSectionProfilePage: React.FC = () => {
       // Upsert all field values
       for (const [fieldId, value] of Object.entries(data)) {
         if (value?.trim()) {
-          await supabase
-            .from('section_profile_data')
+          await (supabase
+            .from('section_profile_data') as any)
             .upsert({
               user_id: user.id,
               section_id: id,
@@ -118,8 +118,8 @@ const EditSectionProfilePage: React.FC = () => {
             })
         } else {
           // Delete empty values
-          await supabase
-            .from('section_profile_data')
+          await (supabase
+            .from('section_profile_data') as any)
             .delete()
             .eq('user_id', user.id)
             .eq('field_id', fieldId)

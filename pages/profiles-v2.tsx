@@ -170,8 +170,8 @@ const ProfilesV2: React.FC = () => {
 
     try {
       // Get sections where user is an approved member with visible membership
-      const { data: memberships } = await supabase
-        .from('section_members')
+      const { data: memberships } = await (supabase
+        .from('section_members') as any)
         .select('section_id')
         .eq('user_id', user.id)
         .eq('status', 'approved')
@@ -181,7 +181,7 @@ const ProfilesV2: React.FC = () => {
         return
       }
 
-      const sectionIds = memberships.map(m => m.section_id)
+      const sectionIds = memberships.map((m: any) => m.section_id)
 
       // Get section details
       const { data: sectionsData } = await supabase
@@ -192,8 +192,8 @@ const ProfilesV2: React.FC = () => {
       // Get member counts
       const sectionsWithCounts = await Promise.all(
         (sectionsData || []).map(async (section: any) => {
-          const { count } = await supabase
-            .from('section_members')
+          const { count } = await (supabase
+            .from('section_members') as any)
             .select('*', { count: 'exact', head: true })
             .eq('section_id', section.id)
             .eq('status', 'approved')
@@ -214,8 +214,8 @@ const ProfilesV2: React.FC = () => {
   const loadSectionMembers = async (sectionId: string) => {
     try {
       // Get members of this section who have visible membership
-      const { data: members } = await supabase
-        .from('section_members')
+      const { data: members } = await (supabase
+        .from('section_members') as any)
         .select('user_id')
         .eq('section_id', sectionId)
         .eq('status', 'approved')
@@ -225,11 +225,11 @@ const ProfilesV2: React.FC = () => {
         return
       }
 
-      const memberIds = members.map(m => m.user_id)
+      const memberIds = members.map((m: any) => m.user_id)
 
       // Check visibility settings
-      const { data: visibilityData } = await supabase
-        .from('section_membership_visibility')
+      const { data: visibilityData } = await (supabase
+        .from('section_membership_visibility') as any)
         .select('user_id, show_membership')
         .eq('section_id', sectionId)
         .in('user_id', memberIds)
@@ -241,8 +241,8 @@ const ProfilesV2: React.FC = () => {
       )
 
       // Filter out hidden members (but always show current user)
-      const visibleMembers = new Set(
-        memberIds.filter(id => id === user?.id || !hiddenMembers.has(id))
+      const visibleMembers = new Set<string>(
+        memberIds.filter((id: string) => id === user?.id || !hiddenMembers.has(id))
       )
 
       setSectionMembers(visibleMembers)

@@ -379,7 +379,7 @@ const DemoMembersPage: React.FC = () => {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {MOCK_FIELDS.map(field => {
-                      const value = member.section_data[field.id]
+                      const value = (member.section_data as Record<string, string>)[field.id]
                       if (!value) return null
                       
                       let displayValue = value
