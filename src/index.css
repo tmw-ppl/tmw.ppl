@@ -169,10 +169,15 @@ p {
 header {
   position: sticky;
   top: 0;
-  z-index: 100;
-  background: rgba(11, 18, 32, 0.8);
+  z-index: 10001;
+  background: var(--bg);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
+}
+
+main {
+  position: relative;
+  z-index: 1; /* Keep main content below header mobile menu */
 }
 
 .nav {
@@ -688,6 +693,8 @@ footer a:hover {
   min-height: 80vh;
   display: flex;
   align-items: center;
+  position: relative;
+  z-index: 1; /* Keep below header mobile menu */
 }
 
 .auth-container {
