@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Head from 'next/head'
 import Header from './Header'
 import Footer from './Footer'
@@ -10,6 +10,13 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   useSmoothScroll()
+
+  useEffect(() => {
+    // Force dark mode on document element
+    document.documentElement.classList.add('dark')
+    // Ensure light-theme class is removed unless specifically requested later
+    document.documentElement.classList.remove('light-theme')
+  }, [])
 
   return (
     <>
@@ -56,7 +63,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <meta name="description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
         <meta name="keywords" content="Section, community, events, sections, social, networking" />
         <meta name="author" content="Section" />
-        <meta name="theme-color" content="#8b5cf6" />
+        <meta name="theme-color" content="#0b1220" />
+        <meta name="color-scheme" content="dark" />
         
         {/* Apple Specific */}
         <meta name="apple-mobile-web-app-title" content="Section" />

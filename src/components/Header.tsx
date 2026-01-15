@@ -64,9 +64,9 @@ const Header: React.FC = () => {
     position: 'sticky',
     top: 0,
     zIndex: 100000,
-    background: 'var(--bg)',
-    backdropFilter: 'blur(10px)',
-    borderBottom: '1px solid var(--border)',
+    backgroundColor: 'var(--section-bg, #0b1220)',
+    backdropFilter: isMobile ? 'none' : 'blur(10px)', // Disable blur on mobile to avoid transparency issues
+    borderBottom: '1px solid var(--section-border, #1f2a44)',
     width: '100%',
   }
 
@@ -88,7 +88,7 @@ const Header: React.FC = () => {
     gap: '0.75rem',
     fontWeight: 700,
     fontSize: '1.25rem',
-    color: 'var(--text)',
+    color: 'var(--section-text, #e6f0ff)',
     textDecoration: 'none',
   }
 
@@ -107,13 +107,13 @@ const Header: React.FC = () => {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'var(--bg)',
+    backgroundColor: 'var(--section-bg, #0b1220)',
     flexDirection: 'column',
     padding: '1.5rem',
     gap: '0.25rem',
     zIndex: 100001, // Higher than header
     overflowY: 'auto',
-    borderTop: '1px solid var(--border)',
+    borderTop: '1px solid var(--section-border, #1f2a44)',
   }
 
   // Toggle button styles
@@ -130,7 +130,7 @@ const Header: React.FC = () => {
 
   // Link styling helper
   const navLinkStyle = (path: string) => ({
-    color: isActive(path) ? 'var(--text)' : 'var(--muted)',
+    color: isActive(path) ? 'var(--section-text, #e6f0ff)' : 'var(--section-muted, #b3c1d1)',
     textDecoration: 'none',
     fontWeight: 500,
     padding: isMobile ? '1rem' : '0.5rem',
