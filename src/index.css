@@ -4410,13 +4410,15 @@ gmp-place-autocomplete input:focus {
   }
 
   .event-calendar .calendar-header {
-    flex-direction: column;
+    flex-direction: row;
     gap: 1rem;
+    align-items: center;
   }
 
   .event-calendar .calendar-title {
-    flex-direction: column;
-    gap: 0.5rem;
+    flex-direction: row;
+    gap: 1rem;
+    align-items: center;
   }
 
   .event-calendar .calendar-title h3 {

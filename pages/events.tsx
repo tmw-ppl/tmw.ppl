@@ -49,7 +49,7 @@ const Events: React.FC = () => {
   const [popularEvents, setPopularEvents] = useState<EventWithRSVP[]>([])
   const [featuredGroups, setFeaturedGroups] = useState<FeaturedGroup[]>([])
   const [activeFilter, setActiveFilter] = useState('upcoming')
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null)
@@ -591,9 +591,9 @@ const Events: React.FC = () => {
     title: { fontSize: 'clamp(2rem, 5vw, 3rem)', marginBottom: '0.5rem', fontWeight: '700' },
     subtitle: { fontSize: 'clamp(1rem, 2.5vw, 1.25rem)', color: 'var(--muted)', maxWidth: '600px', margin: '0 auto' },
     section: { marginBottom: '3rem' },
-    sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' as const, gap: '0.5rem' },
-    sectionTitle: { fontSize: '1.25rem', fontWeight: '600', margin: 0 },
-    viewAllLink: { color: 'var(--primary)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500' },
+    sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'nowrap' as const, gap: '1rem' },
+    sectionTitle: { fontSize: '1.25rem', fontWeight: '600', margin: 0, lineHeight: '1.5' },
+    viewAllLink: { color: 'var(--primary)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', whiteSpace: 'nowrap' as const, lineHeight: '1.5' },
     horizontalScroll: { display: 'flex', gap: '1rem', overflowX: 'auto' as const, paddingBottom: '0.5rem', scrollbarWidth: 'none' as const, msOverflowStyle: 'none' as const, WebkitOverflowScrolling: 'touch' as const },
     eventCard: { minWidth: '280px', maxWidth: '280px', flexShrink: 0, borderRadius: '12px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column' as const },
     eventCardGrid: { height: '100%', display: 'flex', flexDirection: 'column' as const, borderRadius: '12px', overflow: 'hidden', background: 'var(--card)', border: '1px solid var(--border)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' },
@@ -677,9 +677,7 @@ const Events: React.FC = () => {
         style={{ textDecoration: 'none', color: 'inherit' }}
       >
         <Card style={{
-          minWidth: '320px',
-          maxWidth: '320px',
-          flexShrink: 0,
+          width: '100%',
           overflow: 'hidden',
           cursor: 'pointer',
           transition: 'all 0.2s',
@@ -976,16 +974,20 @@ const Events: React.FC = () => {
         {popularEvents.length > 0 && (
           <AnimatedSection animationType="slide-up" delay={100}>
             <div style={styles.section}>
-              <div style={styles.sectionHeader}>
+              <div style={{
+                ...styles.sectionHeader,
+                marginBottom: '1.5rem'
+              }}>
                 <h2 style={styles.sectionTitle}>Upcoming Events</h2>
                 <Link href="#all-events" style={styles.viewAllLink}>View All →</Link>
               </div>
               
               <div 
-                className="upcoming-events-scroll" 
                 style={{
-                  ...styles.horizontalScroll,
-                  paddingBottom: '1rem'
+                  display: 'grid',
+                  gridTemplateColumns: '1fr',
+                  gap: '1rem',
+                  width: '100%'
                 }}
               >
                 {popularEvents.map(renderUpcomingCard)}
