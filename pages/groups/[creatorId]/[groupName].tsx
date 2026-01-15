@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -26,12 +26,6 @@ interface GroupEvent {
   maybe_count?: number
 }
 
-interface Subscriber {
-  id: string
-  full_name: string
-  profile_picture_url?: string
-  subscribed_at: string
-}
 
 export default function GroupPage() {
   const router = useRouter()
@@ -41,13 +35,17 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creator, setCreator] = useState<Creator | null>(null)
+  const [section, setSection] = useState<any>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [events, setEvents] = useState<GroupEvent[]>([])
   const [pastEvents, setPastEvents] = useState<GroupEvent[]>([])
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([])
-  const [isSubscribed, setIsSubscribed] = useState(false)
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [members, setMembers] = useState<any[]>([])
+  const [pendingMembers, setPendingMembers] = useState<any[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [showPastEvents, setShowPastEvents] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showAdminModal, setShowAdminModal] = useState(false)
 
   const decodedGroupName = useMemo(() => {
     return groupName ? decodeURIComponent(groupName as string) : ''
@@ -65,6 +63,21 @@ export default function GroupPage() {
     setError(null)
 
     try {
+      // Fetch section data
+      const { data: sectionData, error: sectionError } = await supabase
+        .from('sections')
+        .select('*')
+        .eq('creator_id', creatorId as string)
+        .eq('name', decodedGroupName)
+        .single()
+
+      if (sectionError || !sectionData) {
+        setError('Section not found.')
+        setLoading(false)
+        return
+      }
+      setSection(sectionData)
+
       // Fetch creator profile
       const { data: creatorProfile, error: creatorError } = await supabase
         .from('profiles')
@@ -78,6 +91,63 @@ export default function GroupPage() {
         return
       }
       setCreator(creatorProfile)
+
+      // Load members
+      const { data: membersData } = await supabase
+        .from('section_members')
+        .select('id, user_id, is_admin, status')
+        .eq('section_id', sectionData.id)
+        .in('status', ['approved', 'pending'])
+
+      // Get user IDs for profiles
+      const userIds = Array.from(new Set((membersData || []).map((m: any) => m.user_id)))
+      
+      // Get profiles
+      const { data: memberProfiles } = userIds.length > 0 ? await supabase
+        .from('profiles')
+        .select('id, full_name, profile_picture_url')
+        .in('id', userIds) : { data: [] }
+
+      const profileMap = new Map<string, any>()
+      memberProfiles?.forEach((profile: any) => {
+        profileMap.set(profile.id, profile)
+      })
+
+      // Check if user is admin and organize members
+      let userIsAdmin = false
+      const approvedMembers: any[] = []
+      const pendingMembersList: any[] = []
+
+      membersData?.forEach((member: any) => {
+        const profile = profileMap.get(member.user_id) || { id: member.user_id, full_name: 'Unknown', profile_picture_url: null }
+        
+        if (user && member.user_id === user.id && member.is_admin && member.status === 'approved') {
+          userIsAdmin = true
+        }
+
+        if (member.status === 'approved') {
+          approvedMembers.push({
+            id: member.id,
+            user_id: member.user_id,
+            is_admin: member.is_admin,
+            profile: profile
+          })
+        } else if (member.status === 'pending') {
+          pendingMembersList.push({
+            id: member.id,
+            user_id: member.user_id,
+            profile: profile
+          })
+        }
+      })
+
+      setIsAdmin(userIsAdmin)
+      setMembers(approvedMembers)
+      
+      // Load pending members (only for admins/creators)
+      if (user && (user.id === creatorId || userIsAdmin)) {
+        setPendingMembers(pendingMembersList)
+      }
 
       const today = new Date().toISOString().split('T')[0]
 
@@ -110,43 +180,6 @@ export default function GroupPage() {
         setPastEvents(pastEventsData)
       }
 
-      // Load subscribers
-      const { data: subsData, error: subsError } = await (supabase
-        .from('event_group_subscriptions')
-        .select('subscriber_id, created_at')
-        .eq('creator_id', creatorId as string)
-        .eq('group_name', decodedGroupName) as any)
-
-      if (!subsError && subsData && subsData.length > 0) {
-        const subscriberIds = subsData.map((s: any) => s.subscriber_id)
-
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, full_name, profile_picture_url')
-          .in('id', subscriberIds)
-
-        const subscribersWithDates = subsData.map((sub: any) => {
-          const profile = profilesData?.find((p: any) => p.id === sub.subscriber_id) as { id: string; full_name: string; profile_picture_url?: string } | undefined
-          if (!profile) return null
-          return {
-            id: profile.id,
-            full_name: profile.full_name,
-            profile_picture_url: profile.profile_picture_url,
-            subscribed_at: sub.created_at
-          }
-        }).filter((s: any) => s && s.id)
-
-        setSubscribers(subscribersWithDates as Subscriber[])
-
-        // Check if current user is subscribed
-        if (user) {
-          const isUserSubscribed = subsData.some((s: any) => s.subscriber_id === user.id)
-          setIsSubscribed(isUserSubscribed)
-        }
-      } else {
-        setSubscribers([])
-        setIsSubscribed(false)
-      }
     } catch (err) {
       console.error('Error loading group data:', err)
       setError('Failed to load event group')
@@ -155,61 +188,6 @@ export default function GroupPage() {
     }
   }
 
-  const handleSubscribe = async () => {
-    if (!user || !creatorId || !decodedGroupName) return
-
-    setSubscriptionLoading(true)
-    try {
-      if (isSubscribed) {
-        // Unsubscribe
-        const { error } = await (supabase
-          .from('event_group_subscriptions')
-          .delete()
-          .eq('subscriber_id', user.id)
-          .eq('creator_id', creatorId as string)
-          .eq('group_name', decodedGroupName) as any)
-
-        if (error) throw error
-
-        setIsSubscribed(false)
-        setSubscribers(prev => prev.filter(s => s.id !== user.id))
-      } else {
-        // Subscribe
-        const { error } = await (supabase
-          .from('event_group_subscriptions')
-          .insert({
-            subscriber_id: user.id,
-            creator_id: creatorId as string,
-            group_name: decodedGroupName
-          } as any) as any)
-
-        if (error) throw error
-
-        setIsSubscribed(true)
-        // Add current user to subscribers list
-        const { data: userProfile } = await supabase
-          .from('profiles')
-          .select('id, full_name, profile_picture_url')
-          .eq('id', user.id)
-          .single()
-
-        if (userProfile) {
-          const profile = userProfile as { id: string; full_name: string; profile_picture_url?: string }
-          setSubscribers(prev => [...prev, {
-            id: profile.id,
-            full_name: profile.full_name,
-            profile_picture_url: profile.profile_picture_url,
-            subscribed_at: new Date().toISOString()
-          }])
-        }
-      }
-    } catch (err) {
-      console.error('Error toggling subscription:', err)
-      alert('Failed to update subscription')
-    } finally {
-      setSubscriptionLoading(false)
-    }
-  }
 
   const calendarEvents = useMemo(() => {
     return events.map(event => ({
@@ -244,6 +222,116 @@ export default function GroupPage() {
   }
 
   const isCreator = user?.id === creator.id
+  const canManage = isCreator || isAdmin
+
+  const handleEditSection = async (formData: any) => {
+    if (!section || !canManage) return
+
+    try {
+      const { error } = await supabase
+        .from('sections')
+        .update({
+          name: formData.name,
+          description: formData.description || null,
+          image_url: formData.image_url || null,
+          is_public: formData.is_public,
+          requires_approval: formData.requires_approval
+        } as any)
+        .eq('id', section.id)
+
+      if (error) throw error
+
+      await loadGroupData()
+      setShowEditModal(false)
+      alert('Section updated successfully!')
+    } catch (err: any) {
+      console.error('Error updating section:', err)
+      alert('Failed to update section: ' + (err.message || 'Unknown error'))
+    }
+  }
+
+  const handleDeleteSection = async () => {
+    if (!section || !isCreator) return
+
+    try {
+      const { error } = await supabase
+        .from('sections')
+        .delete()
+        .eq('id', section.id)
+
+      if (error) throw error
+
+      alert('Section deleted successfully!')
+      router.push('/sections')
+    } catch (err: any) {
+      console.error('Error deleting section:', err)
+      alert('Failed to delete section: ' + (err.message || 'Unknown error'))
+    }
+  }
+
+  const handlePromoteToAdmin = async (memberId: string, userId: string) => {
+    if (!section || !canManage) return
+
+    try {
+      const { error } = await supabase
+        .from('section_members')
+        .update({ is_admin: true } as any)
+        .eq('id', memberId)
+        .eq('section_id', section.id)
+
+      if (error) throw error
+
+      await loadGroupData()
+      alert('Member promoted to admin!')
+    } catch (err: any) {
+      console.error('Error promoting member:', err)
+      alert('Failed to promote member: ' + (err.message || 'Unknown error'))
+    }
+  }
+
+  const handleApproveMember = async (memberId: string) => {
+    if (!section || !canManage) return
+
+    try {
+      const { error } = await supabase
+        .from('section_members')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user!.id
+        } as any)
+        .eq('id', memberId)
+        .eq('section_id', section.id)
+
+      if (error) throw error
+
+      await loadGroupData()
+      alert('Member approved!')
+    } catch (err: any) {
+      console.error('Error approving member:', err)
+      alert('Failed to approve member: ' + (err.message || 'Unknown error'))
+    }
+  }
+
+  const handleRejectMember = async (memberId: string) => {
+    if (!section || !canManage) return
+
+    try {
+      const { error } = await supabase
+        .from('section_members')
+        .update({ status: 'rejected' } as any)
+        .eq('id', memberId)
+        .eq('section_id', section.id)
+
+      if (error) throw error
+
+      await loadGroupData()
+      alert('Member request rejected')
+    } catch (err: any) {
+      console.error('Error rejecting member:', err)
+      alert('Failed to reject member: ' + (err.message || 'Unknown error'))
+    }
+  }
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1rem' }}>
@@ -268,19 +356,33 @@ export default function GroupPage() {
               {creator.full_name}
             </Link>
           </p>
+          {section?.description && (
+            <p style={{ margin: '0.75rem 0 0', color: 'var(--text)', fontSize: '1rem', lineHeight: '1.5' }}>
+              {section.description}
+            </p>
+          )}
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {user && !isCreator && (
-            <Button
-              variant={isSubscribed ? 'primary' : 'secondary'}
-              onClick={handleSubscribe}
-              disabled={subscriptionLoading}
-            >
-              {subscriptionLoading ? 'Loading...' : (isSubscribed ? '🔔 Subscribed' : '🔕 Subscribe')}
-            </Button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {canManage && (
+            <>
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={() => setShowEditModal(true)}
+              >
+                ✏️ Edit
+              </Button>
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={() => setShowAdminModal(true)}
+              >
+                👥 Manage Admins
+              </Button>
+            </>
           )}
-          {isCreator && (
+          {(isCreator || isAdmin) && (
             <span style={{
               background: 'var(--primary)',
               color: 'white',
@@ -289,7 +391,7 @@ export default function GroupPage() {
               fontSize: '0.85rem',
               fontWeight: '600'
             }}>
-              Your Group
+              {isCreator ? '👑 Creator' : '🛡️ Admin'}
             </span>
           )}
         </div>
@@ -315,10 +417,10 @@ export default function GroupPage() {
         </div>
         <div>
           <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text)' }}>
-            {subscribers.length}
+            {members.length}
           </div>
           <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
-            Subscribers
+            Members
           </div>
         </div>
         <div>
@@ -500,22 +602,21 @@ export default function GroupPage() {
         </div>
       )}
 
-      {/* Subscribers */}
-      <div>
-        <h2 style={{ margin: '0 0 1rem', fontSize: '1.25rem' }}>
-          👥 Subscribers ({subscribers.length})
-        </h2>
-
-        {subscribers.length > 0 ? (
+      {/* Members */}
+      {members.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h2 style={{ margin: '0 0 1rem', fontSize: '1.25rem' }}>
+            👥 Members ({members.length})
+          </h2>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
             gap: '1rem'
           }}>
-            {subscribers.map(subscriber => (
+            {members.map(member => (
               <Link
-                key={subscriber.id}
-                href={`/profiles/${subscriber.id}`}
+                key={member.id}
+                href={`/profiles/${member.profile.id}`}
                 style={{ textDecoration: 'none', color: 'inherit' }}
               >
                 <Card style={{
@@ -524,12 +625,13 @@ export default function GroupPage() {
                   gap: '0.75rem',
                   padding: '0.75rem',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  border: member.is_admin ? '2px solid var(--primary)' : undefined
                 }}>
-                  {subscriber.profile_picture_url ? (
+                  {member.profile.profile_picture_url ? (
                     <img
-                      src={subscriber.profile_picture_url}
-                      alt={subscriber.full_name}
+                      src={member.profile.profile_picture_url}
+                      alt={member.profile.full_name}
                       style={{
                         width: '40px',
                         height: '40px',
@@ -550,42 +652,481 @@ export default function GroupPage() {
                       fontWeight: 'bold',
                       fontSize: '1rem'
                     }}>
-                      {subscriber.full_name?.charAt(0)?.toUpperCase() || '?'}
+                      {member.profile.full_name?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontWeight: '500',
+                      fontWeight: member.is_admin ? 600 : 400,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap'
                     }}>
-                      {subscriber.full_name}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                      Subscribed {new Date(subscriber.subscribed_at).toLocaleDateString()}
+                      {member.profile.full_name}
+                      {member.is_admin && <span style={{ marginLeft: '0.5rem', color: 'var(--primary)' }}>👑</span>}
                     </div>
                   </div>
                 </Card>
               </Link>
             ))}
           </div>
-        ) : (
-          <Card style={{ padding: '2rem', textAlign: 'center' }}>
-            <p style={{ margin: 0, color: 'var(--muted)' }}>No subscribers yet</p>
-            {user && !isCreator && (
+        </div>
+      )}
+
+
+      {/* Edit Section Modal */}
+      {showEditModal && section && (
+        <EditSectionModal
+          section={section}
+          onSave={handleEditSection}
+          onClose={() => setShowEditModal(false)}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          sectionName={decodedGroupName}
+          onConfirm={handleDeleteSection}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+
+      {/* Admin Management Modal */}
+      {showAdminModal && section && (
+        <AdminManagementModal
+          section={section}
+          members={members}
+          pendingMembers={pendingMembers}
+          onPromote={handlePromoteToAdmin}
+          onApprove={handleApproveMember}
+          onReject={handleRejectMember}
+          onClose={() => setShowAdminModal(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// Edit Section Modal Component
+function EditSectionModal({ section, onSave, onClose }: { section: any, onSave: (data: any) => void, onClose: () => void }) {
+  const [name, setName] = useState(section.name || '')
+  const [description, setDescription] = useState(section.description || '')
+  const [imageUrl, setImageUrl] = useState(section.image_url || '')
+  const [isPublic, setIsPublic] = useState(section.is_public !== false)
+  const [requiresApproval, setRequiresApproval] = useState(section.requires_approval || false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const { user } = useAuth()
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image must be less than 10MB')
+      return
+    }
+
+    try {
+      setUploadingImage(true)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `section-${Date.now()}.${fileExt}`
+      const filePath = `sections/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('project-images')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-images')
+        .getPublicUrl(filePath)
+
+      setImageUrl(publicUrl)
+    } catch (err: any) {
+      console.error('Error uploading image:', err)
+      alert('Failed to upload image')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave({ name, description, image_url: imageUrl, is_public: isPublic, requires_approval: requiresApproval })
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '1rem'
+    }} onClick={onClose}>
+      <Card style={{
+        maxWidth: '600px',
+        width: '100%',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        padding: '2rem'
+      }} onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Edit Section</h2>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+              Section Name *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-2)',
+                color: 'var(--text)',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-2)',
+                color: 'var(--text)',
+                fontSize: '1rem',
+                fontFamily: 'inherit',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+              Section Image
+            </label>
+            {imageUrl && (
+              <img
+                src={imageUrl}
+                alt="Section"
+                style={{
+                  width: '100%',
+                  maxHeight: '200px',
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                  marginBottom: '0.5rem'
+                }}
+              />
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              style={{ display: 'none' }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingImage}
+            >
+              {uploadingImage ? 'Uploading...' : imageUrl ? 'Change Image' : 'Upload Image'}
+            </Button>
+            {imageUrl && (
               <Button
-                variant="primary"
-                onClick={handleSubscribe}
-                disabled={subscriptionLoading}
-                style={{ marginTop: '1rem' }}
+                type="button"
+                variant="secondary"
+                onClick={() => setImageUrl('')}
+                style={{ marginLeft: '0.5rem' }}
               >
-                Be the first to subscribe!
+                Remove
               </Button>
             )}
-          </Card>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>
+              Privacy Settings
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                checked={isPublic}
+                onChange={() => {
+                  setIsPublic(true)
+                  setRequiresApproval(false)
+                }}
+              />
+              <span>Public - Anyone can join</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                checked={!isPublic}
+                onChange={() => setIsPublic(false)}
+              />
+              <span>Private - Requires approval</span>
+            </label>
+            {!isPublic && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={requiresApproval}
+                  onChange={(e) => setRequiresApproval(e.target.checked)}
+                />
+                <span style={{ fontSize: '0.9rem' }}>Require admin approval for new members</span>
+              </label>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary">
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  )
+}
+
+// Delete Confirmation Modal
+function DeleteConfirmModal({ sectionName, onConfirm, onCancel }: { sectionName: string, onConfirm: () => void, onCancel: () => void }) {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '1rem'
+    }} onClick={onCancel}>
+      <Card style={{
+        maxWidth: '400px',
+        width: '100%',
+        padding: '2rem'
+      }} onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0, color: 'var(--danger)' }}>Delete Section?</h2>
+        <p style={{ marginBottom: '1.5rem' }}>
+          Are you sure you want to delete "{sectionName}"? This action cannot be undone and will delete all events in this section.
+        </p>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+          <Button variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={onConfirm} style={{ background: 'var(--danger)' }}>
+            Delete
+          </Button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// Admin Management Modal
+function AdminManagementModal({ section, members, pendingMembers, onPromote, onApprove, onReject, onClose }: {
+  section: any,
+  members: any[],
+  pendingMembers: any[],
+  onPromote: (memberId: string, userId: string) => void,
+  onApprove: (memberId: string) => void,
+  onReject: (memberId: string) => void,
+  onClose: () => void
+}) {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '1rem'
+    }} onClick={onClose}>
+      <Card style={{
+        maxWidth: '600px',
+        width: '100%',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        padding: '2rem'
+      }} onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Manage Section</h2>
+
+        {/* Pending Members */}
+        {pendingMembers.length > 0 && (
+          <div style={{ marginBottom: '2rem' }}>
+            <h3 style={{ marginBottom: '1rem' }}>Pending Members ({pendingMembers.length})</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {pendingMembers.map((member) => (
+                <div key={member.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem',
+                  background: 'var(--bg-2)',
+                  borderRadius: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {member.profile.profile_picture_url ? (
+                      <img
+                        src={member.profile.profile_picture_url}
+                        alt={member.profile.full_name}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: 'var(--primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 'bold'
+                      }}>
+                        {member.profile.full_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span>{member.profile.full_name}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <Button
+                      variant="primary"
+                      size="small"
+                      onClick={() => onApprove(member.id)}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => onReject(member.id)}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
-      </div>
+
+        {/* Current Members */}
+        <div>
+          <h3 style={{ marginBottom: '1rem' }}>Members ({members.length})</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {members.map((member) => (
+              <div key={member.id} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem',
+                background: 'var(--bg-2)',
+                borderRadius: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  {member.profile.profile_picture_url ? (
+                    <img
+                      src={member.profile.profile_picture_url}
+                      alt={member.profile.full_name}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: member.is_admin ? '2px solid var(--primary)' : 'none'
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: 'var(--primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      border: member.is_admin ? '2px solid var(--primary)' : 'none'
+                    }}>
+                      {member.profile.full_name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ fontWeight: member.is_admin ? 600 : 400 }}>
+                      {member.profile.full_name}
+                      {member.is_admin && <span style={{ marginLeft: '0.5rem', color: 'var(--primary)' }}>👑 Admin</span>}
+                    </div>
+                  </div>
+                </div>
+                {!member.is_admin && (
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={() => onPromote(member.id, member.user_id)}
+                  >
+                    Promote to Admin
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </Card>
     </div>
   )
 }

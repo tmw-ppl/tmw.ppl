@@ -59,13 +59,13 @@ const Footer: React.FC = () => {
         <div style={logoSectionStyles}>
           <span style={logoStyles} aria-hidden="true">
             <img
-              src="/assets/logo-original.png"
-              alt="Tomorrow People Logo"
+              src="/assets/section-logo-20260114.png"
+              alt="Section Logo"
               width="20"
               height="20"
             />
           </span>
-          <span>Tomorrow People</span>
+          <span>Section</span>
         </div>
         <div>
           <Link 

@@ -50,6 +50,7 @@ const Events: React.FC = () => {
   const [featuredGroups, setFeaturedGroups] = useState<FeaturedGroup[]>([])
   const [activeFilter, setActiveFilter] = useState('upcoming')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [upcomingViewMode, setUpcomingViewMode] = useState<'carousel' | 'calendar'>('carousel')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null)
@@ -350,15 +351,20 @@ const Events: React.FC = () => {
         }))
       }
 
-      const popular = [...eventsWithRSVP]
+      // Filter to only upcoming events
+      const upcoming = [...eventsWithRSVP]
         .filter(e => {
           const eventDateTime = e.date.includes('T') ? e.date : migrateLegacyDateTime(e.date, e.time)
           return isEventUpcoming(eventDateTime) && !['completed', 'cancelled'].includes(e.status || 'scheduled')
         })
-        .sort((a, b) => (b.popularity_score || 0) - (a.popularity_score || 0))
-        .slice(0, 6)
+        .sort((a, b) => {
+          // Sort by date (soonest first)
+          const dateA = a.date.includes('T') ? new Date(a.date) : new Date(migrateLegacyDateTime(a.date, a.time))
+          const dateB = b.date.includes('T') ? new Date(b.date) : new Date(migrateLegacyDateTime(b.date, b.time))
+          return dateA.getTime() - dateB.getTime()
+        })
 
-      setPopularEvents(popular)
+      setPopularEvents(upcoming)
       setEvents(eventsWithRSVP)
       filterEventsDirectly(eventsWithRSVP, activeFilter)
     } catch (error) {
@@ -610,27 +616,190 @@ const Events: React.FC = () => {
     toggleBtnActive: { background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)' },
   }
 
-  // Render popular event card (Luma style)
-  const renderPopularCard = (event: EventWithRSVP) => {
+  // Render upcoming event card (for carousel)
+  const renderUpcomingCard = (event: EventWithRSVP) => {
     const eventDateTime = event.date.includes('T') ? event.date : migrateLegacyDateTime(event.date, event.time)
-    const isPast = !isEventUpcoming(eventDateTime)
+    const formattedDateTime = formatDateTime(event.date, event.time)
+    const creatorName = (event.creator as any)?.full_name || 'Unknown'
+    
+    // Get RSVP status badge
+    const getRSVPBadge = () => {
+      if (!user) return null
+      if (event.user_rsvp_status === 'going') {
+        return (
+          <span style={{
+            position: 'absolute',
+            top: '0.75rem',
+            right: '0.75rem',
+            background: 'var(--success)',
+            color: 'white',
+            padding: '0.25rem 0.75rem',
+            borderRadius: '20px',
+            fontSize: '0.75rem',
+            fontWeight: '600',
+            zIndex: 1
+          }}>
+            ✓ Going
+          </span>
+        )
+      }
+      if (event.user_rsvp_status === 'maybe') {
+        return (
+          <span style={{
+            position: 'absolute',
+            top: '0.75rem',
+            right: '0.75rem',
+            background: 'var(--warning)',
+            color: 'white',
+            padding: '0.25rem 0.75rem',
+            borderRadius: '20px',
+            fontSize: '0.75rem',
+            fontWeight: '600',
+            zIndex: 1
+          }}>
+            ? Maybe
+          </span>
+        )
+      }
+      return null
+    }
     
     return (
-      <Link key={event.id} href={`/events/${event.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-        <div style={{ ...styles.eventCard, opacity: isPast ? 0.6 : 1 }}>
-          {event.image_url ? (
-            <img src={event.image_url} alt={event.title} style={styles.eventImage} />
-          ) : (
-            <div style={{ ...styles.eventImage, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '3rem' }}>
-              📅
-            </div>
-          )}
-          <div style={styles.eventContent}>
-            <h3 style={styles.eventTitle}>{event.title}</h3>
-            {event.creator && <p style={styles.eventMeta}>{event.creator.full_name}</p>}
-            {event.location && <p style={styles.eventMeta}>📍 {event.location}</p>}
+      <Link 
+        key={event.id} 
+        href={`/events/${event.id}`} 
+        style={{ textDecoration: 'none', color: 'inherit' }}
+      >
+        <Card style={{
+          minWidth: '320px',
+          maxWidth: '320px',
+          flexShrink: 0,
+          overflow: 'hidden',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: 0
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-4px)'
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)'
+          e.currentTarget.style.boxShadow = 'var(--shadow)'
+        }}
+        >
+          {/* Banner Image */}
+          <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden' }}>
+            {event.image_url ? (
+              <img 
+                src={event.image_url} 
+                alt={event.title} 
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+            ) : (
+              <div style={{
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '3rem'
+              }}>
+                📅
+              </div>
+            )}
+            {getRSVPBadge()}
           </div>
-        </div>
+
+          {/* Content */}
+          <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              margin: '0 0 0.75rem 0',
+              lineHeight: '1.3',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}>
+              {event.title}
+            </h3>
+
+            {/* Date/Time */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '0.5rem',
+              color: 'var(--muted)',
+              fontSize: '0.9rem'
+            }}>
+              <span>📅</span>
+              <span>{formattedDateTime}</span>
+            </div>
+
+            {/* Location */}
+            {event.location && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.5rem',
+                color: 'var(--muted)',
+                fontSize: '0.9rem'
+              }}>
+                <span>📍</span>
+                <span style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {event.location}
+                </span>
+              </div>
+            )}
+
+            {/* Host */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '0.75rem',
+              color: 'var(--muted)',
+              fontSize: '0.9rem'
+            }}>
+              <span>👤</span>
+              <span>Hosted by {creatorName}</span>
+            </div>
+
+            {/* RSVP Count */}
+            <div style={{
+              marginTop: 'auto',
+              paddingTop: '0.75rem',
+              borderTop: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              fontSize: '0.85rem',
+              color: 'var(--muted)'
+            }}>
+              <span>✅ {event.rsvp_count || 0} going</span>
+              {event.maybe_count && event.maybe_count > 0 && (
+                <span>🤔 {event.maybe_count} maybe</span>
+              )}
+            </div>
+          </div>
+        </Card>
       </Link>
     )
   }
@@ -792,44 +961,69 @@ const Events: React.FC = () => {
           </div>
         </AnimatedSection>
 
-        {/* Popular Events */}
+        {/* Upcoming Events */}
         {popularEvents.length > 0 && (
           <AnimatedSection animationType="slide-up" delay={100}>
             <div style={styles.section}>
               <div style={styles.sectionHeader}>
-                <h2 style={styles.sectionTitle}>Popular Events</h2>
-                <Link href="#all-events" style={styles.viewAllLink}>View All →</Link>
+                <h2 style={styles.sectionTitle}>Upcoming Events</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={styles.viewToggle}>
+                    <button
+                      style={{ 
+                        ...styles.toggleBtn, 
+                        ...(upcomingViewMode === 'carousel' ? styles.toggleBtnActive : {}) 
+                      }}
+                      onClick={() => setUpcomingViewMode('carousel')}
+                    >
+                      Cards
+                    </button>
+                    <button
+                      style={{ 
+                        ...styles.toggleBtn, 
+                        ...(upcomingViewMode === 'calendar' ? styles.toggleBtnActive : {}) 
+                      }}
+                      onClick={() => setUpcomingViewMode('calendar')}
+                    >
+                      Calendar
+                    </button>
+                  </div>
+                  <Link href="#all-events" style={styles.viewAllLink}>View All →</Link>
+                </div>
               </div>
-              <div className="popular-events-scroll" style={styles.horizontalScroll}>
-                {popularEvents.map(renderPopularCard)}
-              </div>
+              
+              {upcomingViewMode === 'carousel' ? (
+                <div 
+                  className="upcoming-events-scroll" 
+                  style={{
+                    ...styles.horizontalScroll,
+                    paddingBottom: '1rem'
+                  }}
+                >
+                  {popularEvents.map(renderUpcomingCard)}
+                </div>
+              ) : (
+                <div style={{ marginTop: '1rem' }}>
+                  <EventCalendar
+                    events={popularEvents.map(e => ({
+                      id: e.id,
+                      title: e.title,
+                      date: e.date,
+                      time: e.time,
+                      location: e.location,
+                      rsvp_count: e.rsvp_count,
+                      maybe_count: e.maybe_count,
+                      max_capacity: e.max_capacity
+                    }))}
+                    onEventClick={(event) => router.push(`/events/${event.id}`)}
+                  />
+                </div>
+              )}
             </div>
           </AnimatedSection>
         )}
 
-        {/* Browse by Category */}
-        {categories.length > 0 && (
-          <AnimatedSection animationType="slide-up" delay={200}>
-            <div style={styles.section}>
-              <h2 style={styles.sectionTitle}>Browse by Category</h2>
-              <div style={{ marginTop: '1rem', ...styles.categoryGrid }}>
-                {categories.map(renderCategoryCard)}
-              </div>
-            </div>
-          </AnimatedSection>
-        )}
 
-        {/* Featured Calendars */}
-        {featuredGroups.length > 0 && (
-          <AnimatedSection animationType="slide-up" delay={300}>
-            <div style={styles.section}>
-              <h2 style={styles.sectionTitle}>Featured Calendars</h2>
-              <div className="popular-events-scroll" style={{ ...styles.horizontalScroll, marginTop: '1rem' }}>
-                {featuredGroups.map(renderCalendarCard)}
-              </div>
-            </div>
-          </AnimatedSection>
-        )}
 
         {/* All Events */}
         <AnimatedSection animationType="slide-up" delay={400}>

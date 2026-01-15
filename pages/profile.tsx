@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
-import EventCalendar from '@/components/EventCalendar'
 
 interface ProfileData {
   id: string
@@ -53,6 +52,24 @@ interface RSVPEvent {
   }
 }
 
+interface MyEvent {
+  id: string
+  title: string
+  description?: string
+  date: string
+  time: string
+  location?: string
+  image_url?: string
+  max_capacity?: number
+  rsvp_count?: number
+  maybe_count?: number
+  relationship: 'hosting' | 'going' | 'maybe' | 'invited'
+  creator?: {
+    full_name: string
+    email: string
+  }
+}
+
 interface SubscribedEvent {
   id: string
   title: string
@@ -70,9 +87,13 @@ interface SubscribedEvent {
 }
 
 interface Subscription {
+  section_id: string
   group_name: string
   creator_id: string
   creator_name: string
+  image_url?: string
+  description?: string
+  is_admin: boolean
 }
 
 const Profile: React.FC = () => {
@@ -81,11 +102,13 @@ const Profile: React.FC = () => {
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [userEvents, setUserEvents] = useState<UserEvent[]>([])
   const [rsvpEvents, setRsvpEvents] = useState<RSVPEvent[]>([])
+  const [invitedEvents, setInvitedEvents] = useState<MyEvent[]>([])
   const [subscribedEvents, setSubscribedEvents] = useState<SubscribedEvent[]>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [selectedSubscriptionGroups, setSelectedSubscriptionGroups] = useState<Set<string>>(new Set())
   const [eventsLoading, setEventsLoading] = useState(true)
   const [rsvpLoading, setRsvpLoading] = useState(true)
+  const [invitedLoading, setInvitedLoading] = useState(true)
   const [subscribedLoading, setSubscribedLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [showEditForm, setShowEditForm] = useState(false)
@@ -99,11 +122,7 @@ const Profile: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [editingEventGroup, setEditingEventGroup] = useState<string | null>(null)
-  const [newGroupName, setNewGroupName] = useState('')
-  const [savingGroup, setSavingGroup] = useState(false)
-  const [groupFilter, setGroupFilter] = useState<string | 'all'>('all')
-  const [eventsView, setEventsView] = useState<'cards' | 'calendar'>('cards')
+  const [activeTab, setActiveTab] = useState<'events' | 'groups'>('events')
 
   useEffect(() => {
     if (!user) {
@@ -113,6 +132,7 @@ const Profile: React.FC = () => {
     loadUserProfile()
     loadUserEvents()
     loadUserRSVPs()
+    loadInvitedEvents()
     loadSubscribedEvents()
   }, [user, router])
 
@@ -294,54 +314,166 @@ const Profile: React.FC = () => {
     }
   }
 
+  const loadInvitedEvents = async () => {
+    if (!user) return
+
+    try {
+      setInvitedLoading(true)
+      
+      // Get all events user is invited to
+      const { data: invitations, error } = await supabase
+        .from('event_invitations' as any)
+        .select(`
+          event_id,
+          events!inner (
+            id,
+            title,
+            description,
+            date,
+            time,
+            location,
+            image_url,
+            max_capacity,
+            published,
+            creator:profiles!created_by (
+              full_name,
+              email
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('events.published', true)
+        .gte('events.date', new Date().toISOString().split('T')[0])
+
+      if (error) {
+        console.error('Error loading invited events:', error)
+        return
+      }
+
+      // Transform to MyEvent format
+      const transformed = await Promise.all(
+        (invitations || []).map(async (inv: any) => {
+          const event = inv.events
+          
+          // Check if user has RSVP'd to this event (if so, it's already in rsvpEvents)
+          const { data: rsvpData } = await supabase
+            .from('event_rsvps')
+            .select('status')
+            .eq('event_id', event.id)
+            .eq('user_id', user.id)
+            .single()
+
+          // If user has RSVP'd, skip this (it will be in rsvpEvents)
+          if (rsvpData) return null
+
+          // Get RSVP counts
+          const { data: allRsvps } = await supabase
+            .from('event_rsvps')
+            .select('status')
+            .eq('event_id', event.id)
+
+          const counts = (allRsvps || []).reduce((acc: any, r: any) => {
+            acc[r.status] = (acc[r.status] || 0) + 1
+            return acc
+          }, {})
+
+          return {
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            date: event.date,
+            time: event.time,
+            location: event.location,
+            image_url: event.image_url,
+            max_capacity: event.max_capacity,
+            rsvp_count: counts.going || 0,
+            maybe_count: counts.maybe || 0,
+            relationship: 'invited' as const,
+            creator: event.creator
+          } as MyEvent
+        })
+      )
+
+      const filtered = transformed.filter((e): e is MyEvent => e !== null)
+      setInvitedEvents(filtered)
+    } catch (error) {
+      console.error('Error loading invited events:', error)
+    } finally {
+      setInvitedLoading(false)
+    }
+  }
+
   const loadSubscribedEvents = async () => {
     if (!user) return
 
     try {
       setSubscribedLoading(true)
 
-      // First, get all subscriptions for this user
-      const { data: subsData, error: subsError } = await supabase
-        .from('event_group_subscriptions')
-        .select('group_name, creator_id')
-        .eq('subscriber_id', user.id)
+      // Get all sections where user is a member (approved status)
+      const { data: membersData, error: membersError } = await supabase
+        .from('section_members')
+        .select('section_id, is_admin, status')
+        .eq('user_id', user.id)
+        .eq('status', 'approved')
 
-      if (subsError) {
-        console.error('Error loading subscriptions:', subsError)
+      if (membersError) {
+        console.error('Error loading section memberships:', membersError)
         return
       }
 
-      if (!subsData || subsData.length === 0) {
+      if (!membersData || membersData.length === 0) {
         setSubscriptions([])
         setSubscribedEvents([])
         return
       }
 
+      // Get section IDs
+      const sectionIds = membersData.map((m: any) => m.section_id)
+      
+      // Get all sections
+      const { data: sectionsData, error: sectionsError } = await supabase
+        .from('sections')
+        .select('id, name, creator_id, description, image_url')
+        .in('id', sectionIds)
+
+      if (sectionsError) {
+        console.error('Error loading sections:', sectionsError)
+        return
+      }
+
       // Get creator profiles
-      const creatorIds = Array.from(new Set(subsData.map((s: any) => s.creator_id)))
+      const creatorIds = Array.from(new Set((sectionsData || []).map((s: any) => s.creator_id)))
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', creatorIds)
 
       const profileMap = new Map((profilesData?.map((p: any) => [p.id, p.full_name]) || []) as [string, string][])
+      const memberMap = new Map((membersData || []).map((m: any) => [m.section_id, m]))
 
-      // Build subscriptions list with creator names
-      const subs: Subscription[] = subsData.map((s: any) => ({
-        group_name: s.group_name,
-        creator_id: s.creator_id,
-        creator_name: profileMap.get(s.creator_id) || 'Unknown'
-      }))
+      // Build subscriptions list with section data
+      const subs: Subscription[] = (sectionsData || []).map((s: any) => {
+        const member = memberMap.get(s.id)
+        return {
+          section_id: s.id,
+          group_name: s.name,
+          creator_id: s.creator_id,
+          creator_name: profileMap.get(s.creator_id) || 'Unknown',
+          image_url: s.image_url,
+          description: s.description,
+          is_admin: member?.is_admin || false
+        }
+      })
       setSubscriptions(subs)
 
       // Initialize all subscription groups as selected
       const allGroupKeys = subs.map(s => `${s.creator_id}:${s.group_name}`)
       setSelectedSubscriptionGroups(new Set(allGroupKeys))
 
-      // Now fetch events for each subscription
+      // Now fetch events for each section
       const allEvents: SubscribedEvent[] = []
 
-      for (const sub of subsData as any[]) {
+      for (const sub of subs) {
         const { data: eventsData } = await supabase
           .from('events')
           .select('id, title, description, date, time, location, image_url, max_capacity, group_name')
@@ -393,20 +525,19 @@ const Profile: React.FC = () => {
     }
   }
 
-  const handleUnsubscribe = async (creatorId: string, groupName: string) => {
+  const handleUnsubscribe = async (sectionId: string) => {
     if (!user) return
 
     try {
       const { error } = await supabase
-        .from('event_group_subscriptions')
+        .from('section_members')
         .delete()
-        .eq('subscriber_id', user.id)
-        .eq('creator_id', creatorId)
-        .eq('group_name', groupName)
+        .eq('user_id', user.id)
+        .eq('section_id', sectionId)
 
       if (error) {
-        console.error('Error unsubscribing:', error)
-        alert('Failed to unsubscribe. Please try again.')
+        console.error('Error leaving section:', error)
+        alert('Failed to leave section. Please try again.')
         return
       }
 
@@ -563,109 +694,99 @@ const Profile: React.FC = () => {
     })
   }
 
-  // Get unique group names from user events
-  const getUniqueGroups = (): string[] => {
-    const groups = userEvents
-      .map(e => e.group_name)
-      .filter((g): g is string => !!g)
-    return Array.from(new Set(groups)).sort()
+  // Combine all user's events (hosting, RSVP'd, invited)
+  const getAllMyEvents = (): MyEvent[] => {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    
+    const allEvents: MyEvent[] = []
+    
+    // Add events user is hosting (upcoming only)
+    userEvents
+      .filter(e => new Date(e.date) >= today)
+      .forEach(event => {
+        allEvents.push({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          date: event.date,
+          time: event.time,
+          location: event.location,
+          image_url: event.image_url,
+          max_capacity: event.max_capacity,
+          rsvp_count: event.rsvp_count,
+          maybe_count: event.maybe_count,
+          relationship: 'hosting',
+          creator: undefined
+        })
+      })
+    
+    // Add events user RSVP'd to (going or maybe)
+    rsvpEvents
+      .filter(e => new Date(e.date) >= today && (e.rsvp_status === 'going' || e.rsvp_status === 'maybe'))
+      .forEach(event => {
+        allEvents.push({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          date: event.date,
+          time: event.time,
+          location: event.location,
+          image_url: event.image_url,
+          max_capacity: event.max_capacity,
+          rsvp_count: event.rsvp_count,
+          maybe_count: event.maybe_count,
+          relationship: event.rsvp_status === 'going' ? 'going' : 'maybe',
+          creator: event.creator
+        })
+      })
+    
+    // Add events user is invited to (that they haven't RSVP'd to)
+    invitedEvents.forEach(event => {
+      // Check if already in list (from hosting or RSVP)
+      if (!allEvents.find(e => e.id === event.id)) {
+        allEvents.push(event)
+      }
+    })
+    
+    // Remove duplicates and sort by date
+    const uniqueEvents = Array.from(
+      new Map(allEvents.map(e => [e.id, e])).values()
+    ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    
+    return uniqueEvents
   }
 
-  // Group events by group_name
-  const getGroupedEvents = (): { [key: string]: UserEvent[] } => {
-    const grouped: { [key: string]: UserEvent[] } = {}
-    
-    userEvents.forEach(event => {
-      const groupKey = event.group_name || 'Ungrouped'
-      if (!grouped[groupKey]) {
-        grouped[groupKey] = []
+  // Categorize events by time period
+  const categorizeEventsByTime = (events: MyEvent[]) => {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const weekFromNow = new Date(today)
+    weekFromNow.setDate(today.getDate() + 7)
+    const monthFromNow = new Date(today)
+    monthFromNow.setMonth(today.getMonth() + 1)
+
+    const thisWeek: MyEvent[] = []
+    const thisMonth: MyEvent[] = []
+    const future: MyEvent[] = []
+
+    events.forEach(event => {
+      const eventDate = new Date(event.date)
+      if (eventDate >= today && eventDate < weekFromNow) {
+        thisWeek.push(event)
+      } else if (eventDate >= weekFromNow && eventDate < monthFromNow) {
+        thisMonth.push(event)
+      } else if (eventDate >= monthFromNow) {
+        future.push(event)
       }
-      grouped[groupKey].push(event)
     })
 
     // Sort each group by date
-    Object.keys(grouped).forEach(key => {
-      grouped[key].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    })
+    thisWeek.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    thisMonth.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    future.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
-    return grouped
-  }
-
-  // Filter events by group
-  const getFilteredEvents = (): UserEvent[] => {
-    if (groupFilter === 'all') {
-      return userEvents
-    }
-    if (groupFilter === 'ungrouped') {
-      return userEvents.filter(e => !e.group_name)
-    }
-    return userEvents.filter(e => e.group_name === groupFilter)
-  }
-
-  // Combine all events for calendar view
-  const allCalendarEvents = useMemo(() => {
-    const myEvents = userEvents.map(e => ({
-      id: e.id,
-      title: e.title,
-      date: e.date,
-      time: e.time,
-      location: e.location,
-      type: 'created' as const,
-      rsvp_count: e.rsvp_count,
-      maybe_count: e.maybe_count,
-      max_capacity: e.max_capacity
-    }))
-    
-    const attending = rsvpEvents.map(e => ({
-      id: e.id,
-      title: e.title,
-      date: e.date,
-      time: e.time,
-      location: e.location,
-      type: 'attending' as const,
-      status: e.rsvp_status,
-      rsvp_count: e.rsvp_count,
-      maybe_count: e.maybe_count,
-      max_capacity: e.max_capacity
-    }))
-    
-    // Combine and dedupe (in case user created an event they're also attending)
-    const combined: (typeof myEvents[0] | typeof attending[0])[] = [...myEvents]
-    attending.forEach(a => {
-      if (!combined.find(e => e.id === a.id)) {
-        combined.push(a)
-      }
-    })
-    
-    return combined
-  }, [userEvents, rsvpEvents])
-
-  // Save event group
-  const handleSaveEventGroup = async (eventId: string, groupName: string) => {
-    setSavingGroup(true)
-    try {
-      const { error } = await ((supabase
-        .from('events') as any)
-        .update({ 
-          group_name: groupName.trim() || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', eventId))
-
-      if (error) throw error
-
-      // Update local state
-      setUserEvents(prev => prev.map(e => 
-        e.id === eventId ? { ...e, group_name: groupName.trim() || undefined } : e
-      ))
-      setEditingEventGroup(null)
-      setNewGroupName('')
-    } catch (err) {
-      console.error('Error saving event group:', err)
-      alert('Failed to save group')
-    } finally {
-      setSavingGroup(false)
-    }
+    return { thisWeek, thisMonth, future }
   }
 
   if (!user) {
@@ -898,7 +1019,7 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* View Toggle */}
+          {/* Tabs */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -908,356 +1029,128 @@ const Profile: React.FC = () => {
           }}>
             <div className="view-toggle">
               <button 
-                className={eventsView === 'cards' ? 'active' : ''}
-                onClick={() => setEventsView('cards')}
+                className={activeTab === 'events' ? 'active' : ''}
+                onClick={() => setActiveTab('events')}
               >
-                📋 Cards
+                🎫 My Events
               </button>
               <button 
-                className={eventsView === 'calendar' ? 'active' : ''}
-                onClick={() => setEventsView('calendar')}
+                className={activeTab === 'groups' ? 'active' : ''}
+                onClick={() => setActiveTab('groups')}
               >
-                📅 Calendar
+                📁 My Sections
               </button>
             </div>
           </div>
 
-          {/* Calendar View */}
-          {eventsView === 'calendar' && (
-            <div style={{ marginTop: '1rem', marginBottom: '2rem' }}>
-              {eventsLoading || rsvpLoading ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                  Loading your events...
-                </div>
-              ) : allCalendarEvents.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📅</div>
-                  <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No events yet</h4>
-                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                    Create or RSVP to events to see them in your calendar!
-                  </p>
-                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                    <Button variant="primary" onClick={() => router.push('/create-event')}>
-                      Create Event
-                    </Button>
-                    <Button variant="secondary" onClick={() => router.push('/events')}>
-                      Browse Events
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Legend */}
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '1.5rem', 
-                    justifyContent: 'center',
-                    marginBottom: '1rem',
-                    fontSize: '0.875rem',
-                    color: 'var(--muted)'
-                  }}>
-                    <span>📅 {userEvents.length} created</span>
-                    <span>✅ {rsvpEvents.filter(e => e.rsvp_status === 'going').length} attending</span>
-                    <span>🤔 {rsvpEvents.filter(e => e.rsvp_status === 'maybe').length} maybe</span>
-                  </div>
-                  
-                  <EventCalendar
-                    events={allCalendarEvents}
-                    onEventClick={(event) => {
-                      router.push(`/events/${event.id}`)
-                    }}
-                  />
-                </>
-              )}
-            </div>
-          )}
-
-          {/* User Events Section - Cards View */}
-          {eventsView === 'cards' && (
-          <div className="user-events-section" style={{ marginTop: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          {/* My Events Tab */}
+          {activeTab === 'events' && (
+          <div className="user-rsvp-section" style={{ marginTop: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ margin: 0 }}>My Events</h3>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                {/* Group Filter */}
-                {userEvents.length > 0 && (
-                  <select
-                    value={groupFilter}
-                    onChange={(e) => setGroupFilter(e.target.value)}
-                    style={{
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--card)',
-                      color: 'var(--text)',
-                      fontSize: '0.875rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="all">All Events ({userEvents.length})</option>
-                    {getUniqueGroups().map(group => (
-                      <option key={group} value={group}>
-                        📁 {group} ({userEvents.filter(e => e.group_name === group).length})
-                      </option>
-                    ))}
-                    {userEvents.some(e => !e.group_name) && (
-                      <option value="ungrouped">
-                        Ungrouped ({userEvents.filter(e => !e.group_name).length})
-                      </option>
-                    )}
-                  </select>
-                )}
-                <Button 
-                  variant="primary" 
-                  size="small"
-                  onClick={() => router.push('/create-event')}
-                >
-                  + Create Event
-                </Button>
-              </div>
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => router.push('/events')}
+              >
+                Browse Events
+              </Button>
             </div>
             
-            {eventsLoading ? (
+            {(rsvpLoading || eventsLoading || invitedLoading) ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                 Loading your events...
               </div>
-            ) : userEvents.length === 0 ? (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '3rem 2rem', 
-                background: 'var(--card)', 
-                borderRadius: '12px',
-                border: '1px solid var(--border)'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎪</div>
-                <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No events yet</h4>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                  Create your first event to start building community!
-                </p>
-                <Button 
-                  variant="primary"
-                  onClick={() => router.push('/create-event')}
-                >
-                  Create Your First Event
-                </Button>
-              </div>
-            ) : (
-              <div className="events-grid" style={{ 
-                display: 'grid', 
-                gap: '1rem',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
-              }}>
-                {getFilteredEvents().map((event) => (
-                  <div 
-                    key={event.id} 
-                    style={{
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '12px',
-                      padding: '1.5rem',
-                      transition: 'all 0.2s ease',
-                      position: 'relative'
-                    }}
-                  >
-                    {/* Group Badge & Editor */}
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      {editingEventGroup === event.id ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                          {/* Existing Groups */}
-                          {getUniqueGroups().length > 0 && (
-                            <div>
-                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                Your Groups
-                              </div>
-                              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                {getUniqueGroups().map(group => (
-                                  <button
-                                    key={group}
-                                    onClick={() => handleSaveEventGroup(event.id, group)}
-                                    disabled={savingGroup}
-                                    style={{
-                                      padding: '0.35rem 0.6rem',
-                                      background: event.group_name === group ? 'var(--primary)' : 'rgba(139, 92, 246, 0.1)',
-                                      color: event.group_name === group ? 'white' : 'var(--primary)',
-                                      border: '1px solid',
-                                      borderColor: event.group_name === group ? 'var(--primary)' : 'rgba(139, 92, 246, 0.3)',
-                                      borderRadius: '16px',
-                                      fontSize: '0.75rem',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.2s',
-                                      fontWeight: 500
-                                    }}
-                                  >
-                                    📁 {group}
-                                  </button>
-                                ))}
-                                {/* Remove from group button */}
-                                {event.group_name && (
-                                  <button
-                                    onClick={() => handleSaveEventGroup(event.id, '')}
-                                    disabled={savingGroup}
-                                    style={{
-                                      padding: '0.35rem 0.6rem',
-                                      background: 'rgba(239, 68, 68, 0.1)',
-                                      color: '#ef4444',
-                                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                                      borderRadius: '16px',
-                                      fontSize: '0.75rem',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.2s'
-                                    }}
-                                  >
-                                    ✕ Remove
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* New Group Input */}
-                          <div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                              {getUniqueGroups().length > 0 ? 'Or create new group' : 'Create a group'}
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                              <input
-                                type="text"
-                                value={newGroupName}
-                                onChange={(e) => setNewGroupName(e.target.value)}
-                                placeholder="New group name..."
-                                style={{
-                                  flex: 1,
-                                  padding: '0.5rem 0.75rem',
-                                  borderRadius: '8px',
-                                  border: '1px solid var(--border)',
-                                  background: 'var(--bg)',
-                                  color: 'var(--text)',
-                                  fontSize: '0.85rem'
-                                }}
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && newGroupName.trim()) {
-                                    handleSaveEventGroup(event.id, newGroupName)
-                                  } else if (e.key === 'Escape') {
-                                    setEditingEventGroup(null)
-                                    setNewGroupName('')
-                                  }
-                                }}
-                              />
-                              <button
-                                onClick={() => handleSaveEventGroup(event.id, newGroupName)}
-                                disabled={savingGroup || !newGroupName.trim()}
-                                style={{
-                                  padding: '0.5rem 0.75rem',
-                                  background: newGroupName.trim() ? 'var(--primary)' : 'var(--bg)',
-                                  color: newGroupName.trim() ? 'white' : 'var(--text-muted)',
-                                  border: 'none',
-                                  borderRadius: '8px',
-                                  fontSize: '0.85rem',
-                                  cursor: newGroupName.trim() ? 'pointer' : 'not-allowed',
-                                  opacity: newGroupName.trim() ? 1 : 0.5
-                                }}
-                              >
-                                {savingGroup ? '...' : 'Create'}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Cancel Button */}
-                          <button
-                            onClick={() => {
-                              setEditingEventGroup(null)
-                              setNewGroupName('')
-                            }}
-                            style={{
-                              padding: '0.4rem',
-                              background: 'transparent',
-                              color: 'var(--text-muted)',
-                              border: 'none',
-                              fontSize: '0.8rem',
-                              cursor: 'pointer',
-                              textAlign: 'left'
-                            }}
-                          >
-                            ← Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setEditingEventGroup(event.id)
-                            setNewGroupName(event.group_name || '')
-                          }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            padding: '0.25rem 0.5rem',
-                            background: event.group_name ? 'rgba(139, 92, 246, 0.15)' : 'var(--bg)',
-                            color: event.group_name ? 'var(--primary)' : 'var(--text-muted)',
-                            border: '1px solid',
-                            borderColor: event.group_name ? 'rgba(139, 92, 246, 0.3)' : 'var(--border)',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          <span>📁</span>
-                          <span>{event.group_name || 'Add to group'}</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Event Content - Clickable */}
-                    <div 
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => router.push(`/edit-event/${event.id}`)}
+            ) : (() => {
+              const allMyEvents = getAllMyEvents()
+              if (allMyEvents.length === 0) {
+                return (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '3rem 2rem', 
+                    background: 'var(--card)', 
+                    borderRadius: '12px',
+                    border: '1px solid var(--border)'
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎫</div>
+                    <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No events yet</h4>
+                    <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                      RSVP to events, create your own, or get invited to see them here!
+                    </p>
+                    <Button 
+                      variant="primary"
+                      onClick={() => router.push('/events')}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                        <h4 style={{ margin: 0, color: 'var(--text)', fontSize: '1.1rem' }}>
+                      Browse Events
+                    </Button>
+                  </div>
+                )
+              }
+              
+              const { thisWeek, thisMonth, future } = categorizeEventsByTime(allMyEvents)
+              
+              const renderEventItem = (event: MyEvent) => (
+                <div 
+                  key={event.id} 
+                  style={{
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer',
+                    marginBottom: '0.75rem'
+                  }}
+                  onClick={() => router.push(`/events/${event.id}`)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--primary)'
+                    e.currentTarget.style.transform = 'translateX(4px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                    e.currentTarget.style.transform = 'translateX(0)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                        <h4 style={{ margin: 0, color: 'var(--text)', fontSize: '1rem', fontWeight: 600 }}>
                           {event.title}
                         </h4>
-                        {!event.published && (
-                          <span style={{
-                            background: 'var(--warning)',
-                            color: 'white',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: '600'
-                          }}>
-                            DRAFT
-                          </span>
-                        )}
-                      </div>
-                      
-                      {event.description && (
-                        <p style={{ 
-                          color: 'var(--text-muted)', 
-                          fontSize: '0.9rem', 
-                          lineHeight: '1.4',
-                          marginBottom: '1rem',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
+                        <span style={{
+                          background: event.relationship === 'hosting' ? 'var(--primary)' :
+                                     event.relationship === 'going' ? 'var(--success)' : 
+                                     event.relationship === 'maybe' ? 'var(--warning)' : 
+                                     'rgba(139, 92, 246, 0.2)',
+                          color: event.relationship === 'invited' ? 'var(--primary)' : 'white',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          whiteSpace: 'nowrap'
                         }}>
-                          {event.description}
-                        </p>
-                      )}
+                          {event.relationship === 'hosting' ? '🎪' :
+                           event.relationship === 'going' ? '✅' : 
+                           event.relationship === 'maybe' ? '🤔' : 
+                           '📨'}
+                        </span>
+                      </div>
                       
                       <div style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
                         gap: '1rem',
                         fontSize: '0.875rem',
-                        color: 'var(--text-muted)',
+                        color: 'var(--muted)',
                         flexWrap: 'wrap'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span>📅</span>
-                          <span>{new Date(event.date).toLocaleDateString()}</span>
+                          <span>{new Date(event.date).toLocaleDateString('en-US', { 
+                            weekday: 'short',
+                            month: 'short', 
+                            day: 'numeric'
+                          })}</span>
                         </div>
                         {event.time && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1268,92 +1161,101 @@ const Profile: React.FC = () => {
                         {event.location && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span>📍</span>
-                            <span style={{ 
-                              maxWidth: '120px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {event.location}
-                            </span>
+                            <span>{event.location}</span>
                           </div>
                         )}
-                      </div>
-                      
-                      {/* RSVP Stats */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem',
-                        marginTop: '1rem',
-                        paddingTop: '1rem',
-                        borderTop: '1px solid var(--border)',
-                        fontSize: '0.875rem'
-                      }}>
                         <div style={{ 
                           display: 'flex', 
                           alignItems: 'center', 
                           gap: '0.5rem',
-                          color: 'var(--success)'
+                          color: 'var(--success)',
+                          marginLeft: 'auto'
                         }}>
-                          <span>✅</span>
-                          <span>{event.rsvp_count || 0} going</span>
+                          <span>✅ {event.rsvp_count || 0}</span>
                         </div>
-                        {(event.maybe_count || 0) > 0 && (
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.5rem',
-                            color: 'var(--warning)'
-                          }}>
-                            <span>🤔</span>
-                            <span>{event.maybe_count} maybe</span>
-                          </div>
-                        )}
-                        {event.max_capacity && (
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.5rem',
-                            color: (event.rsvp_count || 0) >= event.max_capacity ? 'var(--danger)' : 'var(--muted)',
-                            marginLeft: 'auto'
-                          }}>
-                            <span>👥</span>
-                            <span>
-                              {(event.rsvp_count || 0) >= event.max_capacity 
-                                ? 'FULL' 
-                                : `${event.max_capacity - (event.rsvp_count || 0)} spots left`}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              )
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                  {thisWeek.length > 0 && (
+                    <div>
+                      <h4 style={{ 
+                        margin: 0, 
+                        marginBottom: '1rem', 
+                        color: 'var(--text)', 
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        This Week
+                      </h4>
+                      {thisWeek.map(renderEventItem)}
+                    </div>
+                  )}
+                  
+                  {thisMonth.length > 0 && (
+                    <div>
+                      <h4 style={{ 
+                        margin: 0, 
+                        marginBottom: '1rem', 
+                        color: 'var(--text)', 
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        This Month
+                      </h4>
+                      {thisMonth.map(renderEventItem)}
+                    </div>
+                  )}
+                  
+                  {future.length > 0 && (
+                    <div>
+                      <h4 style={{ 
+                        margin: 0, 
+                        marginBottom: '1rem', 
+                        color: 'var(--text)', 
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        Future Events
+                      </h4>
+                      {future.map(renderEventItem)}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
           )}
 
-          {/* User RSVP Events Section - Cards View */}
-          {eventsView === 'cards' && (
-          <div className="user-rsvp-section" style={{ marginTop: '2rem' }}>
+          {/* My Sections Tab */}
+          {activeTab === 'groups' && (
+          <div className="user-groups-section" style={{ marginTop: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3>Events You're Attending</h3>
+              <h3 style={{ margin: 0 }}>My Sections</h3>
               <Button 
                 variant="secondary" 
                 size="small"
-                onClick={() => router.push('/events')}
+                onClick={() => router.push('/sections')}
               >
-                Browse Events
+                Browse Sections
               </Button>
             </div>
             
-            {rsvpLoading ? (
+            {subscribedLoading ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                Loading your RSVPs...
+                Loading your groups...
               </div>
-            ) : rsvpEvents.length === 0 ? (
+            ) : subscriptions.length === 0 ? (
               <div style={{ 
                 textAlign: 'center', 
                 padding: '3rem 2rem', 
@@ -1361,179 +1263,142 @@ const Profile: React.FC = () => {
                 borderRadius: '12px',
                 border: '1px solid var(--border)'
               }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎫</div>
-                <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No RSVPs yet</h4>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📁</div>
+                <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No groups yet</h4>
                 <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                  RSVP to events to see them here and stay updated!
+                  Join groups from other members to stay updated on their events!
                 </p>
                 <Button 
                   variant="primary"
-                  onClick={() => router.push('/events')}
+                  onClick={() => router.push('/sections')}
                 >
-                  Browse Events
+                  Browse Sections
                 </Button>
               </div>
             ) : (
-              <div className="rsvp-events-grid" style={{ 
+              <div style={{ 
                 display: 'grid', 
                 gap: '1rem',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
               }}>
-                {rsvpEvents.map((event) => (
-                  <div 
-                    key={event.id} 
-                    style={{
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '12px',
-                      padding: '1.5rem',
-                      transition: 'all 0.2s ease',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => router.push('/events')}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--primary)'
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = 'none'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                      <h4 style={{ margin: 0, color: 'var(--text)', fontSize: '1.1rem' }}>
-                        {event.title}
-                      </h4>
-                      <span style={{
-                        background: event.rsvp_status === 'going' ? 'var(--success)' : 
-                                   event.rsvp_status === 'maybe' ? 'var(--warning)' : 
-                                   'var(--danger)',
-                        color: 'white',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600'
-                      }}>
-                        {event.rsvp_status === 'going' ? '✅ GOING' : 
-                         event.rsvp_status === 'maybe' ? '🤔 MAYBE' : 
-                         '❌ NOT GOING'}
-                      </span>
-                    </div>
-                    
-                    {event.description && (
-                      <p style={{ 
-                        color: 'var(--text-muted)', 
-                        fontSize: '0.9rem', 
-                        lineHeight: '1.4',
-                        marginBottom: '1rem',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}>
-                        {event.description}
-                      </p>
-                    )}
-                    
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '1rem',
-                      fontSize: '0.875rem',
-                      color: 'var(--text-muted)',
-                      marginBottom: '1rem'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span>📅</span>
-                        <span>{new Date(event.date).toLocaleDateString()}</span>
-                      </div>
-                      {event.time && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span>⏰</span>
-                          <span>{event.time}</span>
-                        </div>
-                      )}
-                      {event.location && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span>📍</span>
-                          <span style={{ 
-                            maxWidth: '120px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
+                {subscriptions.map((sub) => {
+                  // Count upcoming events for this group
+                  const upcomingEvents = subscribedEvents.filter(
+                    e => e.creator_id === sub.creator_id && 
+                         e.group_name === sub.group_name &&
+                         new Date(e.date) >= new Date()
+                  )
+                  
+                  return (
+                    <div 
+                      key={sub.section_id}
+                      style={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => router.push(`/sections/${sub.section_id}`)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary)'
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border)'
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+                        {sub.image_url && (
+                          <img
+                            src={sub.image_url}
+                            alt={sub.group_name}
+                            style={{
+                              width: '60px',
+                              height: '60px',
+                              borderRadius: '8px',
+                              objectFit: 'cover',
+                              flexShrink: 0
+                            }}
+                          />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                            <h4 style={{ margin: 0, color: 'var(--text)', fontSize: '1.1rem' }}>
+                              {sub.group_name}
+                            </h4>
+                            {sub.is_admin && (
+                              <span style={{
+                                fontSize: '0.75rem',
+                                padding: '0.2rem 0.5rem',
+                                background: 'rgba(139, 92, 246, 0.1)',
+                                color: 'var(--primary)',
+                                borderRadius: '4px',
+                                fontWeight: 600
+                              }}>
+                                👑 Admin
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ 
+                            color: 'var(--muted)', 
+                            fontSize: '0.9rem'
                           }}>
-                            {event.location}
-                          </span>
+                            by {sub.creator_name}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {sub.description && (
+                        <div style={{ 
+                          color: 'var(--muted)', 
+                          fontSize: '0.85rem', 
+                          marginBottom: '1rem',
+                          lineHeight: '1.4',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}>
+                          {sub.description}
                         </div>
                       )}
-                    </div>
-                    
-                    {/* RSVP Stats */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      fontSize: '0.875rem',
-                      flexWrap: 'wrap'
-                    }}>
+                      
                       <div style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
-                        gap: '0.5rem',
-                        color: 'var(--success)'
-                      }}>
-                        <span>✅</span>
-                        <span>{event.rsvp_count || 0} going</span>
-                      </div>
-                      {(event.maybe_count || 0) > 0 && (
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.5rem',
-                          color: 'var(--warning)'
-                        }}>
-                          <span>🤔</span>
-                          <span>{event.maybe_count} maybe</span>
-                        </div>
-                      )}
-                      {event.max_capacity && (
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.5rem',
-                          color: (event.rsvp_count || 0) >= event.max_capacity ? 'var(--danger)' : 'var(--muted)',
-                          marginLeft: 'auto'
-                        }}>
-                          <span>👥</span>
-                          <span>
-                            {(event.rsvp_count || 0) >= event.max_capacity 
-                              ? 'FULL' 
-                              : `${event.max_capacity - (event.rsvp_count || 0)} spots left`}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {event.creator && (
-                      <div style={{ 
+                        gap: '1rem',
                         fontSize: '0.875rem',
-                        color: 'var(--text-muted)',
-                        paddingTop: '1rem',
-                        borderTop: '1px solid var(--border)'
+                        color: 'var(--muted)'
                       }}>
-                        👤 Created by {event.creator.full_name}
+                        <span>
+                          📅 {subscribedEvents.filter(
+                            e => e.creator_id === sub.creator_id && e.group_name === sub.group_name
+                          ).length} {subscribedEvents.filter(
+                            e => e.creator_id === sub.creator_id && e.group_name === sub.group_name
+                          ).length === 1 ? 'event' : 'events'}
+                        </span>
+                        {upcomingEvents.length > 0 && (
+                          <span>
+                            🎯 {upcomingEvents.length} upcoming
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
           )}
 
-          {/* Subscribed Events Section */}
+          {/* Subscribed Events Section - Removed, now shown in Groups tab */}
+          {false && (
           <div className="subscribed-events-section" style={{ marginTop: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ margin: 0 }}>🔔 Subscribed Events</h3>
@@ -1649,8 +1514,8 @@ const Profile: React.FC = () => {
                           </span>
                         </button>
                         <button
-                          onClick={() => handleUnsubscribe(sub.creator_id, sub.group_name)}
-                          title="Unsubscribe from this group"
+                          onClick={() => handleUnsubscribe(sub.section_id)}
+                          title="Leave this section"
                           style={{
                             padding: '0.375rem 0.5rem',
                             borderRadius: '0 20px 20px 0',
@@ -1876,6 +1741,7 @@ const Profile: React.FC = () => {
               </>
             )}
           </div>
+          )}
         </div>
       </div>
     </section>

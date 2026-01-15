@@ -60,6 +60,35 @@ const quickTags = [
   { name: 'Music', emoji: '🎵' },
 ]
 
+// Get default date and time (7pm today, or tomorrow if past 7pm)
+const getDefaultDateTime = () => {
+  const now = new Date()
+  const currentHour = now.getHours()
+  const currentMinute = now.getMinutes()
+  
+  let defaultDate = new Date(now)
+  let defaultTime = '19:00'
+  
+  // If it's past 7pm, use tomorrow
+  if (currentHour > 19 || (currentHour === 19 && currentMinute >= 0)) {
+    defaultDate.setDate(defaultDate.getDate() + 1)
+  }
+  
+  return {
+    date: defaultDate.toISOString().split('T')[0],
+    time: defaultTime
+  }
+}
+
+// Get user's timezone
+const getUserTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone
+  } catch {
+    return 'America/New_York' // Fallback
+  }
+}
+
 const CreateEvent: React.FC = () => {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -78,11 +107,14 @@ const CreateEvent: React.FC = () => {
   const [showGroupDropdown, setShowGroupDropdown] = useState(false)
   const [filteredGroups, setFilteredGroups] = useState<string[]>([])
 
+  const defaultDateTime = getDefaultDateTime()
+  const [timezone, setTimezone] = useState<string>(getUserTimezone())
+
   const [formData, setFormData] = useState<EventFormData>({
-    title: '',
+    title: 'Untitled Event',
     description: '',
-    date: '',
-    time: '19:00',
+    date: defaultDateTime.date,
+    time: defaultDateTime.time,
     end_time: '',
     location: '',
     is_virtual: false,
@@ -115,6 +147,20 @@ const CreateEvent: React.FC = () => {
       loadUserGroups()
     }
   }, [user])
+
+  // Pre-fill group name and description from query params (when coming from create-section)
+  useEffect(() => {
+    if (router.isReady) {
+      const { group_name, description } = router.query
+      if (group_name && typeof group_name === 'string') {
+        setFormData(prev => ({
+          ...prev,
+          group_name: group_name,
+          description: description && typeof description === 'string' ? description : prev.description
+        }))
+      }
+    }
+  }, [router.isReady, router.query])
 
   useEffect(() => {
     setTimeout(() => titleInputRef.current?.focus(), 100)
@@ -312,8 +358,49 @@ const CreateEvent: React.FC = () => {
     return `${displayHour}:${minutes} ${ampm}`
   }
 
+  // Generate time options with 15-minute intervals
+  const generateTimeOptions = () => {
+    const times: string[] = []
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const hourString = hour.toString().padStart(2, '0')
+        const minuteString = minute.toString().padStart(2, '0')
+        times.push(`${hourString}:${minuteString}`)
+      }
+    }
+    return times
+  }
+
+  // Get timezone abbreviation
+  const getTimezoneAbbreviation = (tz: string): string => {
+    const tzMap: Record<string, string> = {
+      'America/Los_Angeles': 'PT',
+      'America/Denver': 'MT',
+      'America/Chicago': 'CT',
+      'America/New_York': 'ET',
+      'Europe/London': 'GMT',
+      'Europe/Paris': 'CET',
+      'Asia/Tokyo': 'JST',
+      'Australia/Sydney': 'AEST',
+    }
+    return tzMap[tz] || tz.split('/').pop() || 'UTC'
+  }
+
+  // Common timezones for selector
+  const commonTimezones = [
+    { value: 'America/Los_Angeles', label: 'PT (Pacific Time)' },
+    { value: 'America/Denver', label: 'MT (Mountain Time)' },
+    { value: 'America/Chicago', label: 'CT (Central Time)' },
+    { value: 'America/New_York', label: 'ET (Eastern Time)' },
+    { value: 'Europe/London', label: 'GMT (Greenwich Mean Time)' },
+    { value: 'Europe/Paris', label: 'CET (Central European Time)' },
+    { value: 'Asia/Tokyo', label: 'JST (Japan Standard Time)' },
+    { value: 'Australia/Sydney', label: 'AEST (Australian Eastern Time)' },
+    { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+  ]
+
   const handleSubmit = async () => {
-    if (!formData.title) {
+    if (!formData.title || formData.title.trim() === '') {
       setError('Give your event a name!')
       return
     }
@@ -714,31 +801,174 @@ const CreateEvent: React.FC = () => {
         {/* Two Column Layout: Form + Preview */}
         <div className="create-layout">
           {/* Main Form Card */}
-          <div className="card" style={{ padding: '2rem' }}>
-            <div className="kicker">Create New Event</div>
-            
-            {/* Cover Image Section */}
-            <div className="form-section" style={{ paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
-              <h3 style={{ marginBottom: '1rem' }}>📷 Cover Image</h3>
+          <div className="card" style={{ padding: '1.5rem' }}>
+            {/* Title - At the top */}
+            <div className="form-section" style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Untitled Event"
+                  style={{
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    padding: '0.75rem',
+                    border: 'none',
+                    borderBottom: '2px solid transparent',
+                    background: 'transparent',
+                    width: '100%',
+                    color: 'var(--text)',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderBottomColor = 'var(--primary)'}
+                  onBlur={(e) => e.currentTarget.style.borderBottomColor = 'transparent'}
+                />
+              </div>
+            </div>
+
+            {/* Date & Time - Compact */}
+            <div className="form-section" style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+              <label style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)' }}>
+                Set a date and time
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.75rem', alignItems: 'end' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    style={{ padding: '0.5rem', fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0, position: 'relative' }}>
+                  <select
+                    value={formData.time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                    style={{ 
+                      padding: '0.5rem', 
+                      fontSize: '0.875rem',
+                      width: '100%',
+                      appearance: 'auto'
+                    }}
+                  >
+                    {generateTimeOptions().map(time => {
+                      const [hours, minutes] = time.split(':')
+                      const hour = parseInt(hours)
+                      const ampm = hour >= 12 ? 'PM' : 'AM'
+                      const displayHour = hour % 12 || 12
+                      return (
+                        <option key={time} value={time}>
+                          {displayHour}:{minutes} {ampm}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <select
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    style={{ 
+                      padding: '0.5rem', 
+                      fontSize: '0.875rem',
+                      minWidth: '120px'
+                    }}
+                  >
+                    {commonTimezones.map(tz => (
+                      <option key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--muted)' }}>
+                Timezone: {getTimezoneAbbreviation(timezone)}
+              </div>
+            </div>
+
+            {/* Location - Compact */}
+            <div className="form-section" style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+              <label style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)' }}>
+                Location
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, is_virtual: false }))}
+                  className={`chip ${!formData.is_virtual ? 'active' : ''}`}
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+                >
+                  📍 In Person
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, is_virtual: true }))}
+                  className={`chip ${formData.is_virtual ? 'active' : ''}`}
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+                >
+                  💻 Online
+                </button>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <input
+                  type="text"
+                  value={formData.is_virtual ? formData.virtual_link : formData.location}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    [formData.is_virtual ? 'virtual_link' : 'location']: e.target.value 
+                  }))}
+                  placeholder={formData.is_virtual ? 'Paste meeting link (Zoom, Meet, etc.)' : 'Add location or address'}
+                  style={{ padding: '0.5rem', fontSize: '0.875rem' }}
+                />
+              </div>
+            </div>
+
+            {/* Description - Compact */}
+            <div className="form-section" style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)' }}>
+                Add a description of your event
+              </label>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Tell people what your event is about..."
+                  rows={3}
+                  style={{ padding: '0.5rem', fontSize: '0.875rem', resize: 'vertical' }}
+                />
+              </div>
+            </div>
+
+            {/* Cover Image Section - Moved down */}
+            <div className="form-section" style={{ paddingBottom: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+              <label style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)' }}>
+                Cover Image
+              </label>
               
               {formData.image_url ? (
-                <div style={{ position: 'relative', marginBottom: '1rem' }}>
+                <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
                   <img 
                     src={formData.image_url} 
                     alt="Cover preview"
                     style={{
                       width: '100%',
-                      height: '200px',
+                      height: '150px',
                       objectFit: 'cover',
-                      borderRadius: '12px',
+                      borderRadius: '8px',
                       border: '1px solid var(--border)'
                     }}
                   />
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <button 
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       className="btn small"
+                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
                     >
                       {uploadingImage ? '⏳ Uploading...' : '🔄 Change'}
                     </button>
@@ -746,6 +976,7 @@ const CreateEvent: React.FC = () => {
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
                       className="btn small danger"
+                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
                     >
                       ✕ Remove
                     </button>
@@ -757,13 +988,13 @@ const CreateEvent: React.FC = () => {
                   onClick={() => fileInputRef.current?.click()}
                   className="btn"
                   disabled={uploadingImage}
-                  style={{ marginBottom: '0.5rem' }}
+                  style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
                 >
                   {uploadingImage ? '⏳ Uploading...' : '📷 Add Cover Photo'}
                 </button>
               )}
               
-              <p className="form-help">Recommended: 1200x630px. Max 5MB.</p>
+              <p className="form-help" style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Recommended: 1200x630px. Max 5MB.</p>
               
               <input
                 ref={fileInputRef}
@@ -774,23 +1005,9 @@ const CreateEvent: React.FC = () => {
               />
             </div>
 
-            {/* Title */}
-            <div className="form-section">
-              <div className="form-group title-group">
-                <input
-                  ref={titleInputRef}
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="What's the event?"
-                  className="title-input"
-                />
-              </div>
-            </div>
-
-            {/* Quick Tags */}
-            <div className="form-section" style={{ borderBottom: 'none', marginBottom: '1rem', paddingBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600, color: 'var(--text)' }}>
+            {/* Quick Tags - Compact */}
+            <div className="form-section" style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)' }}>
                 Quick Tags
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -803,100 +1020,15 @@ const CreateEvent: React.FC = () => {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
+                      gap: '0.4rem',
+                      fontSize: '0.8rem',
+                      padding: '0.4rem 0.75rem'
                     }}
                   >
                     <span>{tag.emoji}</span>
                     <span>{tag.name}</span>
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/* Date & Time */}
-            <div className="form-section">
-              <h3>📅 When</h3>
-              <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                <div className="form-group">
-                  <label>Date</label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                  {formData.date && (
-                    <p className="form-help" style={{ marginTop: '0.5rem', color: 'var(--primary)' }}>
-                      {formatDateForDisplay()}
-                    </p>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label>Time</label>
-                  <input
-                    type="time"
-                    value={formData.time}
-                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                  />
-                  {formData.time && (
-                    <p className="form-help" style={{ marginTop: '0.5rem', color: 'var(--primary)' }}>
-                      {formatTimeForDisplay()}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="form-section">
-              <h3>📍 Where</h3>
-              
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, is_virtual: false }))}
-                  className={`chip ${!formData.is_virtual ? 'active' : ''}`}
-                >
-                  📍 In Person
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, is_virtual: true }))}
-                  className={`chip ${formData.is_virtual ? 'active' : ''}`}
-                >
-                  💻 Online
-                </button>
-              </div>
-
-              <div className="form-group">
-                <input
-                  type="text"
-                  value={formData.is_virtual ? formData.virtual_link : formData.location}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    [formData.is_virtual ? 'virtual_link' : 'location']: e.target.value 
-                  }))}
-                  placeholder={formData.is_virtual ? 'Paste meeting link (Zoom, Meet, etc.)' : 'Add location or address'}
-                />
-                <p className="form-help">
-                  {formData.is_virtual 
-                    ? 'Paste your Zoom, Google Meet, or Teams link' 
-                    : 'Enter an address or venue name'}
-                </p>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="form-section">
-              <h3>✏️ Details</h3>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Tell people what your event is about..."
-                  rows={4}
-                />
               </div>
             </div>
 
