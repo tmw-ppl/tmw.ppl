@@ -1806,7 +1806,7 @@ const InviteSectionsSection: React.FC<{ eventId: string; onInvite: () => void }>
       return
     }
     
-    const sectionIds = membersData.map(m => m.section_id)
+    const sectionIds = (membersData as any[]).map((m: any) => m.section_id)
     const { data: sectionsData } = await supabase
       .from('sections')
       .select('id, name, description, image_url')
@@ -1822,7 +1822,7 @@ const InviteSectionsSection: React.FC<{ eventId: string; onInvite: () => void }>
       .eq('event_id', eventId)
     
     if (invites) {
-      setInvitedSectionIds(invites.map(i => i.section_id))
+      setInvitedSectionIds((invites as any[]).map((i: any) => i.section_id))
     }
   }
 

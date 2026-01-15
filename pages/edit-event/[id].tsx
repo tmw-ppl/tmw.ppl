@@ -1760,10 +1760,9 @@ const EditEvent: React.FC = () => {
                             border: '1px solid var(--border)',
                             borderRadius: '8px',
                             padding: '4px',
-                            background: 'var(--bg)',
-                            // Prevent the container from receiving focus
-                            tabIndex: -1
+                            background: 'var(--bg)'
                           }}
+                          tabIndex={-1}
                         >
                           {generateTimeOptions().map(time => {
                             const [hours, minutes] = time.split(':')

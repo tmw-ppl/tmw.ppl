@@ -128,7 +128,7 @@ const CreateSection: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 500))
 
       // Redirect to the section page
-      router.push(`/sections/${newSection.id}`)
+      router.push(`/sections/${(newSection as any).id}`)
     } catch (err: any) {
       console.error('Error creating section:', err)
       setError(err.message || 'Something went wrong. Please try again.')

@@ -96,7 +96,7 @@ export default function GroupPage() {
       const { data: membersData } = await supabase
         .from('section_members')
         .select('id, user_id, is_admin, status')
-        .eq('section_id', sectionData.id)
+        .eq('section_id', (sectionData as any).id)
         .in('status', ['approved', 'pending'])
 
       // Get user IDs for profiles
@@ -228,16 +228,16 @@ export default function GroupPage() {
     if (!section || !canManage) return
 
     try {
-      const { error } = await supabase
-        .from('sections')
+      const { error } = await (supabase
+        .from('sections') as any)
         .update({
           name: formData.name,
           description: formData.description || null,
           image_url: formData.image_url || null,
           is_public: formData.is_public,
           requires_approval: formData.requires_approval
-        } as any)
-        .eq('id', section.id)
+        })
+        .eq('id', (section as any).id)
 
       if (error) throw error
 
@@ -273,11 +273,11 @@ export default function GroupPage() {
     if (!section || !canManage) return
 
     try {
-      const { error } = await supabase
-        .from('section_members')
-        .update({ is_admin: true } as any)
+      const { error } = await (supabase
+        .from('section_members') as any)
+        .update({ is_admin: true })
         .eq('id', memberId)
-        .eq('section_id', section.id)
+        .eq('section_id', (section as any).id)
 
       if (error) throw error
 
@@ -293,15 +293,15 @@ export default function GroupPage() {
     if (!section || !canManage) return
 
     try {
-      const { error } = await supabase
-        .from('section_members')
+      const { error } = await (supabase
+        .from('section_members') as any)
         .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
           approved_by: user!.id
-        } as any)
+        })
         .eq('id', memberId)
-        .eq('section_id', section.id)
+        .eq('section_id', (section as any).id)
 
       if (error) throw error
 
@@ -317,11 +317,11 @@ export default function GroupPage() {
     if (!section || !canManage) return
 
     try {
-      const { error } = await supabase
-        .from('section_members')
-        .update({ status: 'rejected' } as any)
+      const { error } = await (supabase
+        .from('section_members') as any)
+        .update({ status: 'rejected' })
         .eq('id', memberId)
-        .eq('section_id', section.id)
+        .eq('section_id', (section as any).id)
 
       if (error) throw error
 

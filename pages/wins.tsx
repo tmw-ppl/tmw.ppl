@@ -518,8 +518,13 @@ export default function Wins() {
                     justifyContent: 'space-between',
                     marginBottom: '1rem'
                   }}>
-                    <Chip
+                    <span
                       style={{
+                        display: 'inline-block',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
                         background: `${categoryColors[win.category]}20`,
                         color: categoryColors[win.category],
                         border: `1px solid ${categoryColors[win.category]}40`,
@@ -527,7 +532,7 @@ export default function Wins() {
                       }}
                     >
                       {categoryLabels[win.category]}
-                    </Chip>
+                    </span>
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',

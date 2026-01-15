@@ -80,7 +80,7 @@ const Chats: React.FC = () => {
           .eq('user_id', user!.id)
           .eq('is_banned', false)
 
-        const channelIds = memberChannels?.map(m => m.channel_id) || []
+        const channelIds = (memberChannels as any[])?.map((m: any) => m.channel_id) || []
         
         if (channelIds.length > 0) {
           query = query.in('id', channelIds)
@@ -126,9 +126,9 @@ const Chats: React.FC = () => {
       // Apply filter if needed
       let filteredChannels = allChannels
       if (filter === 'sections') {
-        filteredChannels = allChannels.filter(c => c.type === 'section')
+        filteredChannels = allChannels.filter((c: any) => c.type === 'section')
       } else if (filter === 'events') {
-        filteredChannels = allChannels.filter(c => c.type === 'event')
+        filteredChannels = allChannels.filter((c: any) => c.type === 'event')
       }
 
       setChannels(filteredChannels)
@@ -215,9 +215,9 @@ const Chats: React.FC = () => {
       if (error) throw error
 
       // Update last_message_at
-      await supabase
-        .from('channels')
-        .update({ last_message_at: new Date().toISOString() } as any)
+      await (supabase
+        .from('channels') as any)
+        .update({ last_message_at: new Date().toISOString() })
         .eq('id', selectedChannel.id)
 
       // Reload channels to update order
@@ -229,31 +229,34 @@ const Chats: React.FC = () => {
   }
 
   const getChannelDisplayName = (channel: Channel) => {
-    if (channel.type === 'section' && (channel as any).section) {
-      return (channel as any).section.name
+    const ch = channel as any
+    if (ch.type === 'section' && ch.section) {
+      return ch.section.name
     }
-    if (channel.type === 'event' && (channel as any).event) {
-      return (channel as any).event.title
+    if (ch.type === 'event' && ch.event) {
+      return ch.event.title
     }
     return channel.name
   }
 
   const getChannelImage = (channel: Channel) => {
-    if (channel.type === 'section' && (channel as any).section) {
-      return (channel as any).section.image_url
+    const ch = channel as any
+    if (ch.type === 'section' && ch.section) {
+      return ch.section.image_url
     }
-    if (channel.type === 'event' && (channel as any).event) {
-      return (channel as any).event.image_url
+    if (ch.type === 'event' && ch.event) {
+      return ch.event.image_url
     }
     return null
   }
 
   const getChannelLink = (channel: Channel) => {
-    if (channel.type === 'section' && (channel as any).section) {
-      return `/sections/${(channel as any).section.id}`
+    const ch = channel as any
+    if (ch.type === 'section' && ch.section) {
+      return `/sections/${ch.section.id}`
     }
-    if (channel.type === 'event' && (channel as any).event) {
-      return `/events/${(channel as any).event.id}`
+    if (ch.type === 'event' && ch.event) {
+      return `/events/${ch.event.id}`
     }
     return null
   }
@@ -378,7 +381,7 @@ const Chats: React.FC = () => {
                       justifyContent: 'center',
                       fontSize: '1.25rem'
                     }}>
-                      {channel.type === 'section' ? '📁' : channel.type === 'event' ? '🎪' : '💬'}
+                      {(channel as any).type === 'section' ? '📁' : (channel as any).type === 'event' ? '🎪' : '💬'}
                     </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -401,7 +404,7 @@ const Chats: React.FC = () => {
                           textDecoration: 'none'
                         }}
                       >
-                        View {channel.type === 'section' ? 'Section' : 'Event'} →
+                        View {(channel as any).type === 'section' ? 'Section' : 'Event'} →
                       </Link>
                     )}
                   </div>
@@ -447,7 +450,7 @@ const Chats: React.FC = () => {
                   justifyContent: 'center',
                   fontSize: '1.5rem'
                 }}>
-                  {selectedChannel.type === 'section' ? '📁' : selectedChannel.type === 'event' ? '🎪' : '💬'}
+                  {(selectedChannel as any).type === 'section' ? '📁' : (selectedChannel as any).type === 'event' ? '🎪' : '💬'}
                 </div>
               )}
               <div style={{ flex: 1 }}>
@@ -463,7 +466,7 @@ const Chats: React.FC = () => {
               {getChannelLink(selectedChannel) && (
                 <Link href={getChannelLink(selectedChannel)!}>
                   <Button variant="secondary" size="small">
-                    View {selectedChannel.type === 'section' ? 'Section' : 'Event'}
+                    View {(selectedChannel as any).type === 'section' ? 'Section' : 'Event'}
                   </Button>
                 </Link>
               )}
@@ -491,7 +494,6 @@ const Chats: React.FC = () => {
                   <MessageItem
                     key={message.id}
                     message={message}
-                    currentUserId={user?.id}
                   />
                 ))
               )}
@@ -501,7 +503,11 @@ const Chats: React.FC = () => {
             {/* Message Input */}
             <div style={{ padding: '1rem', borderTop: '1px solid var(--border)' }}>
               <MessageInput
-                onSend={handleSendMessage}
+                channelId={selectedChannel.id}
+                onMessageSent={() => {
+                  loadMessages(selectedChannel.id)
+                  loadChannels()
+                }}
                 placeholder={`Message ${getChannelDisplayName(selectedChannel)}...`}
               />
             </div>

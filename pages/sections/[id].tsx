@@ -79,16 +79,16 @@ export default function SectionPage() {
         setLoading(false)
         return
       }
-      setSection(sectionData)
+      setSection(sectionData as any)
       setImageError(false) // Reset image error when loading new section
       console.log('Section data loaded:', sectionData)
-      console.log('Section image_url:', sectionData.image_url)
+      console.log('Section image_url:', (sectionData as any).image_url)
 
       // Fetch creator profile
       const { data: creatorProfile, error: creatorError } = await supabase
         .from('profiles')
         .select('id, full_name, profile_picture_url')
-        .eq('id', sectionData.creator_id)
+        .eq('id', (sectionData as any).creator_id)
         .single()
 
       if (creatorError || !creatorProfile) {
@@ -102,7 +102,7 @@ export default function SectionPage() {
       const { data: membersData } = await supabase
         .from('section_members')
         .select('id, user_id, is_admin, status')
-        .eq('section_id', sectionData.id)
+        .eq('section_id', (sectionData as any).id)
         .in('status', ['approved', 'pending'])
 
       // Get user IDs for profiles
@@ -154,7 +154,7 @@ export default function SectionPage() {
       const isUserMember = approvedMembers.some(m => m.user_id === user?.id)
       
       // Load pending members (only for admins/creators)
-      if (user && (user.id === sectionData.creator_id || userIsAdmin)) {
+      if (user && (user.id === (sectionData as any).creator_id || userIsAdmin)) {
         setPendingMembers(pendingMembersList)
       }
 
@@ -164,9 +164,9 @@ export default function SectionPage() {
       const { data: invitesData } = await supabase
         .from('event_section_invites')
         .select('event_id')
-        .eq('section_id', sectionData.id)
+        .eq('section_id', (sectionData as any).id)
       
-      const eventIds = invitesData?.map(i => i.event_id) || []
+      const eventIds = (invitesData as any[])?.map((i: any) => i.event_id) || []
       
       if (eventIds.length > 0) {
         const { data: upcomingEvents, error: upcomingError } = await (supabase
@@ -204,14 +204,14 @@ export default function SectionPage() {
       const { data: channelData } = await supabase
         .from('channels')
         .select('*')
-        .eq('section_id', sectionData.id)
+        .eq('section_id', (sectionData as any).id)
         .eq('type', 'section')
         .single()
 
       if (channelData) {
         setSectionChannel(channelData as Channel)
-        loadChannelMessages(channelData.id)
-        const sub = subscribeToChannelMessages(channelData.id)
+        loadChannelMessages((channelData as any).id)
+        const sub = subscribeToChannelMessages((channelData as any).id)
         setChannelSubscription(sub)
       }
     } catch (err) {
@@ -279,7 +279,7 @@ export default function SectionPage() {
       const { error } = await supabase
         .from('channel_messages')
         .insert({
-          channel_id: sectionChannel.id,
+          channel_id: (sectionChannel as any).id,
           user_id: user.id,
           content: content.trim(),
           message_type: 'text'
@@ -287,10 +287,10 @@ export default function SectionPage() {
 
       if (error) throw error
 
-      await supabase
-        .from('channels')
-        .update({ last_message_at: new Date().toISOString() } as any)
-        .eq('id', sectionChannel.id)
+      await (supabase
+        .from('channels') as any)
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', (sectionChannel as any).id)
     } catch (err: any) {
       console.error('Error sending message:', err)
       alert('Failed to send message: ' + (err.message || 'Unknown error'))
@@ -313,16 +313,16 @@ export default function SectionPage() {
     if (!section || !canManage) return
 
     try {
-      const { error } = await supabase
-        .from('sections')
+      const { error } = await (supabase
+        .from('sections') as any)
         .update({
           name: formData.name,
           description: formData.description || null,
           image_url: formData.image_url || null,
           is_public: formData.is_public,
           requires_approval: formData.requires_approval
-        } as any)
-        .eq('id', section.id)
+        })
+        .eq('id', (section as any).id)
 
       if (error) throw error
 
@@ -342,7 +342,7 @@ export default function SectionPage() {
       const { error } = await supabase
         .from('sections')
         .delete()
-        .eq('id', section.id)
+        .eq('id', (section as any).id)
 
       if (error) throw error
 
@@ -358,11 +358,11 @@ export default function SectionPage() {
     if (!section || !canManage) return
 
     try {
-      const { error } = await supabase
-        .from('section_members')
-        .update({ is_admin: true } as any)
+      const { error } = await (supabase
+        .from('section_members') as any)
+        .update({ is_admin: true })
         .eq('id', memberId)
-        .eq('section_id', section.id)
+        .eq('section_id', (section as any).id)
 
       if (error) throw error
 
@@ -378,15 +378,15 @@ export default function SectionPage() {
     if (!section || !canManage) return
 
     try {
-      const { error } = await supabase
-        .from('section_members')
+      const { error } = await (supabase
+        .from('section_members') as any)
         .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
           approved_by: user!.id
-        } as any)
+        })
         .eq('id', memberId)
-        .eq('section_id', section.id)
+        .eq('section_id', (section as any).id)
 
       if (error) throw error
 
@@ -402,11 +402,11 @@ export default function SectionPage() {
     if (!section || !canManage) return
 
     try {
-      const { error } = await supabase
-        .from('section_members')
-        .update({ status: 'rejected' } as any)
+      const { error } = await (supabase
+        .from('section_members') as any)
+        .update({ status: 'rejected' })
         .eq('id', memberId)
-        .eq('section_id', section.id)
+        .eq('section_id', (section as any).id)
 
       if (error) throw error
 
@@ -902,7 +902,6 @@ export default function SectionPage() {
                     <MessageItem
                       key={message.id}
                       message={message}
-                      currentUserId={user?.id}
                     />
                   ))
                 )}
@@ -912,8 +911,11 @@ export default function SectionPage() {
               {/* Message Input */}
               <div style={{ padding: '1rem', borderTop: '1px solid var(--border)' }}>
                 <MessageInput
-                  onSend={handleSendMessage}
-                  placeholder={`Message ${section.name}...`}
+                  channelId={(sectionChannel as any).id}
+                  onMessageSent={() => {
+                    loadChannelMessages((sectionChannel as any).id)
+                  }}
+                  placeholder={`Message ${(section as any).name}...`}
                 />
               </div>
             </Card>
