@@ -36,9 +36,6 @@
 
 /* CSS Custom Properties (Variables) */
 :root {
-  /* Force dark mode */
-  color-scheme: dark;
-  
   /* Colors */
   --bg: #0b1220;
   --bg-2: #0e1626;
@@ -83,7 +80,7 @@
            radial-gradient(800px 400px at 50% 120%, rgba(245,158,11,.14), transparent 50%);
 }
 
-/* Light theme disabled - keeping dark mode only for now
+/* Light theme overrides */
 @media (prefers-color-scheme: light) {
   :root {
     --bg: #f7fafc;
@@ -95,7 +92,6 @@
     --shadow: 0 10px 30px rgba(2,6,23,.08);
   }
 }
-*/
 
 /* Base styles and resets */
 * {
@@ -5240,5 +5236,228 @@ gmp-place-autocomplete input:focus {
 
   .datetime-dropdown {
     max-height: 60vh;
+  }
+}
+
+/* ============================================
+   MOBILE BROWSER CONSISTENCY FIXES
+   Ensures consistent rendering across real 
+   mobile devices and desktop simulators
+   Uses CSS variables for theme compatibility
+   ============================================ */
+
+/* Universal mobile fixes - apply to all screen sizes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS-specific fixes */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Prevent iOS from auto-styling inputs */
+  input, textarea, select, button {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0;
+  }
+  
+  /* Fix for iOS button borders */
+  button {
+    border-radius: 14px;
+  }
+}
+
+/* Ensure consistent border rendering */
+*,
+*::before,
+*::after {
+  border-style: solid;
+  border-width: 0;
+}
+
+@media (max-width: 768px) {
+  /* Fix button rendering on mobile */
+  button,
+  .btn,
+  [role="button"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 14px;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Primary buttons - ensure gradient shows properly */
+  .btn.primary,
+  button[style*="linear-gradient"] {
+    border: none !important;
+    border-width: 0 !important;
+  }
+  
+  /* Secondary/bordered buttons - ensure borders show */
+  .btn.secondary,
+  .btn:not(.primary):not(.danger):not(.success):not(.warning) {
+    border: 1px solid var(--border) !important;
+    border-style: solid !important;
+  }
+  
+  /* Card borders */
+  .card {
+    border: 1px solid var(--border) !important;
+    border-style: solid !important;
+    background-color: var(--card);
+  }
+  
+  /* Input fields - consistent borders */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select {
+    border: 1px solid var(--border) !important;
+    border-style: solid !important;
+    background-color: var(--card);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+  
+  /* Input focus states */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--primary) !important;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  }
+  
+  /* Chip/tag borders */
+  .chip {
+    border: 1px solid var(--border) !important;
+    border-style: solid !important;
+  }
+  
+  /* Active chip */
+  .chip.active {
+    border-color: var(--primary) !important;
+  }
+  
+  /* Dividers and separators */
+  hr,
+  .divider {
+    border-color: var(--border) !important;
+  }
+  
+  /* Dropdown menus */
+  .dropdown-menu {
+    border: 1px solid var(--border) !important;
+    background-color: var(--bg-2) !important;
+    box-shadow: var(--shadow);
+  }
+  
+  /* Modal content */
+  .modal-content,
+  .modal-body {
+    background-color: var(--bg-2) !important;
+    border: 1px solid var(--border) !important;
+  }
+  
+  /* Avatar borders */
+  .avatar {
+    border: 2px solid var(--border);
+  }
+  
+  /* Ensure proper text rendering */
+  body {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Fix for sticky header on mobile */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10001;
+    background-color: var(--bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+  
+  /* Navigation menu on mobile */
+  nav {
+    background-color: var(--bg) !important;
+  }
+  
+  /* Footer consistency */
+  footer {
+    background-color: var(--bg);
+    border-top: 1px solid var(--border) !important;
+  }
+  
+  /* Guest list filter tabs on mobile */
+  .guest-filter-tab {
+    border: 1px solid var(--border);
+    background-color: var(--card);
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Active filter tabs */
+  .guest-filter-tab.active {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+  
+  /* Table/list borders */
+  table,
+  th,
+  td {
+    border-color: var(--border);
+  }
+  
+  /* Scrollbar styling for mobile */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  
+  /* Fix for sections page cards */
+  .section-card {
+    border: 1px solid var(--border) !important;
+    background-color: var(--card) !important;
+    overflow: hidden;
+  }
+  
+  /* Fix for profile cards */
+  .profile-card {
+    border: 1px solid var(--border) !important;
+    background-color: var(--card) !important;
+  }
+  
+  /* Event cards */
+  .event-card {
+    border: 1px solid var(--border) !important;
+    background-color: var(--card) !important;
   }
 }

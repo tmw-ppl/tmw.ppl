@@ -86,8 +86,8 @@ const Header: React.FC = () => {
     position: 'sticky',
     top: 0,
     zIndex: 10001, // Above mobile menu
-    background: isMobile ? '#0b1220' : 'rgba(11, 18, 32, 0.95)', // Solid on mobile
-    backdropFilter: isMobile ? 'none' : 'blur(10px)',
+    background: 'var(--bg)',
+    backdropFilter: 'blur(10px)',
     borderBottom: '1px solid var(--border)',
   }
 
@@ -131,7 +131,7 @@ const Header: React.FC = () => {
     left: 0,
     right: 0,
     bottom: mobileMenuOpen ? 0 : 'auto',
-    background: '#0b1220', // Solid dark background, same as var(--bg)
+    background: 'var(--bg)',
     borderTop: '1px solid var(--border)',
     display: 'flex',
     flexDirection: 'column',
@@ -225,7 +225,7 @@ const Header: React.FC = () => {
     top: 'calc(100% + 0.5rem)',
     left: '50%',
     transform: 'translateX(-50%)',
-    background: '#1a2332', // Solid background
+    background: 'var(--bg-2)',
     border: '1px solid var(--border)',
     borderRadius: '12px',
     padding: '0.5rem',
