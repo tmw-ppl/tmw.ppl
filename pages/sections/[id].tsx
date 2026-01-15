@@ -10,6 +10,7 @@ import EventCalendar from '@/components/EventCalendar'
 import Avatar from '@/components/ui/Avatar'
 import MessageItem from '@/components/channels/MessageItem'
 import MessageInput from '@/components/channels/MessageInput'
+import { FIELD_TYPE_ICONS } from '@/types/sections'
 
 interface Creator {
   id: string
@@ -44,6 +45,7 @@ export default function SectionPage() {
   const [pastEvents, setPastEvents] = useState<GroupEvent[]>([])
   const [members, setMembers] = useState<any[]>([])
   const [pendingMembers, setPendingMembers] = useState<any[]>([])
+  const [sectionFields, setSectionFields] = useState<any[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [showPastEvents, setShowPastEvents] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -119,6 +121,31 @@ export default function SectionPage() {
         profileMap.set(profile.id, profile)
       })
 
+      // Load section profile fields
+      const { data: fieldsData } = await (supabase
+        .from('section_profile_fields') as any)
+        .select('*')
+        .eq('section_id', (sectionData as any).id)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+
+      setSectionFields((fieldsData || []) as any[])
+
+      // Load section profile data for all members
+      const { data: sectionProfileData } = userIds.length > 0 ? await (supabase
+        .from('section_profile_data') as any)
+        .select('user_id, field_id, value')
+        .eq('section_id', (sectionData as any).id)
+        .in('user_id', userIds) : { data: [] }
+
+      // Group profile data by user
+      const profileDataMap = new Map<string, Record<string, string>>()
+      ;(sectionProfileData || []).forEach((data: any) => {
+        const existing = profileDataMap.get(data.user_id) || {}
+        existing[data.field_id] = data.value
+        profileDataMap.set(data.user_id, existing)
+      })
+
       // Check if user is admin and organize members
       let userIsAdmin = false
       const approvedMembers: any[] = []
@@ -136,7 +163,8 @@ export default function SectionPage() {
             id: member.id,
             user_id: member.user_id,
             is_admin: member.is_admin,
-            profile: profile
+            profile: profile,
+            section_data: profileDataMap.get(member.user_id) || {}
           })
         } else if (member.status === 'pending') {
           pendingMembersList.push({
@@ -530,6 +558,13 @@ export default function SectionPage() {
                 <Button
                   variant="secondary"
                   size="small"
+                  onClick={() => router.push(`/sections/${id}/fields`)}
+                >
+                  📋 Profile Fields
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="small"
                   onClick={() => setShowAdminModal(true)}
                 >
                   👥 Manage Admins
@@ -780,12 +815,39 @@ export default function SectionPage() {
         {/* Members */}
         {members.length > 0 && (
           <div style={{ marginBottom: '2rem' }}>
-            <h2 style={{ margin: '0 0 1rem', fontSize: '1.25rem' }}>
-              👥 Members ({members.length})
-            </h2>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1rem',
+              flexWrap: 'wrap',
+              gap: '0.75rem'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem' }}>
+                👥 Members ({members.length})
+              </h2>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {isMember && (
+                  <Button
+                    variant="primary"
+                    size="small"
+                    onClick={() => router.push(`/sections/${id}/edit-profile`)}
+                  >
+                    ✏️ Edit My Profile
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => router.push(`/sections/${id}/members`)}
+                >
+                  View Full Directory →
+                </Button>
+              </div>
+            </div>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
               gap: '1rem'
             }}>
               {members.map(member => (
@@ -795,52 +857,157 @@ export default function SectionPage() {
                   style={{ textDecoration: 'none', color: 'inherit' }}
                 >
                   <Card style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.75rem',
+                    padding: '1rem',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     border: member.is_admin ? '2px solid var(--primary)' : undefined
-                  }}>
-                    {member.profile.profile_picture_url ? (
-                      <img
-                        src={member.profile.profile_picture_url}
-                        alt={member.profile.full_name}
-                        style={{
-                          width: '40px',
-                          height: '40px',
+                  }}
+                  onMouseEnter={(e: any) => {
+                    e.currentTarget.style.borderColor = 'var(--primary)'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                  }}
+                  onMouseLeave={(e: any) => {
+                    e.currentTarget.style.borderColor = member.is_admin ? 'var(--primary)' : 'var(--border)'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                  >
+                    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      {member.profile.profile_picture_url ? (
+                        <img
+                          src={member.profile.profile_picture_url}
+                          alt={member.profile.full_name}
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            flexShrink: 0
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
                           borderRadius: '50%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    ) : (
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        background: 'var(--primary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '1rem'
-                      }}>
-                        {member.profile.full_name?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontWeight: member.is_admin ? 600 : 400,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {member.profile.full_name}
-                        {member.is_admin && <span style={{ marginLeft: '0.5rem', color: 'var(--primary)' }}>👑</span>}
+                          background: 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: '1.1rem',
+                          flexShrink: 0
+                        }}>
+                          {member.profile.full_name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontWeight: member.is_admin ? 600 : 500,
+                          fontSize: '1rem',
+                          marginBottom: '0.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          flexWrap: 'wrap'
+                        }}>
+                          <span style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {member.profile.full_name}
+                          </span>
+                          {member.is_admin && (
+                            <span style={{
+                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                              color: 'white',
+                              padding: '0.1rem 0.5rem',
+                              borderRadius: '20px',
+                              fontSize: '0.7rem',
+                              fontWeight: '600',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              👑 Admin
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Section Profile Data */}
+                    {sectionFields.length > 0 && Object.keys(member.section_data || {}).length > 0 && (
+                      <div style={{
+                        background: 'var(--bg-2)',
+                        borderRadius: '8px',
+                        padding: '0.75rem',
+                        marginTop: '0.5rem',
+                        border: '1px solid var(--border)'
+                      }}>
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--muted)',
+                          marginBottom: '0.5rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          fontWeight: '600'
+                        }}>
+                          Section Profile
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {sectionFields.slice(0, 3).map((field: any) => {
+                            const value = (member.section_data || {})[field.id]
+                            if (!value) return null
+
+                            let displayValue = value
+                            if (field.field_type === 'select') {
+                              const opt = field.field_options?.find((o: any) => o.value === value)
+                              displayValue = opt?.label || value
+                            } else if (field.field_type === 'multiselect') {
+                              displayValue = value.split(',').map((v: string) => {
+                                const opt = field.field_options?.find((o: any) => o.value === v.trim())
+                                return opt?.label || v.trim()
+                              }).join(', ')
+                            } else if (field.field_type === 'checkbox') {
+                              displayValue = value === 'true' ? 'Yes' : 'No'
+                            }
+
+                            return (
+                              <div key={field.id} style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '0.5rem',
+                                fontSize: '0.85rem'
+                              }}>
+                                <span style={{ color: 'var(--muted)', flexShrink: 0 }}>
+                                  {field.field_label}:
+                                </span>
+                                <span style={{
+                                  color: 'var(--text)',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical'
+                                }}>
+                                  {displayValue}
+                                </span>
+                              </div>
+                            )
+                          })}
+                          {sectionFields.filter((f: any) => (member.section_data || {})[f.id]).length > 3 && (
+                            <div style={{
+                              fontSize: '0.8rem',
+                              color: 'var(--muted)',
+                              fontStyle: 'italic',
+                              marginTop: '0.25rem'
+                            }}>
+                              +{sectionFields.filter((f: any) => (member.section_data || {})[f.id]).length - 3} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </Card>
                 </Link>
               ))}

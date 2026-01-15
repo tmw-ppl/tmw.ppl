@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import SectionCard from '@/components/sections/SectionCard'
 import PreviewModeBar from '@/components/sections/PreviewModeBar'
+import ProfileViewSelector from '@/components/ProfileViewSelector'
 import { SectionWithMembership, SectionProfileField, Section } from '@/types/sections'
 
 interface ProfileData {
@@ -395,6 +396,8 @@ const ProfileV3: React.FC = () => {
   return (
     <section className="profile-section">
       <div className="container" style={{ maxWidth: '900px' }}>
+        
+        <ProfileViewSelector currentView="profile-v3" />
         
         {/* Preview Mode Bar */}
         {isPreviewMode && (

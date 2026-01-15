@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
+import ProfileViewSelector from '@/components/ProfileViewSelector'
 
 interface ProfileData {
   id: string
@@ -815,6 +816,7 @@ const Profile: React.FC = () => {
     <section className="profile-section">
       <div className="container">
         <div className="profile-container">
+          <ProfileViewSelector currentView="profile" />
           <div className="profile-header">
             <h1>Your Profile</h1>
             <p>Manage your account and preferences</p>
