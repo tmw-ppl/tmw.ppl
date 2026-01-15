@@ -36,6 +36,9 @@
 
 /* CSS Custom Properties (Variables) */
 :root {
+  /* Force dark mode */
+  color-scheme: dark;
+  
   /* Colors */
   --bg: #0b1220;
   --bg-2: #0e1626;
@@ -80,7 +83,7 @@
            radial-gradient(800px 400px at 50% 120%, rgba(245,158,11,.14), transparent 50%);
 }
 
-/* Light theme overrides */
+/* Light theme disabled - keeping dark mode only for now
 @media (prefers-color-scheme: light) {
   :root {
     --bg: #f7fafc;
@@ -92,6 +95,7 @@
     --shadow: 0 10px 30px rgba(2,6,23,.08);
   }
 }
+*/
 
 /* Base styles and resets */
 * {
