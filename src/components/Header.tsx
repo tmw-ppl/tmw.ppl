@@ -78,13 +78,13 @@ const Header: React.FC = () => {
 
   // Logo styles
   const logoStyles: React.CSSProperties = {
-    width: '34px',
-    height: '34px',
+    width: '40px',
+    height: '40px',
     borderRadius: '10px',
-    background: 'linear-gradient(135deg, #8b5cf6, #3b82f6, #06b6d4, #8b5cf6)',
-    display: 'grid',
-    placeItems: 'center',
-    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
     boxShadow: 'var(--shadow)',
   }
 
@@ -104,11 +104,15 @@ const Header: React.FC = () => {
       borderTop: '1px solid var(--border)',
       flexDirection: 'column',
       padding: '1rem',
-      gap: '1rem',
+      gap: '0.75rem',
       transform: 'translateY(-100%)',
       opacity: 0,
       visibility: 'hidden',
       transition: 'all 0.3s ease',
+      maxHeight: 'calc(100vh - 100%)',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+      zIndex: 99,
     } : {}),
     ...(isMobile && mobileMenuOpen ? {
       position: 'fixed',
@@ -119,11 +123,16 @@ const Header: React.FC = () => {
       borderTop: '1px solid var(--border)',
       flexDirection: 'column',
       padding: '1rem',
-      gap: '1rem',
+      gap: '0.75rem',
       transform: 'translateY(0)',
       opacity: 1,
       visibility: 'visible',
       transition: 'all 0.3s ease',
+      maxHeight: 'calc(100vh - 100%)',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+      zIndex: 99,
+      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
     } : {}),
   }
 
@@ -133,6 +142,15 @@ const Header: React.FC = () => {
     textDecoration: 'none',
     fontWeight: 500,
     transition: 'color 0.2s ease',
+    padding: isMobile ? '0.75rem 0.5rem' : '0.5rem',
+    minHeight: isMobile ? '44px' : 'auto',
+    display: 'flex',
+    alignItems: 'center',
+    width: isMobile ? '100%' : 'auto',
+    borderRadius: isMobile ? '8px' : '0',
+    ...(isMobile && {
+      touchAction: 'manipulation',
+    }),
   })
 
   // Dropdown container styles
@@ -189,13 +207,20 @@ const Header: React.FC = () => {
 
   // Menu toggle styles
   const menuToggleStyles: React.CSSProperties = {
-    display: isMobile ? 'block' : 'none',
+    display: isMobile ? 'flex' : 'none',
+    alignItems: 'center',
+    justifyContent: 'center',
     background: 'none',
     border: 'none',
     color: 'var(--text)',
     fontSize: '1.5rem',
     cursor: 'pointer',
-    padding: '0.5rem',
+    padding: '0.75rem',
+    minWidth: '44px',
+    minHeight: '44px',
+    borderRadius: '8px',
+    touchAction: 'manipulation',
+    transition: 'background-color 0.2s ease',
   }
 
   return (
@@ -210,10 +235,15 @@ const Header: React.FC = () => {
         >
           <span style={logoStyles} aria-hidden="true">
             <img
-              src="/assets/section-logo-20260114.png"
+              src="/assets/section-logo-20260115.png"
               alt="Section Logo"
-              width="20"
-              height="20"
+              width="40"
+              height="40"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              }}
             />
           </span>
           <span>Section</span>
@@ -362,8 +392,10 @@ const Header: React.FC = () => {
           style={menuToggleStyles}
           aria-label="Toggle navigation menu"
           onClick={toggleMobileMenu}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
-          ☰
+          {mobileMenuOpen ? '✕' : '☰'}
         </button>
       </div>
     </header>

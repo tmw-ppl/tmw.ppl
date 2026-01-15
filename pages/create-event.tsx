@@ -1076,7 +1076,7 @@ const CreateEvent: React.FC = () => {
                 </button>
 
                 {showDatePicker && (
-                  <div style={{
+                  <div className="datetime-dropdown" style={{
                     position: 'absolute',
                     top: '100%',
                     left: 0,
@@ -1308,7 +1308,7 @@ const CreateEvent: React.FC = () => {
                     </div>
 
                     {/* Calendar and Time Picker Side by Side */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1rem' }}>
+                    <div className="datetime-picker-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1rem' }}>
                       {/* Calendar */}
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>

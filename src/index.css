@@ -47,6 +47,18 @@
   --card: #121a2b;
   --border: #1f2a44;
   
+  /* Toast animations */
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
   /* Status colors */
   --danger: #ef4444;
   --danger-hover: #dc2626;
@@ -4593,5 +4605,580 @@ gmp-place-autocomplete input:focus {
   .events-search-bar input,
   .events-search-bar select {
     width: 100%;
+  }
+}
+
+/* ============================================
+   COMPREHENSIVE MOBILE OPTIMIZATION
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Container and spacing */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Header mobile improvements */
+  header .container {
+    padding: 0.75rem 1rem;
+  }
+
+  /* Navigation links - better touch targets */
+  nav a,
+  nav button {
+    padding: 0.75rem 0.5rem;
+    min-height: 44px; /* iOS recommended touch target */
+    display: flex;
+    align-items: center;
+  }
+
+  /* Mobile menu dropdown positioning */
+  .dropdown-menu {
+    position: fixed;
+    left: 1rem;
+    right: 1rem;
+    top: auto;
+    transform: none;
+    max-width: calc(100vw - 2rem);
+  }
+
+  /* Event calendar mobile */
+  .event-calendar {
+    padding: 0.5rem;
+  }
+
+  .event-calendar .calendar-header {
+    padding: 0.75rem 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .event-calendar .calendar-header h3 {
+    font-size: 1.125rem;
+  }
+
+  .event-calendar .calendar-weekdays {
+    font-size: 0.75rem;
+    padding: 0.5rem 0;
+  }
+
+  .event-calendar .calendar-day {
+    min-height: 40px;
+    font-size: 0.875rem;
+    padding: 0.25rem;
+  }
+
+  /* Date/Time picker mobile */
+  .datetime-dropdown {
+    position: fixed !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    top: auto !important;
+    bottom: 1rem !important;
+    max-height: 70vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-width: auto !important;
+    padding: 1rem !important;
+  }
+
+  .datetime-picker-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  .datetime-picker-grid > div:first-child {
+    order: 1;
+  }
+
+  .datetime-picker-grid > div:last-child {
+    order: 2;
+  }
+
+  .datetime-preview-button {
+    padding: 1rem 1.25rem;
+    min-height: 70px;
+  }
+
+  .preview-date {
+    font-size: 1.125rem;
+  }
+
+  .preview-time {
+    font-size: 1.5rem;
+  }
+
+  /* Time picker mobile */
+  .time-picker-container {
+    max-height: 300px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .time-option {
+    padding: 1rem;
+    min-height: 48px; /* Better touch target */
+    font-size: 1rem;
+  }
+
+  /* Form sections mobile */
+  .form-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .form-section h3 {
+    font-size: 1.125rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    padding: 0.875rem;
+    font-size: 1rem; /* Prevents zoom on iOS */
+    min-height: 44px;
+  }
+
+  /* Form rows - stack on mobile */
+  .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  /* Buttons mobile */
+  .btn,
+  button[type="button"],
+  button[type="submit"] {
+    min-height: 44px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    touch-action: manipulation; /* Prevents double-tap zoom */
+  }
+
+  /* Cards mobile */
+  .card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Event detail page mobile */
+  .event-header {
+    padding: 1rem;
+  }
+
+  .event-header h1 {
+    font-size: 1.75rem;
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+  }
+
+  .event-meta {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .event-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .event-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Guest list mobile */
+  .guest-list {
+    padding: 1rem;
+  }
+
+  .guest-counts {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .guest-count {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    min-height: 36px;
+  }
+
+  .guest-avatars {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Section page mobile */
+  .section-header {
+    padding: 1rem;
+  }
+
+  .section-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .section-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .section-actions .btn {
+    width: 100%;
+  }
+
+  /* Chat page mobile */
+  .chats-container {
+    flex-direction: column;
+    height: calc(100vh - 80px);
+  }
+
+  .chats-sidebar {
+    width: 100%;
+    max-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 40vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .chats-main {
+    width: 100%;
+    height: calc(60vh - 80px);
+  }
+
+  .channel-item {
+    padding: 1rem;
+    min-height: 60px;
+  }
+
+  /* Modals mobile */
+  .modal-overlay {
+    padding: 0;
+  }
+
+  .modal-content {
+    margin: 0;
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header {
+    padding: 1rem;
+    flex-shrink: 0;
+  }
+
+  .modal-body {
+    padding: 1rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+  }
+
+  .modal-footer {
+    padding: 1rem;
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  /* Toast notifications mobile */
+  .toast-container {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+    max-width: calc(100vw - 2rem);
+  }
+
+  .toast-item {
+    min-width: auto;
+    max-width: 100%;
+    padding: 0.875rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Avatar mobile */
+  .avatar {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Chip mobile */
+  .chip {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    min-height: 32px;
+  }
+
+  /* Search bar mobile */
+  .search-bar {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+
+  /* Event list mobile */
+  .event-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .event-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .event-card-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  /* Profile page mobile */
+  .profile-header {
+    padding: 1rem;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-avatar-large {
+    width: 100px;
+    height: 100px;
+  }
+
+  .profile-stats {
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  /* Invitation modals mobile */
+  .invite-section {
+    padding: 1rem;
+  }
+
+  .invite-section h3 {
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .invite-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .invite-actions .btn {
+    width: 100%;
+  }
+
+  /* Section members mobile */
+  .members-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .member-card {
+    padding: 1rem;
+  }
+
+  /* Comments mobile */
+  .comments-section {
+    padding: 1rem;
+  }
+
+  .comment-item {
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .comment-input {
+    padding: 0.75rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  /* Image upload mobile */
+  .image-upload-area {
+    padding: 2rem 1rem;
+    min-height: 200px;
+  }
+
+  .image-upload-button {
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  /* Tags mobile */
+  .tags-container {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .tag-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    min-height: 36px;
+  }
+
+  /* Footer mobile */
+  footer {
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+
+  footer .container {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Better text selection on mobile */
+  * {
+    -webkit-tap-highlight-color: rgba(139, 92, 246, 0.2);
+  }
+
+  /* Input focus improvements */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+
+  /* Better scrolling on mobile */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Improve tap targets */
+  a, button, input[type="button"], input[type="submit"], .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent text selection on buttons */
+  button {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Better form inputs on mobile */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  input[type="time"],
+  input[type="number"],
+  textarea,
+  select {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 8px;
+  }
+
+  /* Fix iOS input shadows */
+  input, textarea, select {
+    -webkit-box-shadow: none;
+    box-shadow: none;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .title-group .title-input {
+    font-size: 1.5rem !important;
+  }
+
+  .preview-time {
+    font-size: 1.25rem;
+  }
+
+  .preview-date {
+    font-size: 1rem;
+  }
+
+  .event-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .section-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .form-section h3 {
+    font-size: 1rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+  }
+
+  .btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .modal-body {
+    padding: 0.75rem;
+  }
+
+  .guest-count {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .avatar {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .chats-container {
+    flex-direction: row;
+    height: calc(100vh - 60px);
+  }
+
+  .chats-sidebar {
+    width: 300px;
+    max-height: 100%;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+  }
+
+  .chats-main {
+    width: calc(100% - 300px);
+    height: 100%;
+  }
+
+  .datetime-dropdown {
+    max-height: 60vh;
   }
 }

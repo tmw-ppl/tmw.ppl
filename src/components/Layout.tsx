@@ -14,31 +14,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <>
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         
         {/* Favicon and App Icons */}
-        <link rel="icon" type="image/png" href="/assets/section-logo-20260114.png" />
-        <link rel="shortcut icon" type="image/png" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" sizes="144x144" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" sizes="114x114" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" sizes="76x76" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" sizes="72x72" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" sizes="60x60" href="/assets/section-logo-20260114.png" />
-        <link rel="apple-touch-icon" sizes="57x57" href="/assets/section-logo-20260114.png" />
+        <link rel="icon" type="image/png" href="/assets/section-logo-20260115.png" />
+        <link rel="shortcut icon" type="image/png" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" sizes="114x114" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" sizes="76x76" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" sizes="72x72" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" sizes="60x60" href="/assets/section-logo-20260115.png" />
+        <link rel="apple-touch-icon" sizes="57x57" href="/assets/section-logo-20260115.png" />
         
         {/* Open Graph Meta Tags */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Section - Community Event Sections" />
         <meta property="og:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
-        <meta property="og:image" content="/assets/section-logo-20260114.png" />
+        <meta property="og:image" content="/assets/section-logo-20260115.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content="Section Logo" />
@@ -49,7 +49,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Section - Community Event Sections" />
         <meta name="twitter:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
-        <meta name="twitter:image" content="/assets/section-logo-20260114.png" />
+        <meta name="twitter:image" content="/assets/section-logo-20260115.png" />
         <meta name="twitter:image:alt" content="Section Logo" />
         
         {/* Additional Meta Tags */}
