@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import EventCalendar from '@/components/EventCalendar'
+import ProfileViewSelector from '@/components/ProfileViewSelector'
 
 interface ProfileData {
   id: string
@@ -928,6 +929,7 @@ const ProfileV2: React.FC = () => {
       `}</style>
 
       <div className="container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <ProfileViewSelector currentView="profile-v2" />
         {/* Header Section */}
         <div className="profile-v2-card" style={{
           background: 'var(--card)',
