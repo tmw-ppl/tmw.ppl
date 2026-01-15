@@ -36,6 +36,9 @@
 
 /* CSS Custom Properties (Variables) */
 :root {
+  /* Default to dark theme */
+  color-scheme: dark;
+  
   /* Colors */
   --bg: #0b1220;
   --bg-2: #0e1626;
@@ -81,16 +84,16 @@
 }
 
 /* Light theme overrides */
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f7fafc;
-    --bg-2: #ffffff;
-    --text: #0b1220;
-    --muted: #334155;
-    --card: #ffffff;
-    --border: #e5e7eb;
-    --shadow: 0 10px 30px rgba(2,6,23,.08);
-  }
+/* Light theme - activate by adding .light-theme class to <html> element */
+/* A theme toggle can be added later to switch between dark/light */
+:root.light-theme {
+  --bg: #f7fafc;
+  --bg-2: #ffffff;
+  --text: #0b1220;
+  --muted: #334155;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --shadow: 0 10px 30px rgba(2,6,23,.08);
 }
 
 /* Base styles and resets */
@@ -169,7 +172,7 @@ p {
 header {
   position: sticky;
   top: 0;
-  z-index: 10001;
+  z-index: 100000;
   background: var(--bg);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
@@ -5390,48 +5393,30 @@ gmp-place-autocomplete input:focus {
     -moz-osx-font-smoothing: grayscale;
   }
   
-  /* Fix for sticky header on mobile */
-  header {
-    position: sticky;
-    top: 0;
-    z-index: 10001;
-    background-color: var(--bg) !important;
-    border-bottom: 1px solid var(--border) !important;
-  }
-  
-  /* Navigation menu on mobile */
-  nav {
-    background-color: var(--bg) !important;
-  }
-  
-  /* Footer consistency */
-  footer {
-    background-color: var(--bg);
-    border-top: 1px solid var(--border) !important;
-  }
-  
-  /* Guest list filter tabs on mobile */
-  .guest-filter-tab {
-    border: 1px solid var(--border);
-    background-color: var(--card);
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  /* Active filter tabs */
-  .guest-filter-tab.active {
-    background-color: var(--primary);
-    border-color: var(--primary);
-    color: white;
-  }
-  
   /* Table/list borders */
   table,
   th,
   td {
     border-color: var(--border);
+  }
+
+  /* Mobile Nav Menu Overrides */
+  .mobile-nav-menu {
+    background-color: var(--bg) !important;
+    display: none !important;
+  }
+
+  @media (max-width: 1024px) {
+    .mobile-nav-menu.open {
+      display: flex !important;
+      position: fixed !important;
+      top: 70px !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      z-index: 200000 !important;
+      flex-direction: column !important;
+    }
   }
   
   /* Scrollbar styling for mobile */
