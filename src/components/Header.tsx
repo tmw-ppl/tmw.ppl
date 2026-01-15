@@ -56,7 +56,7 @@ const Header: React.FC = () => {
   }
 
   const isBetaActive = () => {
-    return ['/projects', '/ideas', '/section', '/wins', '/gallery', '/tomorrow-people'].includes(router.pathname)
+    return ['/projects', '/ideas', '/section', '/wins', '/gallery', '/tomorrow-people', '/chats'].includes(router.pathname)
   }
 
   // Header styles
@@ -155,7 +155,6 @@ const Header: React.FC = () => {
             <Link href="/events" style={navLinkStyle('/events')}>Events</Link>
             <Link href="/sections" style={navLinkStyle('/sections')}>Sections</Link>
             <Link href="/profiles" style={navLinkStyle('/profiles')}>Profiles</Link>
-            <Link href="/chats" style={navLinkStyle('/chats')}>Chats</Link>
             
             <div style={{ position: 'relative' }} ref={betaDropdownRef}>
               <button 
@@ -188,6 +187,7 @@ const Header: React.FC = () => {
                   flexDirection: 'column',
                   gap: '0.25rem'
                 }}>
+                  <Link href="/chats" style={navLinkStyle('/chats')} onClick={() => setBetaDropdownOpen(false)}>Chats</Link>
                   <Link href="/projects" style={navLinkStyle('/projects')} onClick={() => setBetaDropdownOpen(false)}>Projects</Link>
                   <Link href="/ideas" style={navLinkStyle('/ideas')} onClick={() => setBetaDropdownOpen(false)}>Ideas</Link>
                   <Link href="/section" style={navLinkStyle('/section')} onClick={() => setBetaDropdownOpen(false)}>Section</Link>
@@ -223,10 +223,10 @@ const Header: React.FC = () => {
         <Link href="/events" style={navLinkStyle('/events')} onClick={handleLinkClick}>Events</Link>
         <Link href="/sections" style={navLinkStyle('/sections')} onClick={handleLinkClick}>Sections</Link>
         <Link href="/profiles" style={navLinkStyle('/profiles')} onClick={handleLinkClick}>Profiles</Link>
-        <Link href="/chats" style={navLinkStyle('/chats')} onClick={handleLinkClick}>Chats</Link>
         
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
           <p style={{ color: 'var(--muted)', fontSize: '0.8rem', padding: '0 1rem 0.5rem' }}>BETA FEATURES</p>
+          <Link href="/chats" style={navLinkStyle('/chats')} onClick={handleLinkClick}>Chats</Link>
           <Link href="/projects" style={navLinkStyle('/projects')} onClick={handleLinkClick}>Projects</Link>
           <Link href="/ideas" style={navLinkStyle('/ideas')} onClick={handleLinkClick}>Ideas</Link>
           <Link href="/section" style={navLinkStyle('/section')} onClick={handleLinkClick}>Section</Link>
