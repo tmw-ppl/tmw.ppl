@@ -42,7 +42,7 @@ const Header: React.FC = () => {
   }
 
   const isBetaActive = () => {
-    return ['/projects', '/ideas', '/section'].includes(router.pathname)
+    return ['/projects', '/ideas', '/section', '/wins', '/gallery'].includes(router.pathname)
   }
 
   // Header styles
@@ -204,19 +204,19 @@ const Header: React.FC = () => {
         <Link 
           href="/" 
           style={brandStyles}
-          aria-label="Tomorrow People home"
+          aria-label="Section home"
           onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
           onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
         >
           <span style={logoStyles} aria-hidden="true">
             <img
-              src="/assets/logo-original.png"
-              alt="Tomorrow People Logo"
+              src="/assets/section-logo-20260114.png"
+              alt="Section Logo"
               width="20"
               height="20"
             />
           </span>
-          <span>Tomorrow People</span>
+          <span>Section</span>
         </Link>
 
         <nav style={navlinksStyles}>
@@ -238,6 +238,15 @@ const Header: React.FC = () => {
           >
             Events
           </Link>
+          <Link
+            href="/sections"
+            style={getLinkStyles(isActive('/sections'))}
+            onClick={() => setMobileMenuOpen(false)}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = isActive('/sections') ? 'var(--text)' : 'var(--muted)'}
+          >
+            Sections
+          </Link>
           <Link 
             href="/profiles" 
             style={getLinkStyles(isActive('/profiles'))}
@@ -246,6 +255,15 @@ const Header: React.FC = () => {
             onMouseLeave={(e) => e.currentTarget.style.color = isActive('/profiles') ? 'var(--text)' : 'var(--muted)'}
           >
             Profiles
+          </Link>
+          <Link 
+            href="/chats" 
+            style={getLinkStyles(isActive('/chats'))}
+            onClick={() => setMobileMenuOpen(false)}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = isActive('/chats') ? 'var(--text)' : 'var(--muted)'}
+          >
+            Chats
           </Link>
           
           {/* Beta Dropdown */}
@@ -292,6 +310,24 @@ const Header: React.FC = () => {
                   onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/section') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/section') ? 'var(--text)' : 'var(--muted)'; }}
                 >
                   Section
+                </Link>
+                <Link
+                  href="/wins"
+                  style={getDropdownItemStyles(isActive('/wins'))}
+                  onClick={() => { setMobileMenuOpen(false); setBetaDropdownOpen(false); }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'; e.currentTarget.style.color = 'var(--text)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/wins') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/wins') ? 'var(--text)' : 'var(--muted)'; }}
+                >
+                  Wins
+                </Link>
+                <Link
+                  href="/gallery"
+                  style={getDropdownItemStyles(isActive('/gallery'))}
+                  onClick={() => { setMobileMenuOpen(false); setBetaDropdownOpen(false); }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'; e.currentTarget.style.color = 'var(--text)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/gallery') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/gallery') ? 'var(--text)' : 'var(--muted)'; }}
+                >
+                  Gallery
                 </Link>
               </div>
             )}

@@ -134,6 +134,15 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
     return event.time || ''
   }
 
+  // Sort events by time for a given day
+  const sortEventsByTime = (events: CalendarEvent[]): CalendarEvent[] => {
+    return [...events].sort((a, b) => {
+      const timeA = a.time || '00:00'
+      const timeB = b.time || '00:00'
+      return timeA.localeCompare(timeB)
+    })
+  }
+
   // Render calendar days
   const renderCalendarDays = () => {
     const days = []
@@ -149,23 +158,94 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
       const dateStr = date.toISOString().split('T')[0]
-      const dayEvents = eventsByDate.get(dateStr) || []
+      const dayEvents = sortEventsByTime(eventsByDate.get(dateStr) || [])
       const hasEvents = dayEvents.length > 0
+      const eventsToShow = dayEvents.slice(0, 3)
+      const hasMore = dayEvents.length > 3
       
       days.push(
         <button
           key={day}
           className={`calendar-day ${isToday(date) ? 'today' : ''} ${isSelected(date) ? 'selected' : ''} ${isPast(date) ? 'past' : ''} ${hasEvents ? 'has-events' : ''}`}
           onClick={() => handleDayClick(day)}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            padding: '0.5rem',
+            minHeight: '120px',
+            position: 'relative',
+            textAlign: 'left'
+          }}
         >
-          <span className="day-number">{day}</span>
+          <span className="day-number" style={{ 
+            fontWeight: '600', 
+            marginBottom: hasEvents ? '0.25rem' : '0',
+            fontSize: '0.9rem'
+          }}>
+            {day}
+          </span>
           {hasEvents && (
-            <div className="event-dots">
-              {dayEvents.slice(0, 3).map((_, idx) => (
-                <span key={idx} className="event-dot" />
-              ))}
-              {dayEvents.length > 3 && (
-                <span className="event-dot more">+{dayEvents.length - 3}</span>
+            <div style={{
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              flex: 1,
+              minHeight: 0
+            }}>
+              {eventsToShow.map((event, idx) => {
+                const eventTime = formatEventTime(event)
+                return (
+                  <div
+                    key={event.id}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onEventClick) {
+                        onEventClick(event)
+                      }
+                    }}
+                    style={{
+                      fontSize: '0.65rem',
+                      lineHeight: '1.3',
+                      padding: '0.25rem 0.4rem',
+                      background: 'var(--primary)',
+                      color: 'white',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      width: '100%',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      transition: 'opacity 0.2s',
+                      marginBottom: '0.15rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.8'
+                      e.currentTarget.style.transform = 'scale(1.02)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1'
+                      e.currentTarget.style.transform = 'scale(1)'
+                    }}
+                    title={`${eventTime} - ${event.title}`}
+                  >
+                    <span style={{ fontWeight: '600', marginRight: '0.25rem' }}>
+                      {eventTime}
+                    </span>
+                    <span>{event.title}</span>
+                  </div>
+                )
+              })}
+              {hasMore && (
+                <div style={{
+                  fontSize: '0.7rem',
+                  color: 'var(--muted)',
+                  padding: '0.2rem 0.4rem',
+                  fontWeight: '600'
+                }}>
+                  +{dayEvents.length - 3} more
+                </div>
               )}
             </div>
           )}

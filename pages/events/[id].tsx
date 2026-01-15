@@ -37,9 +37,8 @@ const EventDetail: React.FC = () => {
   const [cohosts, setCohosts] = useState<(Profile & { profile_picture_url?: string })[]>([])
   const [coverUrl, setCoverUrl] = useState('')
   const [coverUploading, setCoverUploading] = useState(false)
-  const [isSubscribed, setIsSubscribed] = useState(false)
-  const [subscriberCount, setSubscriberCount] = useState(0)
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [invitedSections, setInvitedSections] = useState<any[]>([])
+  const [invitedMembers, setInvitedMembers] = useState<any[]>([]) // Union of all members from all invited sections
   const [isInvited, setIsInvited] = useState(false)
   const [invitations, setInvitations] = useState<EventInvitation[]>([])
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -185,10 +184,8 @@ const EventDetail: React.FC = () => {
         setRsvpList([])
       }
 
-      // Load group subscription data if event has a group
-      if (eventWithRSVP.group_name && eventWithRSVP.created_by) {
-        await loadGroupSubscription(eventWithRSVP.created_by, eventWithRSVP.group_name)
-      }
+      // Load invited sections and their members
+      await loadInvitedSections(id as string)
 
       setEvent(eventWithRSVP)
 
@@ -312,80 +309,69 @@ const EventDetail: React.FC = () => {
     }
   }
 
-  const loadGroupSubscription = async (creatorId: string, groupName: string) => {
+  const loadInvitedSections = async (eventId: string) => {
     try {
-      // Get subscriber count
-      const { data: countData, error: countError } = await supabase
-        .from('event_group_subscriptions' as any)
-        .select('id')
-        .eq('creator_id', creatorId)
-        .eq('group_name', groupName)
-
-      if (!countError && countData) {
-        setSubscriberCount((countData as any[]).length)
+      // Load all sections invited to this event
+      const { data: invites } = await supabase
+        .from('event_section_invites')
+        .select(`
+          section_id,
+          sections (
+            id,
+            name,
+            description,
+            image_url
+          )
+        `)
+        .eq('event_id', eventId)
+      
+      if (invites) {
+        const sections = invites
+          .map((invite: any) => invite.sections)
+          .filter(Boolean)
+        setInvitedSections(sections)
+        
+        // Get all unique members from all invited sections (union operation)
+        const sectionIds = sections.map((s: any) => s.id)
+        if (sectionIds.length > 0) {
+          const { data: membersData } = await supabase
+            .from('section_members')
+            .select('user_id, section_id')
+            .in('section_id', sectionIds)
+            .eq('status', 'approved')
+          
+          if (membersData) {
+            // Get unique user IDs (deduplicate)
+            const uniqueUserIds = Array.from(new Set(membersData.map((m: any) => m.user_id)))
+            
+            // Get profiles for these users
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('id, full_name, profile_picture_url')
+              .in('id', uniqueUserIds)
+            
+            // Map members with their section info
+            const membersWithSections = (profiles || []).map((profile: any) => {
+              const memberSections = membersData
+                .filter((m: any) => m.user_id === profile.id)
+                .map((m: any) => {
+                  const section = sections.find((s: any) => s.id === m.section_id)
+                  return section ? { id: section.id, name: section.name } : null
+                })
+                .filter(Boolean)
+              
+              return {
+                ...profile,
+                sections: memberSections
+              }
+            })
+            
+            setInvitedMembers(membersWithSections)
+          }
+        }
       }
-
-      // Check if current user is subscribed
-      if (user) {
-        const { data: subData } = await supabase
-          .from('event_group_subscriptions' as any)
-          .select('id')
-          .eq('subscriber_id', user.id)
-          .eq('creator_id', creatorId)
-          .eq('group_name', groupName)
-          .single()
-
-        setIsSubscribed(!!subData)
-      }
-    } catch (err) {
-      console.error('Error loading group subscription:', err)
-    }
-  }
-
-  const handleSubscribeToGroup = async () => {
-    if (!user) {
-      router.push('/auth')
-      return
-    }
-
-    if (!event?.group_name || !event?.created_by) return
-
-    setSubscriptionLoading(true)
-
-    try {
-      if (isSubscribed) {
-        // Unsubscribe
-        const { error } = await supabase
-          .from('event_group_subscriptions' as any)
-          .delete()
-          .eq('subscriber_id', user.id)
-          .eq('creator_id', event.created_by)
-          .eq('group_name', event.group_name)
-
-        if (error) throw error
-
-        setIsSubscribed(false)
-        setSubscriberCount(prev => Math.max(0, prev - 1))
-      } else {
-        // Subscribe
-        const { error } = await supabase
-          .from('event_group_subscriptions' as any)
-          .insert({
-            subscriber_id: user.id,
-            creator_id: event.created_by,
-            group_name: event.group_name
-          } as any)
-
-        if (error) throw error
-
-        setIsSubscribed(true)
-        setSubscriberCount(prev => prev + 1)
-      }
-    } catch (err) {
-      console.error('Error updating subscription:', err)
-      alert('Failed to update subscription. Please try again.')
-    } finally {
-      setSubscriptionLoading(false)
+    } catch (error) {
+      console.error('Error loading invited sections:', error)
     }
   }
 
@@ -1127,121 +1113,249 @@ const EventDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* Event Group */}
-          {event.group_name && (
+          {/* Manage Invitations - Only for hosts/co-hosts */}
+          {isHostOrCohost() && (
             <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-              padding: '1rem',
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)',
+              padding: '1.5rem',
+              background: 'var(--bg-2)',
               borderRadius: '12px',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
-              marginTop: '1rem',
-              flexWrap: 'wrap'
+              border: '1px solid var(--border)',
+              marginTop: '1rem'
             }}>
-              <Link
-                href={`/groups/${event.created_by}/${encodeURIComponent(event.group_name)}`}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.75rem',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  cursor: 'pointer',
-                  transition: 'opacity 0.2s'
-                }}
-                title="View event group"
-              >
-                <span style={{ fontSize: '1.25rem' }}>🏷️</span>
-                <div>
-                  <div style={{ 
-                    fontWeight: 600, 
-                    color: 'var(--text)',
-                    fontSize: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    {event.group_name}
-                    <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>↗</span>
-                  </div>
-                  <div style={{ 
-                    fontSize: '0.8rem', 
-                    color: 'var(--muted)'
-                  }}>
-                    Event Group • {subscriberCount} subscriber{subscriberCount !== 1 ? 's' : ''}
-                  </div>
-                </div>
-              </Link>
+              <h3 style={{ 
+                marginBottom: '1rem', 
+                fontSize: '1.125rem', 
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                📬 Manage Invitations
+              </h3>
               
-              {/* Don't show subscribe button for own events */}
-              {user && event.created_by !== user.id && (
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                 <button
-                  onClick={handleSubscribeToGroup}
-                  disabled={subscriptionLoading}
+                  onClick={() => setShowInviteModal(true)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.5rem 1rem',
+                    padding: '0.75rem 1.5rem',
+                    background: 'var(--primary)',
+                    color: 'white',
+                    border: 'none',
                     borderRadius: '8px',
-                    border: isSubscribed ? '1px solid var(--success)' : '1px solid var(--primary)',
-                    background: isSubscribed ? 'var(--success)' : 'transparent',
-                    color: isSubscribed ? 'white' : 'var(--primary)',
-                    cursor: subscriptionLoading ? 'wait' : 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    transition: 'all 0.2s',
-                    opacity: subscriptionLoading ? 0.7 : 1
-                  }}
-                >
-                  {subscriptionLoading ? (
-                    '...'
-                  ) : isSubscribed ? (
-                    <>🔔 Subscribed</>
-                  ) : (
-                    <>🔕 Subscribe</>
-                  )}
-                </button>
-              )}
-              
-              {/* Show badge for own event group */}
-              {user && event.created_by === user.id && (
-                <span style={{
-                  padding: '0.375rem 0.75rem',
-                  borderRadius: '8px',
-                  background: 'var(--primary)',
-                  color: 'white',
-                  fontSize: '0.8rem',
-                  fontWeight: 600
-                }}>
-                  Your Group
-                </span>
-              )}
-              
-              {/* Show subscribe prompt for non-logged in users */}
-              {!user && (
-                <button
-                  onClick={() => router.push('/auth')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--primary)',
-                    background: 'transparent',
-                    color: 'var(--primary)',
                     cursor: 'pointer',
-                    fontSize: '0.875rem',
+                    fontSize: '0.9rem',
                     fontWeight: 600,
                     transition: 'all 0.2s'
                   }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
                 >
-                  🔕 Sign in to Subscribe
+                  📧 Invite by Email
                 </button>
+                <button
+                  onClick={() => setShowInviteUserModal(true)}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'var(--bg)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-2)'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--bg)'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                >
+                  👤 Invite User
+                </button>
+                <InviteSectionsSection eventId={id as string} onInvite={() => loadInvitedSections(id as string)} />
+              </div>
+            </div>
+          )}
+
+          {/* Invited Sections */}
+          {invitedSections.length > 0 && (
+            <div style={{
+              padding: '1.5rem',
+              background: 'var(--bg-2)',
+              borderRadius: '12px',
+              border: '1px solid var(--border)',
+              marginTop: '1rem'
+            }}>
+              <h3 style={{ 
+                marginBottom: '1rem', 
+                fontSize: '1.125rem', 
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                📁 Invited Sections ({invitedSections.length})
+              </h3>
+              
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '0.75rem',
+                marginBottom: '1.5rem'
+              }}>
+                {invitedSections.map((section: any) => (
+                  <Link
+                    key={section.id}
+                    href={`/sections/${section.id}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)'
+                      e.currentTarget.style.background = 'rgba(139, 92, 246, 0.05)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)'
+                      e.currentTarget.style.background = 'var(--bg)'
+                    }}
+                  >
+                    {section.image_url ? (
+                      <img 
+                        src={section.image_url} 
+                        alt={section.name}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '6px',
+                        background: 'var(--bg-2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.2rem'
+                      }}>
+                        📁
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{section.name}</div>
+                      {section.description && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                          {section.description.substring(0, 40)}...
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              
+              {/* Union of all members from all invited sections */}
+              {invitedMembers.length > 0 && (
+                <div>
+                  <h4 style={{ 
+                    marginBottom: '0.75rem', 
+                    fontSize: '0.95rem', 
+                    fontWeight: 600,
+                    color: 'var(--muted)'
+                  }}>
+                    Invited Members ({invitedMembers.length} total)
+                  </h4>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap', 
+                    gap: '0.5rem'
+                  }}>
+                    {invitedMembers.slice(0, showAllGuests ? invitedMembers.length : 20).map((member: any) => (
+                      <Link
+                        key={member.id}
+                        href={`/profile/${member.id}`}
+                        style={{
+                          position: 'relative',
+                          textDecoration: 'none'
+                        }}
+                        title={`${member.full_name || 'Unknown'} - ${member.sections?.map((s: any) => s.name).join(', ') || ''}`}
+                      >
+                        <Avatar
+                          src={member.profile_picture_url}
+                          alt={member.full_name || 'Unknown'}
+                          size={40}
+                        />
+                        {member.sections && member.sections.length > 1 && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            right: 0,
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                            background: 'var(--primary)',
+                            border: '2px solid var(--bg)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.7rem',
+                            color: 'white',
+                            fontWeight: 600
+                          }}>
+                            {member.sections.length}
+                          </div>
+                        )}
+                      </Link>
+                    ))}
+                    {invitedMembers.length > 20 && (
+                      <button
+                        onClick={() => setShowAllGuests(!showAllGuests)}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          background: 'var(--bg)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          color: 'var(--text)'
+                        }}
+                      >
+                        {showAllGuests ? 'Show Less' : `+${invitedMembers.length - 20} more`}
+                      </button>
+                    )}
+                  </div>
+                  {invitedMembers.length > 1 && (
+                    <p style={{ 
+                      marginTop: '0.75rem', 
+                      fontSize: '0.75rem', 
+                      color: 'var(--muted)',
+                      fontStyle: 'italic'
+                    }}>
+                      Members are deduplicated across all invited sections
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -1637,6 +1751,278 @@ const EventDetail: React.FC = () => {
                 {inviteLoading ? '⏳ Sending...' : '📧 Send Invitation'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Invite Sections Component
+const InviteSectionsSection: React.FC<{ eventId: string; onInvite: () => void }> = ({ eventId, onInvite }) => {
+  const { user } = useAuth()
+  const [userSections, setUserSections] = useState<any[]>([])
+  const [invitedSectionIds, setInvitedSectionIds] = useState<string[]>([])
+  const [sectionSearch, setSectionSearch] = useState('')
+  const [filteredSections, setFilteredSections] = useState<any[]>([])
+  const [showSectionDropdown, setShowSectionDropdown] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const dropdownRef = React.useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (user) {
+      loadUserSections()
+      loadInvitedSections()
+    }
+  }, [user, eventId])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowSectionDropdown(false)
+      }
+    }
+
+    if (showSectionDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showSectionDropdown])
+
+  const loadUserSections = async () => {
+    if (!user) return
+    const { data: membersData } = await supabase
+      .from('section_members')
+      .select('section_id, status')
+      .eq('user_id', user.id)
+      .eq('status', 'approved')
+    
+    if (!membersData || membersData.length === 0) {
+      setUserSections([])
+      return
+    }
+    
+    const sectionIds = (membersData as any[]).map((m: any) => m.section_id)
+    const { data: sectionsData } = await supabase
+      .from('sections')
+      .select('id, name, description, image_url')
+      .in('id', sectionIds)
+    
+    setUserSections(sectionsData || [])
+  }
+
+  const loadInvitedSections = async () => {
+    const { data: invites } = await supabase
+      .from('event_section_invites')
+      .select('section_id')
+      .eq('event_id', eventId)
+    
+    if (invites) {
+      setInvitedSectionIds((invites as any[]).map((i: any) => i.section_id))
+    }
+  }
+
+  const handleSectionSearch = (query: string) => {
+    setSectionSearch(query)
+    
+    if (query.length === 0) {
+      setFilteredSections([])
+      setShowSectionDropdown(false)
+      return
+    }
+    
+    const matches = userSections.filter(s => 
+      s.name.toLowerCase().includes(query.toLowerCase()) ||
+      (s.description && s.description.toLowerCase().includes(query.toLowerCase()))
+    )
+    
+    setFilteredSections(matches)
+    setShowSectionDropdown(true)
+  }
+
+  const toggleSectionInvite = async (sectionId: string) => {
+    if (!user) return
+    
+    setLoading(true)
+    try {
+      const isInvited = invitedSectionIds.includes(sectionId)
+      
+      if (isInvited) {
+        // Remove invitation
+        const { error } = await supabase
+          .from('event_section_invites')
+          .delete()
+          .eq('event_id', eventId)
+          .eq('section_id', sectionId)
+        
+        if (error) throw error
+        setInvitedSectionIds(prev => prev.filter(id => id !== sectionId))
+      } else {
+        // Add invitation
+        const { error } = await supabase
+          .from('event_section_invites')
+          .insert({
+            event_id: eventId,
+            section_id: sectionId,
+            invited_by: user.id
+          } as any)
+        
+        if (error) throw error
+        setInvitedSectionIds(prev => [...prev, sectionId])
+      }
+      
+      onInvite() // Refresh the invited sections display
+    } catch (err: any) {
+      console.error('Error toggling section invite:', err)
+      alert(err.message || 'Failed to update section invitation')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+      <button
+        onClick={() => setShowSectionDropdown(!showSectionDropdown)}
+        style={{
+          padding: '0.75rem 1.5rem',
+          background: 'var(--bg)',
+          color: 'var(--text)',
+          border: '1px solid var(--border)',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontSize: '0.9rem',
+          fontWeight: 600,
+          transition: 'all 0.2s',
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'var(--bg-2)'
+          e.currentTarget.style.transform = 'translateY(-1px)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'var(--bg)'
+          e.currentTarget.style.transform = 'translateY(0)'
+        }}
+      >
+        📁 Invite Section
+      </button>
+      
+      {showSectionDropdown && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          borderRadius: '8px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+          zIndex: 50,
+          marginTop: '4px',
+          overflow: 'hidden',
+          maxHeight: '400px',
+          overflowY: 'auto'
+        }}>
+          <div style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
+            <input
+              type="text"
+              value={sectionSearch}
+              onChange={(e) => handleSectionSearch(e.target.value)}
+              placeholder="Search sections..."
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
+                background: 'var(--bg)',
+                color: 'var(--text)',
+                fontSize: '0.875rem'
+              }}
+            />
+          </div>
+          
+          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+            {(sectionSearch ? filteredSections : userSections).map((section) => {
+              const isInvited = invitedSectionIds.includes(section.id)
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => toggleSectionInvite(section.id)}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: isInvited ? 'rgba(139, 92, 246, 0.1)' : 'none',
+                    border: 'none',
+                    borderBottom: '1px solid var(--border)',
+                    textAlign: 'left',
+                    cursor: loading ? 'wait' : 'pointer',
+                    color: 'var(--text)',
+                    fontSize: '0.9rem',
+                    transition: 'background 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    opacity: loading ? 0.6 : 1
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isInvited && !loading) {
+                      e.currentTarget.style.background = 'var(--bg-2)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = isInvited ? 'rgba(139, 92, 246, 0.1)' : 'none'
+                  }}
+                >
+                  {section.image_url ? (
+                    <img 
+                      src={section.image_url} 
+                      alt={section.name}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '6px',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '6px',
+                      background: 'var(--bg-2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.2rem'
+                    }}>
+                      📁
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600 }}>{section.name}</div>
+                    {section.description && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                        {section.description.substring(0, 40)}...
+                      </div>
+                    )}
+                  </div>
+                  {isInvited && (
+                    <span style={{ color: 'var(--primary)', fontSize: '1.2rem' }}>✓</span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
