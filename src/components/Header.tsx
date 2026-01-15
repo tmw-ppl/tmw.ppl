@@ -12,8 +12,6 @@ const Header: React.FC = () => {
   const [betaDropdownOpen, setBetaDropdownOpen] = useState(false)
   const betaDropdownRef = useRef<HTMLDivElement>(null)
   const mobileMenuRef = useRef<HTMLElement>(null)
-  const menuToggleRef = useRef<HTMLButtonElement>(null)
-  const justToggledRef = useRef(false)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -21,6 +19,7 @@ const Header: React.FC = () => {
       // Close menu when switching to desktop
       if (window.innerWidth > 768) {
         setMobileMenuOpen(false)
+        setBetaDropdownOpen(false)
       }
     }
     
@@ -28,6 +27,16 @@ const Header: React.FC = () => {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setMobileMenuOpen(false)
+      setBetaDropdownOpen(false)
+    }
+    router.events.on('routeChangeStart', handleRouteChange)
+    return () => router.events.off('routeChangeStart', handleRouteChange)
+  }, [router])
 
   // Close beta dropdown when clicking outside
   useEffect(() => {
@@ -40,80 +49,28 @@ const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Close mobile menu when clicking outside
-  useEffect(() => {
-    if (!mobileMenuOpen) return
-
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      // Ignore if we just toggled the menu (prevents immediate closure on mobile)
-      if (justToggledRef.current) {
-        return
-      }
-
-      const target = event.target as HTMLElement
-      
-      // Ignore clicks on Vercel toolbar (common selectors)
-      if (
-        target.closest('[data-vercel-toolbar]') ||
-        target.closest('#__vercel_toolbar') ||
-        target.closest('[id*="vercel"]') ||
-        target.closest('[class*="vercel"]') ||
-        target.closest('[class*="VercelToolbar"]')
-      ) {
-        return
-      }
-
-      // Ignore clicks on fixed-position elements at the bottom (likely toolbars)
-      // Check if the element or its parent is fixed and near the bottom of viewport
-      let element: HTMLElement | null = target
-      while (element && element !== document.body) {
-        const style = window.getComputedStyle(element)
-        if (style.position === 'fixed' || style.position === 'sticky') {
-          const rect = element.getBoundingClientRect()
-          // If it's in the bottom 100px of viewport, likely a toolbar
-          if (rect.bottom > window.innerHeight - 100) {
-            return
-          }
-        }
-        element = element.parentElement
-      }
-
-      if (
-        mobileMenuRef.current &&
-        menuToggleRef.current &&
-        !mobileMenuRef.current.contains(target) &&
-        !menuToggleRef.current.contains(target)
-      ) {
-        setMobileMenuOpen(false)
-      }
+  // Close mobile menu when clicking on the overlay (outside menu content)
+  // Simplified approach: only close when clicking the dark overlay area
+  const handleOverlayClick = (event: React.MouseEvent | React.TouchEvent) => {
+    // Only close if clicking directly on the nav element (the overlay), not its children
+    if (event.target === event.currentTarget) {
+      setMobileMenuOpen(false)
+      setBetaDropdownOpen(false)
     }
-
-    // Use a delay for mobile to prevent immediate closure
-    // Mobile browsers often fire touch events immediately after the toggle
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside)
-      document.addEventListener('touchstart', handleClickOutside, { passive: true })
-    }, 300)
-
-    return () => {
-      clearTimeout(timeoutId)
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('touchstart', handleClickOutside)
-    }
-  }, [mobileMenuOpen])
+  }
 
   const toggleMobileMenu = (e?: React.MouseEvent | React.TouchEvent) => {
     if (e) {
       e.preventDefault()
       e.stopPropagation()
     }
-    // Set flag to ignore outside clicks immediately after toggle
-    justToggledRef.current = true
-    setMobileMenuOpen(prev => !prev)
-    // Clear flag after a delay
-    setTimeout(() => {
-      justToggledRef.current = false
-    }, 400)
+    setMobileMenuOpen(prev => {
+      // Close beta dropdown when closing menu
+      if (prev) {
+        setBetaDropdownOpen(false)
+      }
+      return !prev
+    })
   }
 
   const isActive = (path: string) => {
@@ -128,9 +85,9 @@ const Header: React.FC = () => {
   const headerStyles: React.CSSProperties = {
     position: 'sticky',
     top: 0,
-    zIndex: 100,
-    background: 'rgba(11, 18, 32, 0.8)',
-    backdropFilter: 'blur(10px)',
+    zIndex: 10001, // Above mobile menu
+    background: isMobile ? '#0b1220' : 'rgba(11, 18, 32, 0.95)', // Solid on mobile
+    backdropFilter: isMobile ? 'none' : 'blur(10px)',
     borderBottom: '1px solid var(--border)',
   }
 
@@ -167,52 +124,36 @@ const Header: React.FC = () => {
     boxShadow: 'var(--shadow)',
   }
 
-  // Navigation links styles
-  const navlinksStyles: React.CSSProperties = {
+  // Navigation links styles - completely rewritten for proper mobile behavior
+  const navlinksStyles: React.CSSProperties = isMobile ? {
+    position: 'fixed',
+    top: '73px', // Height of the header
+    left: 0,
+    right: 0,
+    bottom: mobileMenuOpen ? 0 : 'auto',
+    background: '#0b1220', // Solid dark background, same as var(--bg)
+    borderTop: '1px solid var(--border)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    padding: '1rem',
+    gap: '0.5rem',
+    listStyle: 'none',
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    zIndex: 9999,
+    boxShadow: mobileMenuOpen ? '0 4px 20px rgba(0, 0, 0, 0.5)' : 'none',
+    // Animation
+    transform: mobileMenuOpen ? 'translateY(0)' : 'translateY(-120%)',
+    opacity: mobileMenuOpen ? 1 : 0,
+    visibility: mobileMenuOpen ? 'visible' : 'hidden',
+    transition: 'transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease',
+    maxHeight: 'calc(100vh - 73px)',
+  } : {
     display: 'flex',
     alignItems: 'center',
     gap: '1.5rem',
     listStyle: 'none',
-    // Mobile styles applied conditionally
-    ...(isMobile && !mobileMenuOpen ? {
-      position: 'fixed',
-      top: '100%',
-      left: 0,
-      right: 0,
-      background: 'var(--bg)',
-      borderTop: '1px solid var(--border)',
-      flexDirection: 'column',
-      padding: '1rem',
-      gap: '0.75rem',
-      transform: 'translateY(-100%)',
-      opacity: 0,
-      visibility: 'hidden',
-      transition: 'all 0.3s ease',
-      maxHeight: 'calc(100vh - 100%)',
-      overflowY: 'auto',
-      WebkitOverflowScrolling: 'touch',
-      zIndex: 99,
-    } : {}),
-    ...(isMobile && mobileMenuOpen ? {
-      position: 'fixed',
-      top: '100%',
-      left: 0,
-      right: 0,
-      background: 'var(--bg)',
-      borderTop: '1px solid var(--border)',
-      flexDirection: 'column',
-      padding: '1rem',
-      gap: '0.75rem',
-      transform: 'translateY(0)',
-      opacity: 1,
-      visibility: 'visible',
-      transition: 'all 0.3s ease',
-      maxHeight: 'calc(100vh - 100%)',
-      overflowY: 'auto',
-      WebkitOverflowScrolling: 'touch',
-      zIndex: 99,
-      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-    } : {}),
   }
 
   // Link styles
@@ -220,21 +161,25 @@ const Header: React.FC = () => {
     color: active ? 'var(--text)' : 'var(--muted)',
     textDecoration: 'none',
     fontWeight: 500,
-    transition: 'color 0.2s ease',
-    padding: isMobile ? '0.75rem 0.5rem' : '0.5rem',
-    minHeight: isMobile ? '44px' : 'auto',
+    transition: 'all 0.2s ease',
+    padding: isMobile ? '1rem' : '0.5rem',
+    minHeight: isMobile ? '48px' : 'auto',
     display: 'flex',
     alignItems: 'center',
     width: isMobile ? '100%' : 'auto',
-    borderRadius: isMobile ? '8px' : '0',
+    borderRadius: isMobile ? '12px' : '0',
+    background: isMobile && active ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
+    fontSize: isMobile ? '1.1rem' : 'inherit',
     ...(isMobile && {
       touchAction: 'manipulation',
+      WebkitTapHighlightColor: 'transparent',
     }),
   })
 
   // Dropdown container styles
   const dropdownContainerStyles: React.CSSProperties = {
     position: 'relative',
+    width: isMobile ? '100%' : 'auto',
   }
 
   // Dropdown trigger styles
@@ -242,30 +187,50 @@ const Header: React.FC = () => {
     color: active ? 'var(--text)' : 'var(--muted)',
     textDecoration: 'none',
     fontWeight: 500,
-    transition: 'color 0.2s ease',
+    transition: 'all 0.2s ease',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '0.25rem',
-    background: 'none',
+    justifyContent: isMobile ? 'space-between' : 'flex-start',
+    gap: '0.5rem',
+    background: isMobile && active ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
     border: 'none',
-    padding: 0,
-    fontSize: 'inherit',
+    padding: isMobile ? '1rem' : 0,
+    fontSize: isMobile ? '1.1rem' : 'inherit',
     fontFamily: 'inherit',
+    width: isMobile ? '100%' : 'auto',
+    minHeight: isMobile ? '48px' : 'auto',
+    borderRadius: isMobile ? '12px' : '0',
+    WebkitTapHighlightColor: 'transparent',
   })
 
   // Dropdown menu styles
-  const dropdownMenuStyles: React.CSSProperties = {
+  const dropdownMenuStyles: React.CSSProperties = isMobile ? {
+    position: 'relative',
+    top: 0,
+    left: 0,
+    transform: 'none',
+    background: 'rgba(139, 92, 246, 0.05)',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '0.5rem',
+    marginTop: '0.5rem',
+    marginLeft: '1rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+    zIndex: 200,
+  } : {
     position: 'absolute',
     top: 'calc(100% + 0.5rem)',
     left: '50%',
     transform: 'translateX(-50%)',
-    background: 'var(--bg-2)',
+    background: '#1a2332', // Solid background
     border: '1px solid var(--border)',
     borderRadius: '12px',
     padding: '0.5rem',
-    minWidth: '140px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+    minWidth: '180px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
     display: 'flex',
     flexDirection: 'column',
     gap: '0.25rem',
@@ -276,12 +241,13 @@ const Header: React.FC = () => {
   const getDropdownItemStyles = (active: boolean): React.CSSProperties => ({
     color: active ? 'var(--text)' : 'var(--muted)',
     textDecoration: 'none',
-    padding: '0.5rem 0.75rem',
+    padding: isMobile ? '0.75rem 1rem' : '0.5rem 0.75rem',
     borderRadius: '8px',
     transition: 'all 0.2s ease',
     display: 'block',
-    fontSize: '0.9rem',
-    background: active ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+    fontSize: isMobile ? '1rem' : '0.9rem',
+    background: active ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
+    minHeight: isMobile ? '44px' : 'auto',
   })
 
   // Menu toggle styles
@@ -289,17 +255,20 @@ const Header: React.FC = () => {
     display: isMobile ? 'flex' : 'none',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'none',
-    border: 'none',
+    background: mobileMenuOpen ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+    border: '1px solid',
+    borderColor: mobileMenuOpen ? 'var(--primary)' : 'transparent',
     color: 'var(--text)',
     fontSize: '1.5rem',
     cursor: 'pointer',
     padding: '0.75rem',
-    minWidth: '44px',
-    minHeight: '44px',
-    borderRadius: '8px',
+    minWidth: '48px',
+    minHeight: '48px',
+    borderRadius: '12px',
     touchAction: 'manipulation',
-    transition: 'background-color 0.2s ease',
+    transition: 'all 0.2s ease',
+    WebkitTapHighlightColor: 'transparent',
+    zIndex: 10000, // Above the menu
   }
 
   return (
@@ -328,7 +297,12 @@ const Header: React.FC = () => {
           <span>Section</span>
         </Link>
 
-        <nav ref={mobileMenuRef} style={navlinksStyles} onClick={(e) => e.stopPropagation()}>
+        <nav 
+          ref={mobileMenuRef} 
+          style={navlinksStyles} 
+          onClick={isMobile ? handleOverlayClick : undefined}
+          onTouchEnd={isMobile ? handleOverlayClick : undefined}
+        >
           <Link 
             href="/about" 
             style={getLinkStyles(isActive('/about'))}
@@ -477,21 +451,10 @@ const Header: React.FC = () => {
         </nav>
 
         <button
-          ref={menuToggleRef}
           style={menuToggleStyles}
           aria-label="Toggle navigation menu"
           aria-expanded={mobileMenuOpen}
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            toggleMobileMenu(e)
-          }}
-          onTouchStart={(e) => {
-            // Prevent touch event from bubbling to click-outside handler
-            e.stopPropagation()
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.1)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          onClick={toggleMobileMenu}
           type="button"
         >
           {mobileMenuOpen ? '✕' : '☰'}
