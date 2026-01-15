@@ -27,7 +27,7 @@ interface RSVPUser {
 const EventDetail: React.FC = () => {
   const router = useRouter()
   const { id } = router.query
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { showSuccess, showError } = useToast()
   const [event, setEvent] = useState<EventWithRSVP | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,8 +54,17 @@ const EventDetail: React.FC = () => {
   const [inviteUserLoading, setInviteUserLoading] = useState(false)
   const coverFileInputRef = React.useRef<HTMLInputElement>(null)
 
+  // Require authentication
   useEffect(() => {
-    if (id) {
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
+
+  useEffect(() => {
+    if (id && user) {
+      // Prevent scroll to bottom on page load
+      window.scrollTo(0, 0)
       loadEvent()
     }
   }, [id, user])
@@ -813,6 +822,11 @@ const EventDetail: React.FC = () => {
     return true
   }
 
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
+  }
+
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -1404,26 +1418,36 @@ const EventDetail: React.FC = () => {
                       onClick={() => setGuestFilter('all')}
                       style={{
                         ...styles.countBadge,
-                        background: guestFilter === 'all' ? 'var(--bg-2)' : 'transparent',
-                        border: guestFilter === 'all' ? '1px solid var(--primary)' : '1px solid transparent',
+                        background: guestFilter === 'all' ? 'var(--primary)' : 'var(--bg-2)',
+                        border: guestFilter === 'all' ? '1px solid var(--primary)' : '1px solid var(--border)',
+                        color: guestFilter === 'all' ? 'white' : 'var(--text)',
                         cursor: 'pointer',
-                        padding: '0.5rem 0.75rem'
+                        padding: '0.625rem 1rem',
+                        borderRadius: '8px',
+                        fontWeight: guestFilter === 'all' ? 600 : 500,
+                        boxShadow: guestFilter === 'all' ? '0 2px 8px rgba(139, 92, 246, 0.3)' : 'none',
+                        transition: 'all 0.2s'
                       }}
                     >
-                      <span style={{ color: 'var(--text)' }}>{totalCount}</span> All
+                      <span style={{ fontWeight: 600 }}>{totalCount}</span> All
                     </button>
                     {goingCount > 0 && (
                       <button
                         onClick={() => setGuestFilter('going')}
                         style={{
                           ...styles.countBadge,
-                          background: guestFilter === 'going' ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-                          border: guestFilter === 'going' ? '1px solid #10b981' : '1px solid transparent',
+                          background: guestFilter === 'going' ? '#10b981' : 'var(--bg-2)',
+                          border: guestFilter === 'going' ? '1px solid #10b981' : '1px solid var(--border)',
+                          color: guestFilter === 'going' ? 'white' : 'var(--text)',
                           cursor: 'pointer',
-                          padding: '0.5rem 0.75rem'
+                          padding: '0.625rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: guestFilter === 'going' ? 600 : 500,
+                          boxShadow: guestFilter === 'going' ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
+                          transition: 'all 0.2s'
                         }}
                       >
-                        <span style={{ color: '#10b981' }}>{goingCount}</span> Going
+                        <span style={{ fontWeight: 600 }}>{goingCount}</span> Going
                       </button>
                     )}
                     {maybeCount > 0 && (
@@ -1431,13 +1455,18 @@ const EventDetail: React.FC = () => {
                         onClick={() => setGuestFilter('maybe')}
                         style={{
                           ...styles.countBadge,
-                          background: guestFilter === 'maybe' ? 'rgba(245, 158, 11, 0.1)' : 'transparent',
-                          border: guestFilter === 'maybe' ? '1px solid #f59e0b' : '1px solid transparent',
+                          background: guestFilter === 'maybe' ? '#f59e0b' : 'var(--bg-2)',
+                          border: guestFilter === 'maybe' ? '1px solid #f59e0b' : '1px solid var(--border)',
+                          color: guestFilter === 'maybe' ? 'white' : 'var(--text)',
                           cursor: 'pointer',
-                          padding: '0.5rem 0.75rem'
+                          padding: '0.625rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: guestFilter === 'maybe' ? 600 : 500,
+                          boxShadow: guestFilter === 'maybe' ? '0 2px 8px rgba(245, 158, 11, 0.3)' : 'none',
+                          transition: 'all 0.2s'
                         }}
                       >
-                        <span style={{ color: '#f59e0b' }}>{maybeCount}</span> Maybe
+                        <span style={{ fontWeight: 600 }}>{maybeCount}</span> Maybe
                       </button>
                     )}
                     {notGoingCount > 0 && (
@@ -1445,13 +1474,18 @@ const EventDetail: React.FC = () => {
                         onClick={() => setGuestFilter('not_going')}
                         style={{
                           ...styles.countBadge,
-                          background: guestFilter === 'not_going' ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
-                          border: guestFilter === 'not_going' ? '1px solid #ef4444' : '1px solid transparent',
+                          background: guestFilter === 'not_going' ? '#ef4444' : 'var(--bg-2)',
+                          border: guestFilter === 'not_going' ? '1px solid #ef4444' : '1px solid var(--border)',
+                          color: guestFilter === 'not_going' ? 'white' : 'var(--text)',
                           cursor: 'pointer',
-                          padding: '0.5rem 0.75rem'
+                          padding: '0.625rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: guestFilter === 'not_going' ? 600 : 500,
+                          boxShadow: guestFilter === 'not_going' ? '0 2px 8px rgba(239, 68, 68, 0.3)' : 'none',
+                          transition: 'all 0.2s'
                         }}
                       >
-                        <span style={{ color: '#ef4444' }}>{notGoingCount}</span> Can't Go
+                        <span style={{ fontWeight: 600 }}>{notGoingCount}</span> Can't Go
                       </button>
                     )}
                     {invitedOnlyCount > 0 && (
@@ -1459,13 +1493,18 @@ const EventDetail: React.FC = () => {
                         onClick={() => setGuestFilter('invited')}
                         style={{
                           ...styles.countBadge,
-                          background: guestFilter === 'invited' ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
-                          border: guestFilter === 'invited' ? '1px solid #8b5cf6' : '1px solid transparent',
+                          background: guestFilter === 'invited' ? '#8b5cf6' : 'var(--bg-2)',
+                          border: guestFilter === 'invited' ? '1px solid #8b5cf6' : '1px solid var(--border)',
+                          color: guestFilter === 'invited' ? 'white' : 'var(--text)',
                           cursor: 'pointer',
-                          padding: '0.5rem 0.75rem'
+                          padding: '0.625rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: guestFilter === 'invited' ? 600 : 500,
+                          boxShadow: guestFilter === 'invited' ? '0 2px 8px rgba(139, 92, 246, 0.3)' : 'none',
+                          transition: 'all 0.2s'
                         }}
                       >
-                        <span style={{ color: '#8b5cf6' }}>{invitedOnlyCount}</span> Invited
+                        <span style={{ fontWeight: 600 }}>{invitedOnlyCount}</span> Invited
                       </button>
                     )}
                   </>
@@ -1982,6 +2021,7 @@ const EventDetail: React.FC = () => {
 // Invite Sections Component
 const InviteSectionsSection: React.FC<{ eventId: string; onInvite: () => void }> = ({ eventId, onInvite }) => {
   const { user } = useAuth()
+  const { showError } = useToast()
   const [userSections, setUserSections] = useState<any[]>([])
   const [invitedSectionIds, setInvitedSectionIds] = useState<string[]>([])
   const [sectionSearch, setSectionSearch] = useState('')
@@ -2454,8 +2494,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   guestCounts: {
     display: 'flex',
-    gap: '1rem',
-    fontSize: '0.85rem',
+    gap: '0.75rem',
+    fontSize: '0.875rem',
+    flexWrap: 'wrap',
   },
   countBadge: {
     display: 'flex',

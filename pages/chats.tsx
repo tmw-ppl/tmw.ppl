@@ -302,8 +302,8 @@ const Chats: React.FC = () => {
     if (!user) return
 
     try {
-      const { error } = await supabase
-        .from('section_invitations')
+      const { error } = await (supabase
+        .from('section_invitations') as any)
         .update({ 
           status: 'accepted',
           responded_at: new Date().toISOString()
@@ -327,8 +327,8 @@ const Chats: React.FC = () => {
     if (!user) return
 
     try {
-      const { error } = await supabase
-        .from('section_invitations')
+      const { error } = await (supabase
+        .from('section_invitations') as any)
         .update({ 
           status: 'declined',
           responded_at: new Date().toISOString()

@@ -43,7 +43,7 @@ interface Group {
 }
 
 const Sections: React.FC = () => {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
@@ -51,8 +51,17 @@ const Sections: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
 
+  // Require authentication
   useEffect(() => {
-    loadGroups()
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
+
+  useEffect(() => {
+    if (user) {
+      loadGroups()
+    }
   }, [user])
 
   const loadGroups = async () => {
@@ -357,12 +366,15 @@ const Sections: React.FC = () => {
           />
         </div>
 
-        {/* Groups List */}
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--muted)' }}>
-            Loading groups...
-          </div>
-        ) : filteredGroups.length === 0 ? (
+        {/* Show nothing while checking auth or redirecting */}
+        {(authLoading || !user) ? null : (
+          <>
+            {/* Groups List */}
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--muted)' }}>
+                Loading groups...
+              </div>
+            ) : filteredGroups.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--muted)' }}>
             {searchQuery ? 'No groups found matching your search.' : 'No groups available yet.'}
           </div>
@@ -374,14 +386,16 @@ const Sections: React.FC = () => {
               const showPending = group.membership_status === 'pending'
 
               return (
-                <Card key={group.id} style={{ padding: '1.5rem' }}>
-                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+                <Card key={group.id} style={{ padding: '1.5rem', overflow: 'hidden', maxWidth: '100%', boxSizing: 'border-box' }}>
+                  <div className="section-card-layout" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', minWidth: 0 }}>
                     {/* Section Image (square on left) */}
                     <Link
                       href={`/sections/${group.id}`}
                       style={{ textDecoration: 'none', flexShrink: 0 }}
+                      className="section-image-link"
                     >
                       <div
+                        className="section-image-container"
                         style={{
                           width: '120px',
                           height: '120px',
@@ -394,7 +408,8 @@ const Sections: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '2rem'
+                          fontSize: '2rem',
+                          flexShrink: 0
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.transform = 'scale(1.05)'
@@ -424,15 +439,21 @@ const Sections: React.FC = () => {
                     </Link>
 
                       {/* Group Info */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                             <Link
                               href={`/sections/${group.id}`}
-                              style={{ textDecoration: 'none', color: 'inherit' }}
+                              style={{ textDecoration: 'none', color: 'inherit', minWidth: 0, flex: '1 1 auto' }}
                             >
-                              <h3 style={{ margin: 0, cursor: 'pointer', transition: 'color 0.2s' }}
+                              <h3 style={{ 
+                                margin: 0, 
+                                cursor: 'pointer', 
+                                transition: 'color 0.2s',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word'
+                              }}
                                   onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
                                   onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}>
                                 {group.group_name}
@@ -444,7 +465,8 @@ const Sections: React.FC = () => {
                                   padding: '0.2rem 0.5rem',
                                   background: 'rgba(139, 92, 246, 0.1)',
                                   color: 'var(--primary)',
-                                  borderRadius: '4px'
+                                  borderRadius: '4px',
+                                  flexShrink: 0
                                 }}>
                                   🔒 Private
                                 </span>
@@ -452,41 +474,82 @@ const Sections: React.FC = () => {
                             </div>
                             <Link
                               href={`/profiles/${group.creator.id}`}
-                              style={{ color: 'var(--muted)', textDecoration: 'none', fontSize: '0.9rem' }}
+                              style={{ color: 'var(--muted)', textDecoration: 'none', fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}
                             >
                               by {group.creator.full_name}
                             </Link>
                             {group.description && (
                               <p style={{ 
-                                margin: '0.75rem 0 0 0', 
+                                margin: '0.5rem 0 0 0', 
                                 color: 'var(--muted)', 
                                 fontSize: '0.9rem',
-                                lineHeight: '1.5'
+                                lineHeight: '1.5',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'break-word'
                               }}>
                                 {group.description}
                               </p>
                             )}
                           </div>
                           {user && (
-                            <Button
-                              variant={group.is_member ? 'secondary' : 'primary'}
-                              onClick={() => {
-                                if (group.is_member) {
-                                  handleLeave(group.id)
-                                } else {
-                                  handleJoin(group.id)
-                                }
-                              }}
-                              disabled={isJoining || showPending}
-                            >
-                              {isJoining
-                                ? '...'
-                                : showPending
-                                ? '⏳ Pending'
-                                : group.is_member
-                                ? '✓ Member'
-                                : 'Join'}
-                            </Button>
+                            <div style={{ flexShrink: 0, alignSelf: 'flex-start', marginTop: '0.25rem' }}>
+                              {group.is_member ? (
+                                <button
+                                  onClick={() => handleLeave(group.id)}
+                                  disabled={isJoining}
+                                  style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                                    background: 'rgba(16, 185, 129, 0.1)',
+                                    color: '#10b981',
+                                    fontSize: '0.875rem',
+                                    fontWeight: 600,
+                                    cursor: isJoining ? 'not-allowed' : 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    minWidth: '100px',
+                                    transition: 'all 0.2s',
+                                    opacity: isJoining ? 0.6 : 1
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isJoining) {
+                                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                                      e.currentTarget.style.borderColor = '#ef4444'
+                                      e.currentTarget.style.color = '#ef4444'
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isJoining) {
+                                      e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'
+                                      e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.3)'
+                                      e.currentTarget.style.color = '#10b981'
+                                    }
+                                  }}
+                                >
+                                  ✓ Member
+                                </button>
+                              ) : (
+                                <Button
+                                  variant="primary"
+                                  size="small"
+                                  onClick={() => handleJoin(group.id)}
+                                  disabled={isJoining || showPending}
+                                  style={{ 
+                                    whiteSpace: 'nowrap',
+                                    minWidth: '100px',
+                                    opacity: showPending ? 0.7 : 1,
+                                    cursor: (isJoining || showPending) ? 'not-allowed' : 'pointer',
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  {isJoining
+                                    ? '...'
+                                    : showPending
+                                    ? '⏳ Pending'
+                                    : 'Join'}
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
 
@@ -557,7 +620,14 @@ const Sections: React.FC = () => {
                         )}
 
                         {/* Stats */}
-                        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', color: 'var(--muted)', fontSize: '0.9rem' }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '1.5rem', 
+                          marginTop: '0.75rem', 
+                          color: 'var(--muted)', 
+                          fontSize: '0.9rem',
+                          flexWrap: 'wrap'
+                        }}>
                           <span>
                             📅 {group.event_count} {group.event_count === 1 ? 'event' : 'events'}
                           </span>
@@ -576,6 +646,8 @@ const Sections: React.FC = () => {
               )
             })}
           </div>
+        )}
+          </>
         )}
       </section>
     </>

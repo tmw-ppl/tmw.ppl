@@ -35,7 +35,7 @@ interface GroupEvent {
 export default function SectionPage() {
   const router = useRouter()
   const { id } = router.query
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { showSuccess, showError } = useToast()
 
   const [loading, setLoading] = useState(true)
@@ -60,8 +60,15 @@ export default function SectionPage() {
   const [channelSubscription, setChannelSubscription] = useState<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Require authentication
   useEffect(() => {
-    if (id) {
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
+
+  useEffect(() => {
+    if (id && user) {
       loadSectionData()
     }
   }, [id, user])
@@ -461,6 +468,11 @@ export default function SectionPage() {
       max_capacity: event.max_capacity
     }))
   }, [events])
+
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
+  }
 
   if (loading) {
     return (
@@ -1131,6 +1143,7 @@ function EditSectionModal({ section, onSave, onDelete, onClose }: {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const { user } = useAuth()
+  const { showError } = useToast()
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -1599,6 +1612,7 @@ function InviteMembersModal({ section, onInvite, onClose }: {
   onClose: () => void
 }) {
   const { user } = useAuth()
+  const { showSuccess, showError } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
@@ -1697,8 +1711,8 @@ function InviteMembersModal({ section, onInvite, onClose }: {
 
       if (error) throw error
 
-      setInvitedUsers(prev => new Set([...prev, userId]))
-      setPendingInviteIds(prev => new Set([...prev, userId]))
+      setInvitedUsers(prev => new Set([...Array.from(prev), userId]))
+      setPendingInviteIds(prev => new Set([...Array.from(prev), userId]))
       setInviteMessage('')
       showSuccess(`Invitation sent to ${userName}!`)
     } catch (err: any) {

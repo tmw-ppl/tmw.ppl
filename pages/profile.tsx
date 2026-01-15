@@ -99,7 +99,7 @@ interface Subscription {
 }
 
 const Profile: React.FC = () => {
-  const { user, signOut } = useAuth()
+  const { user, signOut, loading: authLoading } = useAuth()
   const router = useRouter()
   const { showSuccess, showError } = useToast()
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
@@ -129,18 +129,21 @@ const Profile: React.FC = () => {
   const [sectionInvitations, setSectionInvitations] = useState<any[]>([])
   const [invitationsLoading, setInvitationsLoading] = useState(true)
 
+  // Require authentication
   useEffect(() => {
-    if (!user) {
+    if (!authLoading && !user) {
       router.push('/auth')
       return
     }
-    loadUserProfile()
-    loadUserEvents()
-    loadUserRSVPs()
-    loadInvitedEvents()
-    loadSubscribedEvents()
-    loadSectionInvitations()
-  }, [user, router])
+    if (user) {
+      loadUserProfile()
+      loadUserEvents()
+      loadUserRSVPs()
+      loadInvitedEvents()
+      loadSubscribedEvents()
+      loadSectionInvitations()
+    }
+  }, [user, authLoading, router])
 
   const loadUserProfile = async () => {
     if (!user) return
@@ -566,8 +569,8 @@ const Profile: React.FC = () => {
     if (!user) return
 
     try {
-      const { error } = await supabase
-        .from('section_invitations')
+      const { error } = await (supabase
+        .from('section_invitations') as any)
         .update({ 
           status: 'accepted',
           responded_at: new Date().toISOString()
@@ -591,8 +594,8 @@ const Profile: React.FC = () => {
     if (!user) return
 
     try {
-      const { error } = await supabase
-        .from('section_invitations')
+      const { error } = await (supabase
+        .from('section_invitations') as any)
         .update({ 
           status: 'declined',
           responded_at: new Date().toISOString()
@@ -875,6 +878,11 @@ const Profile: React.FC = () => {
   }
 
   if (!user) {
+    return null
+  }
+
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
     return null
   }
 

@@ -27,19 +27,56 @@ CREATE INDEX IF NOT EXISTS idx_section_invitations_invited_by ON section_invitat
 -- Enable RLS
 ALTER TABLE section_invitations ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies first (before dropping functions they depend on)
+DROP POLICY IF EXISTS "Users can read their own section invitations" ON section_invitations;
+DROP POLICY IF EXISTS "Section admins can read invitations for their sections" ON section_invitations;
+DROP POLICY IF EXISTS "Section admins can create invitations" ON section_invitations;
+DROP POLICY IF EXISTS "Users can update their own invitations" ON section_invitations;
+
+-- Drop existing functions if they exist (allows re-running the migration)
+DROP FUNCTION IF EXISTS is_section_admin_or_creator(UUID, UUID);
+DROP FUNCTION IF EXISTS is_user_section_member(UUID, UUID);
+DROP FUNCTION IF EXISTS has_pending_invitation(UUID, UUID);
+
 -- Helper function to check if user is section admin or creator
-CREATE OR REPLACE FUNCTION is_section_admin_or_creator(section_id UUID, user_id UUID)
+CREATE OR REPLACE FUNCTION is_section_admin_or_creator(check_section_id UUID, check_user_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM sections s
-    WHERE s.id = section_id AND s.creator_id = user_id
+    WHERE s.id = check_section_id AND s.creator_id = check_user_id
   ) OR EXISTS (
     SELECT 1 FROM section_members sm
-    WHERE sm.section_id = section_id 
-    AND sm.user_id = user_id 
+    WHERE sm.section_id = check_section_id 
+    AND sm.user_id = check_user_id 
     AND sm.is_admin = true 
     AND sm.status = 'approved'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Helper function to check if user is already a member
+CREATE OR REPLACE FUNCTION is_user_section_member(check_section_id UUID, check_user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM section_members sm
+    WHERE sm.section_id = check_section_id
+    AND sm.user_id = check_user_id
+    AND sm.status = 'approved'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Helper function to check if pending invitation exists
+CREATE OR REPLACE FUNCTION has_pending_invitation(check_section_id UUID, check_user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM section_invitations si
+    WHERE si.section_id = check_section_id
+    AND si.user_id = check_user_id
+    AND si.status = 'pending'
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -67,20 +104,8 @@ CREATE POLICY "Section admins can create invitations"
   WITH CHECK (
     is_section_admin_or_creator(section_id, auth.uid())
     AND auth.uid() = invited_by
-    AND NOT EXISTS (
-      -- Don't allow inviting users who are already members
-      SELECT 1 FROM section_members sm
-      WHERE sm.section_id = section_invitations.section_id
-      AND sm.user_id = section_invitations.user_id
-      AND sm.status = 'approved'
-    )
-    AND NOT EXISTS (
-      -- Don't allow duplicate pending invitations
-      SELECT 1 FROM section_invitations si
-      WHERE si.section_id = section_invitations.section_id
-      AND si.user_id = section_invitations.user_id
-      AND si.status = 'pending'
-    )
+    AND NOT is_user_section_member(section_id, user_id)
+    AND NOT has_pending_invitation(section_id, user_id)
   );
 
 -- Users can update their own invitations (accept/decline)

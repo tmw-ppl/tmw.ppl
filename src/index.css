@@ -4941,6 +4941,60 @@ gmp-place-autocomplete input:focus {
     margin-bottom: 1rem;
   }
 
+  /* Upcoming events carousel - stack vertically on mobile */
+  .upcoming-events-scroll {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow-x: visible !important;
+    gap: 1rem !important;
+  }
+
+  .upcoming-events-scroll > * {
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Sections page - prevent overflow */
+  .container {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Section cards - ensure content doesn't overflow */
+  .section-card-content {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .section-card-content h3,
+  .section-card-content p {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Sections page mobile - stack image and content vertically */
+  @media (max-width: 768px) {
+    /* Ensure section cards don't overflow */
+    [class*="Card"] {
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    /* Stack section image and content on mobile */
+    .section-card-layout {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+
+    .section-image-container {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+      aspect-ratio: 1 !important;
+      margin-bottom: 1rem !important;
+    }
+  }
+
   .event-card h3 {
     font-size: 1.25rem;
     margin-bottom: 0.5rem;

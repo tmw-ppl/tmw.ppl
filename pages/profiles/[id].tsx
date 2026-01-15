@@ -68,7 +68,7 @@ const generateFunChatName = (id1: string, id2: string): string => {
 const PublicProfilePage: React.FC = () => {
   const router = useRouter()
   const { id } = router.query
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [events, setEvents] = useState<PublicEvent[]>([])
@@ -82,13 +82,18 @@ const PublicProfilePage: React.FC = () => {
   const [subscribedGroups, setSubscribedGroups] = useState<Set<string>>(new Set())
   const [subscribingGroup, setSubscribingGroup] = useState<string | null>(null)
 
+  // Require authentication
   useEffect(() => {
-    if (id && typeof id === 'string') {
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
+
+  useEffect(() => {
+    if (id && typeof id === 'string' && user) {
       loadProfile(id)
       loadUserEvents(id)
-      if (user) {
-        loadSubscriptions(id)
-      }
+      loadSubscriptions(id)
     }
   }, [id, user])
 
@@ -414,6 +419,11 @@ const PublicProfilePage: React.FC = () => {
     maybe_count: e.maybe_count,
     max_capacity: e.max_capacity
   }))
+
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
+  }
 
   if (loading) {
     return (

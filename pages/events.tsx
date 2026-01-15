@@ -42,7 +42,7 @@ type DateRange = 'all' | 'this_week' | 'this_month' | 'next_3_months'
 type PaginationMode = 'pagination' | 'infinite_scroll'
 
 const Events: React.FC = () => {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [events, setEvents] = useState<EventWithRSVP[]>([])
   const [filteredEvents, setFilteredEvents] = useState<EventWithRSVP[]>([])
@@ -54,6 +54,13 @@ const Events: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null)
+
+  // Require authentication
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
   
   // New state for enhanced features
   const [searchQuery, setSearchQuery] = useState('')
@@ -909,6 +916,11 @@ const Events: React.FC = () => {
         </div>
       </Link>
     )
+  }
+
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
   }
 
   if (loading) {

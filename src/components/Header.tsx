@@ -42,7 +42,7 @@ const Header: React.FC = () => {
   }
 
   const isBetaActive = () => {
-    return ['/projects', '/ideas', '/section', '/wins', '/gallery'].includes(router.pathname)
+    return ['/projects', '/ideas', '/section', '/wins', '/gallery', '/tomorrow-people'].includes(router.pathname)
   }
 
   // Header styles
@@ -358,6 +358,15 @@ const Header: React.FC = () => {
                   onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/gallery') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/gallery') ? 'var(--text)' : 'var(--muted)'; }}
                 >
                   Gallery
+                </Link>
+                <Link
+                  href="/tomorrow-people"
+                  style={getDropdownItemStyles(isActive('/tomorrow-people'))}
+                  onClick={() => { setMobileMenuOpen(false); setBetaDropdownOpen(false); }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'; e.currentTarget.style.color = 'var(--text)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/tomorrow-people') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/tomorrow-people') ? 'var(--text)' : 'var(--muted)'; }}
+                >
+                  The Tomorrow People
                 </Link>
               </div>
             )}
