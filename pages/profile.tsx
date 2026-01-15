@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import ProfileViewSelector from '@/components/ProfileViewSelector'
@@ -100,6 +101,7 @@ interface Subscription {
 const Profile: React.FC = () => {
   const { user, signOut } = useAuth()
   const router = useRouter()
+  const { showSuccess, showError } = useToast()
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [userEvents, setUserEvents] = useState<UserEvent[]>([])
   const [rsvpEvents, setRsvpEvents] = useState<RSVPEvent[]>([])
@@ -124,6 +126,8 @@ const Profile: React.FC = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [activeTab, setActiveTab] = useState<'events' | 'groups'>('events')
+  const [sectionInvitations, setSectionInvitations] = useState<any[]>([])
+  const [invitationsLoading, setInvitationsLoading] = useState(true)
 
   useEffect(() => {
     if (!user) {
@@ -135,6 +139,7 @@ const Profile: React.FC = () => {
     loadUserRSVPs()
     loadInvitedEvents()
     loadSubscribedEvents()
+    loadSectionInvitations()
   }, [user, router])
 
   const loadUserProfile = async () => {
@@ -526,6 +531,85 @@ const Profile: React.FC = () => {
     }
   }
 
+  const loadSectionInvitations = async () => {
+    if (!user) return
+
+    try {
+      setInvitationsLoading(true)
+      const { data, error } = await supabase
+        .from('section_invitations')
+        .select(`
+          id,
+          section_id,
+          invited_by,
+          message,
+          invited_at,
+          status,
+          section:sections(id, name, description, image_url, creator_id),
+          inviter:profiles!invited_by(id, full_name, profile_picture_url)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('invited_at', { ascending: false })
+
+      if (error) throw error
+
+      setSectionInvitations((data || []) as any[])
+    } catch (err: any) {
+      console.error('Error loading section invitations:', err)
+    } finally {
+      setInvitationsLoading(false)
+    }
+  }
+
+  const handleAcceptInvitation = async (invitationId: string, sectionId: string) => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from('section_invitations')
+        .update({ 
+          status: 'accepted',
+          responded_at: new Date().toISOString()
+        })
+        .eq('id', invitationId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Refresh data
+      await loadSectionInvitations()
+      await loadSubscribedEvents()
+      showSuccess('Invitation accepted! You are now a member of this section.')
+    } catch (err: any) {
+      console.error('Error accepting invitation:', err)
+      showError('Failed to accept invitation: ' + (err.message || 'Unknown error'))
+    }
+  }
+
+  const handleDeclineInvitation = async (invitationId: string) => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from('section_invitations')
+        .update({ 
+          status: 'declined',
+          responded_at: new Date().toISOString()
+        })
+        .eq('id', invitationId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Refresh invitations
+      await loadSectionInvitations()
+    } catch (err: any) {
+      console.error('Error declining invitation:', err)
+      showError('Failed to decline invitation: ' + (err.message || 'Unknown error'))
+    }
+  }
+
   const handleUnsubscribe = async (sectionId: string) => {
     if (!user) return
 
@@ -538,7 +622,7 @@ const Profile: React.FC = () => {
 
       if (error) {
         console.error('Error leaving section:', error)
-        alert('Failed to leave section. Please try again.')
+        showError('Failed to leave section. Please try again.')
         return
       }
 
@@ -1020,6 +1104,106 @@ const Profile: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Section Invitations */}
+          {sectionInvitations.length > 0 && (
+            <div style={{ marginTop: '2rem' }}>
+              <h3 style={{ marginBottom: '1rem' }}>📨 Section Invitations ({sectionInvitations.length})</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {sectionInvitations.map((invitation: any) => {
+                  const section = invitation.section
+                  const inviter = invitation.inviter
+                  
+                  return (
+                    <div
+                      key={invitation.id}
+                      style={{
+                        background: 'var(--card)',
+                        border: '2px solid var(--primary)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        display: 'flex',
+                        gap: '1rem',
+                        alignItems: 'flex-start'
+                      }}
+                    >
+                      {section?.image_url ? (
+                        <img
+                          src={section.image_url}
+                          alt={section.name}
+                          style={{
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '8px',
+                            objectFit: 'cover',
+                            flexShrink: 0
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '8px',
+                          background: 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.5rem',
+                          flexShrink: 0
+                        }}>
+                          📁
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>
+                          {section?.name || 'Unknown Section'}
+                        </h4>
+                        <p style={{ margin: '0 0 0.5rem 0', color: 'var(--muted)', fontSize: '0.9rem' }}>
+                          {inviter?.full_name || 'Someone'} invited you to join this section
+                        </p>
+                        {invitation.message && (
+                          <p style={{ 
+                            margin: '0 0 0.75rem 0', 
+                            color: 'var(--text)', 
+                            fontSize: '0.9rem',
+                            fontStyle: 'italic',
+                            padding: '0.75rem',
+                            background: 'var(--bg-2)',
+                            borderRadius: '6px'
+                          }}>
+                            "{invitation.message}"
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                          <Button
+                            variant="primary"
+                            size="small"
+                            onClick={() => handleAcceptInvitation(invitation.id, section.id)}
+                          >
+                            ✓ Accept
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => handleDeclineInvitation(invitation.id)}
+                          >
+                            ✕ Decline
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => router.push(`/sections/${section.id}`)}
+                          >
+                            View Section →
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Tabs */}
           <div style={{ 

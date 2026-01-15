@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Head from 'next/head'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import { supabase, type Channel, type ChannelMessage } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
@@ -35,6 +36,7 @@ export default function SectionPage() {
   const router = useRouter()
   const { id } = router.query
   const { user } = useAuth()
+  const { showSuccess, showError } = useToast()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +52,7 @@ export default function SectionPage() {
   const [showPastEvents, setShowPastEvents] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showAdminModal, setShowAdminModal] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [sectionChannel, setSectionChannel] = useState<Channel | null>(null)
   const [channelMessages, setChannelMessages] = useState<ChannelMessage[]>([])
@@ -321,7 +324,7 @@ export default function SectionPage() {
         .eq('id', (sectionChannel as any).id)
     } catch (err: any) {
       console.error('Error sending message:', err)
-      alert('Failed to send message: ' + (err.message || 'Unknown error'))
+      showError('Failed to send message: ' + (err.message || 'Unknown error'))
     }
   }
 
@@ -356,10 +359,10 @@ export default function SectionPage() {
 
       await loadSectionData()
       setShowEditModal(false)
-      alert('Section updated successfully!')
+      showSuccess('Section updated successfully!')
     } catch (err: any) {
       console.error('Error updating section:', err)
-      alert('Failed to update section: ' + (err.message || 'Unknown error'))
+      showError('Failed to update section: ' + (err.message || 'Unknown error'))
     }
   }
 
@@ -374,11 +377,11 @@ export default function SectionPage() {
 
       if (error) throw error
 
-      alert('Section deleted successfully!')
+      showSuccess('Section deleted successfully!')
       router.push('/sections')
     } catch (err: any) {
       console.error('Error deleting section:', err)
-      alert('Failed to delete section: ' + (err.message || 'Unknown error'))
+      showError('Failed to delete section: ' + (err.message || 'Unknown error'))
     }
   }
 
@@ -395,10 +398,10 @@ export default function SectionPage() {
       if (error) throw error
 
       await loadSectionData()
-      alert('Member promoted to admin!')
+      showSuccess('Member promoted to admin!')
     } catch (err: any) {
       console.error('Error promoting member:', err)
-      alert('Failed to promote member: ' + (err.message || 'Unknown error'))
+      showError('Failed to promote member: ' + (err.message || 'Unknown error'))
     }
   }
 
@@ -419,10 +422,10 @@ export default function SectionPage() {
       if (error) throw error
 
       await loadSectionData()
-      alert('Member approved!')
+      showSuccess('Member approved!')
     } catch (err: any) {
       console.error('Error approving member:', err)
-      alert('Failed to approve member: ' + (err.message || 'Unknown error'))
+      showError('Failed to approve member: ' + (err.message || 'Unknown error'))
     }
   }
 
@@ -439,10 +442,10 @@ export default function SectionPage() {
       if (error) throw error
 
       await loadSectionData()
-      alert('Member request rejected')
+      showSuccess('Member request rejected')
     } catch (err: any) {
       console.error('Error rejecting member:', err)
-      alert('Failed to reject member: ' + (err.message || 'Unknown error'))
+      showError('Failed to reject member: ' + (err.message || 'Unknown error'))
     }
   }
 
@@ -568,6 +571,13 @@ export default function SectionPage() {
                   onClick={() => setShowAdminModal(true)}
                 >
                   👥 Manage Admins
+                </Button>
+                <Button
+                  variant="primary"
+                  size="small"
+                  onClick={() => setShowInviteModal(true)}
+                >
+                  ➕ Invite Members
                 </Button>
               </>
             )}
@@ -1038,6 +1048,18 @@ export default function SectionPage() {
           />
         )}
 
+        {/* Invite Members Modal */}
+        {showInviteModal && section && (
+          <InviteMembersModal
+            section={section}
+            onInvite={async () => {
+              await loadSectionData()
+              setShowInviteModal(false)
+            }}
+            onClose={() => setShowInviteModal(false)}
+          />
+        )}
+
         {/* Section Chat */}
         {sectionChannel && isMember && (
           <div style={{ marginTop: '2rem' }}>
@@ -1115,12 +1137,12 @@ function EditSectionModal({ section, onSave, onDelete, onClose }: {
     if (!file || !user) return
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file')
+      showError('Please select an image file')
       return
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('Image must be less than 10MB')
+      showError('Image must be less than 10MB')
       return
     }
 
@@ -1143,7 +1165,7 @@ function EditSectionModal({ section, onSave, onDelete, onClose }: {
       setImageUrl(publicUrl)
     } catch (err: any) {
       console.error('Error uploading image:', err)
-      alert('Failed to upload image')
+      showError('Failed to upload image')
     } finally {
       setUploadingImage(false)
     }
@@ -1561,6 +1583,288 @@ function AdminManagementModal({ section, members, pendingMembers, onPromote, onA
         </div>
 
         <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// Invite Members Modal
+function InviteMembersModal({ section, onInvite, onClose }: {
+  section: any,
+  onInvite: () => void,
+  onClose: () => void
+}) {
+  const { user } = useAuth()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+  const [inviting, setInviting] = useState<string | null>(null)
+  const [inviteMessage, setInviteMessage] = useState('')
+  const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set())
+
+  // Load existing members and pending invitations to exclude them
+  const [existingMemberIds, setExistingMemberIds] = useState<Set<string>>(new Set())
+  const [pendingInviteIds, setPendingInviteIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    loadExistingMembersAndInvites()
+  }, [section.id])
+
+  const loadExistingMembersAndInvites = async () => {
+    try {
+      // Get existing members
+      const { data: membersData } = await supabase
+        .from('section_members')
+        .select('user_id')
+        .eq('section_id', section.id)
+        .in('status', ['approved', 'pending'])
+
+      const memberIds = new Set((membersData || []).map((m: any) => m.user_id))
+      setExistingMemberIds(memberIds)
+
+      // Get pending invitations
+      const { data: invitesData } = await supabase
+        .from('section_invitations')
+        .select('user_id')
+        .eq('section_id', section.id)
+        .eq('status', 'pending')
+
+      const inviteIds = new Set((invitesData || []).map((i: any) => i.user_id))
+      setPendingInviteIds(inviteIds)
+    } catch (err) {
+      console.error('Error loading existing members and invites:', err)
+    }
+  }
+
+  const searchUsers = async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([])
+      return
+    }
+
+    try {
+      setSearching(true)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, profile_picture_url')
+        .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+        .limit(20)
+
+      if (error) throw error
+
+      // Filter out existing members and pending invites
+      const filtered = (data || []).filter((p: any) => 
+        p.id !== user?.id && 
+        !existingMemberIds.has(p.id) && 
+        !pendingInviteIds.has(p.id)
+      )
+
+      setSearchResults(filtered)
+    } catch (err: any) {
+      console.error('Error searching users:', err)
+      showError('Failed to search users: ' + (err.message || 'Unknown error'))
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchUsers(searchQuery)
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery])
+
+  const handleInvite = async (userId: string, userName: string) => {
+    if (!user || inviting) return
+
+    try {
+      setInviting(userId)
+      const { error } = await supabase
+        .from('section_invitations')
+        .insert({
+          section_id: section.id,
+          user_id: userId,
+          invited_by: user.id,
+          message: inviteMessage.trim() || null,
+          status: 'pending'
+        } as any)
+
+      if (error) throw error
+
+      setInvitedUsers(prev => new Set([...prev, userId]))
+      setPendingInviteIds(prev => new Set([...prev, userId]))
+      setInviteMessage('')
+      showSuccess(`Invitation sent to ${userName}!`)
+    } catch (err: any) {
+      console.error('Error sending invitation:', err)
+      showError('Failed to send invitation: ' + (err.message || 'Unknown error'))
+    } finally {
+      setInviting(null)
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '1rem'
+    }} onClick={onClose}>
+      <Card style={{
+        maxWidth: '600px',
+        width: '100%',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        padding: '2rem'
+      }} onClick={(e) => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Invite Members to {section.name}</h2>
+        
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+            Search Users
+          </label>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name or email..."
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--bg-2)',
+              color: 'var(--text)',
+              fontSize: '1rem'
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+            Optional Message
+          </label>
+          <textarea
+            value={inviteMessage}
+            onChange={(e) => setInviteMessage(e.target.value)}
+            placeholder="Add a personal message to your invitation..."
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--bg-2)',
+              color: 'var(--text)',
+              fontSize: '1rem',
+              fontFamily: 'inherit',
+              resize: 'vertical'
+            }}
+          />
+        </div>
+
+        {searching && (
+          <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--muted)' }}>
+            Searching...
+          </div>
+        )}
+
+        {searchResults.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Search Results</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {searchResults.map((profile: any) => {
+                const isInvited = invitedUsers.has(profile.id)
+                const isInviting = inviting === profile.id
+
+                return (
+                  <div
+                    key={profile.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem',
+                      background: 'var(--bg-2)',
+                      borderRadius: '8px',
+                      border: isInvited ? '2px solid var(--success)' : '1px solid var(--border)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      {profile.profile_picture_url ? (
+                        <img
+                          src={profile.profile_picture_url}
+                          alt={profile.full_name}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          background: 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 'bold'
+                        }}>
+                          {profile.full_name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{profile.full_name}</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
+                          {profile.email}
+                        </div>
+                      </div>
+                    </div>
+                    {isInvited ? (
+                      <span style={{ color: 'var(--success)', fontSize: '0.875rem' }}>
+                        ✓ Invited
+                      </span>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        size="small"
+                        onClick={() => handleInvite(profile.id, profile.full_name)}
+                        disabled={isInviting}
+                      >
+                        {isInviting ? 'Sending...' : 'Invite'}
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+            No users found matching "{searchQuery}"
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>

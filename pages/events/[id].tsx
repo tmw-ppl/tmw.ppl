@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import { supabase, type Event, type Profile, type EventInvitation } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
@@ -27,12 +28,14 @@ const EventDetail: React.FC = () => {
   const router = useRouter()
   const { id } = router.query
   const { user } = useAuth()
+  const { showSuccess, showError } = useToast()
   const [event, setEvent] = useState<EventWithRSVP | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState(false)
   const [rsvpList, setRsvpList] = useState<RSVPUser[]>([])
   const [showAllGuests, setShowAllGuests] = useState(false)
+  const [guestFilter, setGuestFilter] = useState<'all' | 'going' | 'maybe' | 'not_going' | 'invited'>('all')
   const [showCoverEditor, setShowCoverEditor] = useState(false)
   const [cohosts, setCohosts] = useState<(Profile & { profile_picture_url?: string })[]>([])
   const [coverUrl, setCoverUrl] = useState('')
@@ -143,7 +146,7 @@ const EventDetail: React.FC = () => {
 
       setEvent(eventWithRSVP)
 
-      // Load RSVP list
+      // Load RSVP list - include all statuses
       console.log('Loading RSVP list for event:', id)
       const { data: rsvpListData, error: rsvpListError } = await supabase
         .from('event_rsvps')
@@ -153,7 +156,7 @@ const EventDetail: React.FC = () => {
           created_at
         `)
         .eq('event_id', id as string)
-        .in('status', ['going', 'maybe'])
+        .in('status', ['going', 'maybe', 'not_going'])
         .order('created_at', { ascending: true })
 
       console.log('RSVP list response:', { data: rsvpListData, error: rsvpListError })
@@ -283,9 +286,10 @@ const EventDetail: React.FC = () => {
       setInviteEmail('')
       setShowInviteModal(false)
       await loadInvitations()
+      showSuccess('Invitation sent!')
     } catch (err: any) {
       console.error('Error inviting user:', err)
-      alert(err.message?.includes('duplicate') ? 'User is already invited' : 'Failed to send invitation')
+      showError(err.message?.includes('duplicate') ? 'User is already invited' : 'Failed to send invitation')
     } finally {
       setInviteLoading(false)
     }
@@ -303,9 +307,10 @@ const EventDetail: React.FC = () => {
       if (error) throw error
 
       await loadInvitations()
+      showSuccess('Invitation removed')
     } catch (err) {
       console.error('Error removing invitation:', err)
-      alert('Failed to remove invitation')
+      showError('Failed to remove invitation')
     }
   }
 
@@ -475,9 +480,10 @@ const EventDetail: React.FC = () => {
       setEvent(prev => prev ? { ...prev, image_url: publicUrl } : null)
       setShowCoverEditor(false)
       setCoverUrl('')
+      showSuccess('Cover image uploaded!')
     } catch (err) {
       console.error('Error uploading cover:', err)
-      alert('Failed to upload cover image')
+      showError('Failed to upload cover image')
     } finally {
       setCoverUploading(false)
       if (coverFileInputRef.current) {
@@ -502,9 +508,10 @@ const EventDetail: React.FC = () => {
       setEvent(prev => prev ? { ...prev, image_url: coverUrl.trim() } : null)
       setShowCoverEditor(false)
       setCoverUrl('')
+      showSuccess('Cover image updated!')
     } catch (err) {
       console.error('Error updating cover URL:', err)
-      alert('Failed to update cover image')
+      showError('Failed to update cover image')
     } finally {
       setCoverUploading(false)
     }
@@ -525,9 +532,10 @@ const EventDetail: React.FC = () => {
 
       setEvent(prev => prev ? { ...prev, image_url: undefined } : null)
       setShowCoverEditor(false)
+      showSuccess('Cover image removed')
     } catch (err) {
       console.error('Error removing cover:', err)
-      alert('Failed to remove cover image')
+      showError('Failed to remove cover image')
     } finally {
       setCoverUploading(false)
     }
@@ -613,7 +621,7 @@ const EventDetail: React.FC = () => {
         setTimeout(() => setLinkCopied(false), 2000)
       } catch (fallbackErr) {
         console.error('Failed to copy link:', fallbackErr)
-        alert('Failed to copy link. Please copy manually: ' + eventUrl)
+        showError('Failed to copy link. Please copy manually: ' + eventUrl)
       }
       document.body.removeChild(textArea)
     }
@@ -718,7 +726,7 @@ const EventDetail: React.FC = () => {
       // Find or create DM channel
       const channelId = await findOrCreateDMChannel(invitedUserId)
       if (!channelId) {
-        alert('Failed to create message channel. Please try again.')
+        showError('Failed to create message channel. Please try again.')
         return
       }
 
@@ -782,7 +790,7 @@ const EventDetail: React.FC = () => {
       router.push(`/section?channel=${channelId}`)
     } catch (err) {
       console.error('Error inviting user:', err)
-      alert('Failed to send invitation. Please try again.')
+      showError('Failed to send invitation. Please try again.')
     } finally {
       setInviteUserLoading(false)
     }
@@ -1065,52 +1073,6 @@ const EventDetail: React.FC = () => {
                 </>
               )}
             </div>
-            
-            {/* Share and Invite Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto' }}>
-              <button
-                onClick={() => setShowInviteUserModal(true)}
-                style={{
-                  background: 'var(--bg-2)',
-                  color: 'var(--text)',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s ease',
-                  fontWeight: 500
-                }}
-                title="Invite someone via message"
-              >
-                ✉️ Invite
-              </button>
-              <button
-                onClick={handleShareLink}
-                style={{
-                  background: linkCopied ? 'var(--success)' : 'var(--bg-2)',
-                  color: linkCopied ? 'white' : 'var(--text)',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s ease',
-                  fontWeight: 500
-                }}
-                title="Copy event link"
-              >
-                {linkCopied ? '✓ Copied!' : '🔗 Invite w/ Link'}
-              </button>
-            </div>
           </div>
 
           {/* Manage Invitations - Only for hosts/co-hosts */}
@@ -1133,7 +1095,7 @@ const EventDetail: React.FC = () => {
                 📬 Manage Invitations
               </h3>
               
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 <button
                   onClick={() => setShowInviteModal(true)}
                   style={{
@@ -1145,7 +1107,11 @@ const EventDetail: React.FC = () => {
                     cursor: 'pointer',
                     fontSize: '0.9rem',
                     fontWeight: 600,
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.opacity = '0.9'
@@ -1169,7 +1135,11 @@ const EventDetail: React.FC = () => {
                     cursor: 'pointer',
                     fontSize: '0.9rem',
                     fontWeight: 600,
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'var(--bg-2)'
@@ -1181,6 +1151,39 @@ const EventDetail: React.FC = () => {
                   }}
                 >
                   👤 Invite User
+                </button>
+                <button
+                  onClick={handleShareLink}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: linkCopied ? 'var(--success)' : 'var(--bg)',
+                    color: linkCopied ? 'white' : 'var(--text)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!linkCopied) {
+                      e.currentTarget.style.background = 'var(--bg-2)'
+                      e.currentTarget.style.transform = 'translateY(-1px)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!linkCopied) {
+                      e.currentTarget.style.background = 'var(--bg)'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                    }
+                  }}
+                  title="Copy event link"
+                >
+                  {linkCopied ? '✓ Copied!' : '🔗 Invite w/ Link'}
                 </button>
                 <InviteSectionsSection eventId={id as string} onInvite={() => loadInvitedSections(id as string)} />
               </div>
@@ -1274,89 +1277,6 @@ const EventDetail: React.FC = () => {
                   </Link>
                 ))}
               </div>
-              
-              {/* Union of all members from all invited sections */}
-              {invitedMembers.length > 0 && (
-                <div>
-                  <h4 style={{ 
-                    marginBottom: '0.75rem', 
-                    fontSize: '0.95rem', 
-                    fontWeight: 600,
-                    color: 'var(--muted)'
-                  }}>
-                    Invited Members ({invitedMembers.length} total)
-                  </h4>
-                  <div style={{ 
-                    display: 'flex', 
-                    flexWrap: 'wrap', 
-                    gap: '0.5rem'
-                  }}>
-                    {invitedMembers.slice(0, showAllGuests ? invitedMembers.length : 20).map((member: any) => (
-                      <Link
-                        key={member.id}
-                        href={`/profile/${member.id}`}
-                        style={{
-                          position: 'relative',
-                          textDecoration: 'none'
-                        }}
-                        title={`${member.full_name || 'Unknown'} - ${member.sections?.map((s: any) => s.name).join(', ') || ''}`}
-                      >
-                        <Avatar
-                          src={member.profile_picture_url}
-                          alt={member.full_name || 'Unknown'}
-                          size={40}
-                        />
-                        {member.sections && member.sections.length > 1 && (
-                          <div style={{
-                            position: 'absolute',
-                            bottom: 0,
-                            right: 0,
-                            width: '16px',
-                            height: '16px',
-                            borderRadius: '50%',
-                            background: 'var(--primary)',
-                            border: '2px solid var(--bg)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.7rem',
-                            color: 'white',
-                            fontWeight: 600
-                          }}>
-                            {member.sections.length}
-                          </div>
-                        )}
-                      </Link>
-                    ))}
-                    {invitedMembers.length > 20 && (
-                      <button
-                        onClick={() => setShowAllGuests(!showAllGuests)}
-                        style={{
-                          padding: '0.5rem 1rem',
-                          background: 'var(--bg)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          color: 'var(--text)'
-                        }}
-                      >
-                        {showAllGuests ? 'Show Less' : `+${invitedMembers.length - 20} more`}
-                      </button>
-                    )}
-                  </div>
-                  {invitedMembers.length > 1 && (
-                    <p style={{ 
-                      marginTop: '0.75rem', 
-                      fontSize: '0.75rem', 
-                      color: 'var(--muted)',
-                      fontStyle: 'italic'
-                    }}>
-                      Members are deduplicated across all invited sections
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -1388,6 +1308,14 @@ const EventDetail: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Description - Moved up before RSVP */}
+        {event.description && (
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}>About</h3>
+            <p style={styles.description}>{event.description}</p>
+          </div>
+        )}
 
         {/* RSVP Buttons */}
         <div style={styles.rsvpSection}>
@@ -1456,106 +1384,371 @@ const EventDetail: React.FC = () => {
           )}
         </div>
 
-        {/* Description */}
-        {event.description && (
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>About</h3>
-            <p style={styles.description}>{event.description}</p>
-          </div>
-        )}
-
         {/* Guest List */}
         <div style={styles.section}>
           <div style={styles.sectionHeader}>
             <h3 style={styles.sectionTitle}>Guest List</h3>
             <div style={styles.guestCounts}>
-              <span style={styles.countBadge}>
-                <span style={{ color: '#10b981' }}>{event.rsvp_count || 0}</span> Going
-              </span>
-              <span style={styles.countBadge}>
-                <span style={{ color: '#f59e0b' }}>{event.maybe_count || 0}</span> Maybe
-              </span>
+              {(() => {
+                // Calculate counts properly
+                const rsvpUserIds = new Set(rsvpList.map(r => r.user_id))
+                const goingCount = rsvpList.filter(r => r.status === 'going').length
+                const maybeCount = rsvpList.filter(r => r.status === 'maybe').length
+                const notGoingCount = rsvpList.filter(r => r.status === 'not_going').length
+                const invitedOnlyCount = invitedMembers.filter((m: any) => !rsvpUserIds.has(m.user_id)).length
+                const totalCount = goingCount + maybeCount + notGoingCount + invitedOnlyCount
+                
+                return (
+                  <>
+                    <button
+                      onClick={() => setGuestFilter('all')}
+                      style={{
+                        ...styles.countBadge,
+                        background: guestFilter === 'all' ? 'var(--bg-2)' : 'transparent',
+                        border: guestFilter === 'all' ? '1px solid var(--primary)' : '1px solid transparent',
+                        cursor: 'pointer',
+                        padding: '0.5rem 0.75rem'
+                      }}
+                    >
+                      <span style={{ color: 'var(--text)' }}>{totalCount}</span> All
+                    </button>
+                    {goingCount > 0 && (
+                      <button
+                        onClick={() => setGuestFilter('going')}
+                        style={{
+                          ...styles.countBadge,
+                          background: guestFilter === 'going' ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                          border: guestFilter === 'going' ? '1px solid #10b981' : '1px solid transparent',
+                          cursor: 'pointer',
+                          padding: '0.5rem 0.75rem'
+                        }}
+                      >
+                        <span style={{ color: '#10b981' }}>{goingCount}</span> Going
+                      </button>
+                    )}
+                    {maybeCount > 0 && (
+                      <button
+                        onClick={() => setGuestFilter('maybe')}
+                        style={{
+                          ...styles.countBadge,
+                          background: guestFilter === 'maybe' ? 'rgba(245, 158, 11, 0.1)' : 'transparent',
+                          border: guestFilter === 'maybe' ? '1px solid #f59e0b' : '1px solid transparent',
+                          cursor: 'pointer',
+                          padding: '0.5rem 0.75rem'
+                        }}
+                      >
+                        <span style={{ color: '#f59e0b' }}>{maybeCount}</span> Maybe
+                      </button>
+                    )}
+                    {notGoingCount > 0 && (
+                      <button
+                        onClick={() => setGuestFilter('not_going')}
+                        style={{
+                          ...styles.countBadge,
+                          background: guestFilter === 'not_going' ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+                          border: guestFilter === 'not_going' ? '1px solid #ef4444' : '1px solid transparent',
+                          cursor: 'pointer',
+                          padding: '0.5rem 0.75rem'
+                        }}
+                      >
+                        <span style={{ color: '#ef4444' }}>{notGoingCount}</span> Can't Go
+                      </button>
+                    )}
+                    {invitedOnlyCount > 0 && (
+                      <button
+                        onClick={() => setGuestFilter('invited')}
+                        style={{
+                          ...styles.countBadge,
+                          background: guestFilter === 'invited' ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                          border: guestFilter === 'invited' ? '1px solid #8b5cf6' : '1px solid transparent',
+                          cursor: 'pointer',
+                          padding: '0.5rem 0.75rem'
+                        }}
+                      >
+                        <span style={{ color: '#8b5cf6' }}>{invitedOnlyCount}</span> Invited
+                      </button>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           </div>
 
           {canSeeGuestList() ? (
             <div style={styles.guestList}>
-              {goingGuests.length === 0 && maybeGuests.length === 0 ? (
-                <p style={styles.emptyGuests}>No RSVPs yet. Be the first!</p>
-              ) : (
-                <>
-                  {/* Avatar row preview */}
-                  <div style={styles.avatarRow}>
-                    {rsvpList.slice(0, showAllGuests ? undefined : 8).map((rsvp, idx) => (
-                      <div
-                        key={rsvp.user_id}
-                        style={{
-                          ...styles.avatarWrapper,
-                          marginLeft: idx > 0 ? '-8px' : 0,
-                          zIndex: 10 - idx
-                        }}
-                        title={`${rsvp.profile?.full_name} (${rsvp.status})`}
-                      >
-                        <Avatar
-                          src={rsvp.profile?.profile_picture_url}
-                          name={rsvp.profile?.full_name || 'Guest'}
-                          size={40}
-                        />
-                        <span style={{
-                          ...styles.statusDot,
-                          background: rsvp.status === 'going' ? '#10b981' : '#f59e0b'
-                        }} />
-                      </div>
-                    ))}
-                    {rsvpList.length > 8 && !showAllGuests && (
-                      <div style={styles.moreGuests}>+{rsvpList.length - 8}</div>
-                    )}
-                  </div>
-
-                  {rsvpList.length > 8 && (
-                    <button
-                      onClick={() => setShowAllGuests(!showAllGuests)}
-                      style={styles.viewAllButton}
-                    >
-                      {showAllGuests ? 'Show less' : 'View all guests'}
-                    </button>
-                  )}
-
-                  {/* Expanded guest list */}
-                  {showAllGuests && (
-                    <div style={styles.expandedGuestList}>
-                      <div style={styles.guestGroup}>
-                        <h4 style={styles.guestGroupTitle}>Going ({goingGuests.length})</h4>
-                        {goingGuests.map(guest => (
-                          <div key={guest.user_id} style={styles.guestItem}>
+              {(() => {
+                // Create a map to ensure each user appears only once with their highest priority status
+                // Priority: going > maybe > not_going > invited
+                const guestMap = new Map<string, { user_id: string; status: 'going' | 'maybe' | 'not_going' | 'invited'; profile: any }>()
+                
+                // First, add all RSVP'd users (they have highest priority)
+                rsvpList.forEach(rsvp => {
+                  guestMap.set(rsvp.user_id, {
+                    user_id: rsvp.user_id,
+                    status: rsvp.status,
+                    profile: rsvp.profile
+                  })
+                })
+                
+                // Then, add invited members only if they haven't RSVP'd
+                invitedMembers.forEach((member: any) => {
+                  if (!guestMap.has(member.user_id)) {
+                    guestMap.set(member.user_id, {
+                      user_id: member.user_id,
+                      status: 'invited',
+                      profile: {
+                        id: member.user_id,
+                        full_name: member.full_name,
+                        profile_picture_url: member.profile_picture_url
+                      }
+                    })
+                  }
+                })
+                
+                // Convert map to array
+                const allGuests = Array.from(guestMap.values())
+                
+                // Separate by status
+                const goingGuestsCombined = allGuests.filter(g => g.status === 'going')
+                const maybeGuestsCombined = allGuests.filter(g => g.status === 'maybe')
+                const notGoingGuestsCombined = allGuests.filter(g => g.status === 'not_going')
+                const invitedGuestsCombined = allGuests.filter(g => g.status === 'invited')
+                
+                // Filter based on selected tab
+                const filteredGuests = guestFilter === 'all' ? allGuests :
+                                     guestFilter === 'going' ? goingGuestsCombined :
+                                     guestFilter === 'maybe' ? maybeGuestsCombined :
+                                     guestFilter === 'not_going' ? notGoingGuestsCombined :
+                                     invitedGuestsCombined
+                
+                if (allGuests.length === 0) {
+                  return <p style={styles.emptyGuests}>No RSVPs yet. Be the first!</p>
+                }
+                
+                if (filteredGuests.length === 0) {
+                  return <p style={styles.emptyGuests}>No guests in this category.</p>
+                }
+                
+                return (
+                  <>
+                    {/* Avatar row preview - show filtered guests */}
+                    <div style={styles.avatarRow}>
+                      {filteredGuests
+                        .slice(0, showAllGuests ? undefined : 8)
+                        .map((guest, idx) => (
+                        <Link
+                          key={guest.user_id}
+                          href={`/profiles/${guest.user_id}`}
+                          style={{
+                            textDecoration: 'none',
+                            position: 'relative',
+                            display: 'inline-block'
+                          }}
+                        >
+                          <div
+                            style={{
+                              ...styles.avatarWrapper,
+                              marginLeft: idx > 0 ? '-8px' : 0,
+                              zIndex: 10 - idx,
+                              cursor: 'pointer',
+                              transition: 'transform 0.2s'
+                            }}
+                            title={`${guest.profile?.full_name} (${guest.status === 'invited' ? 'Invited' : guest.status === 'not_going' ? "Can't Go" : guest.status})`}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.1)'
+                              e.currentTarget.style.zIndex = '100'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)'
+                              e.currentTarget.style.zIndex = String(10 - idx)
+                            }}
+                          >
                             <Avatar
                               src={guest.profile?.profile_picture_url}
                               name={guest.profile?.full_name || 'Guest'}
-                              size={32}
+                              size={40}
                             />
-                            <span>{guest.profile?.full_name}</span>
+                            <span style={{
+                              ...styles.statusDot,
+                              background: guest.status === 'going' ? '#10b981' : 
+                                         guest.status === 'maybe' ? '#f59e0b' : 
+                                         guest.status === 'not_going' ? '#ef4444' :
+                                         '#8b5cf6'
+                            }} />
                           </div>
-                        ))}
-                      </div>
-                      {maybeGuests.length > 0 && (
-                        <div style={styles.guestGroup}>
-                          <h4 style={styles.guestGroupTitle}>Maybe ({maybeGuests.length})</h4>
-                          {maybeGuests.map(guest => (
-                            <div key={guest.user_id} style={styles.guestItem}>
-                              <Avatar
-                                src={guest.profile?.profile_picture_url}
-                                name={guest.profile?.full_name || 'Guest'}
-                                size={32}
-                              />
-                              <span>{guest.profile?.full_name}</span>
-                            </div>
-                          ))}
-                        </div>
+                        </Link>
+                      ))}
+                      {filteredGuests.length > 8 && !showAllGuests && (
+                        <div style={styles.moreGuests}>+{filteredGuests.length - 8}</div>
                       )}
                     </div>
-                  )}
-                </>
-              )}
+
+                    {filteredGuests.length > 8 && (
+                      <button
+                        onClick={() => setShowAllGuests(!showAllGuests)}
+                        style={styles.viewAllButton}
+                      >
+                        {showAllGuests ? 'Show less' : 'View all guests'}
+                      </button>
+                    )}
+
+                    {/* Expanded guest list */}
+                    {showAllGuests && (
+                      <div style={styles.expandedGuestList}>
+                        {guestFilter === 'all' || guestFilter === 'going' ? (
+                          goingGuestsCombined.length > 0 && (
+                            <div style={styles.guestGroup}>
+                              <h4 style={styles.guestGroupTitle}>Going ({goingGuestsCombined.length})</h4>
+                              {goingGuestsCombined.map(guest => (
+                                <Link
+                                  key={guest.user_id}
+                                  href={`/profiles/${guest.user_id}`}
+                                  style={{ textDecoration: 'none', color: 'inherit' }}
+                                >
+                                  <div 
+                                    key={guest.user_id} 
+                                    style={{
+                                      ...styles.guestItem,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = 'var(--bg-2)'
+                                      e.currentTarget.style.transform = 'translateX(4px)'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = 'transparent'
+                                      e.currentTarget.style.transform = 'translateX(0)'
+                                    }}
+                                  >
+                                    <Avatar
+                                      src={guest.profile?.profile_picture_url}
+                                      name={guest.profile?.full_name || 'Guest'}
+                                      size={32}
+                                    />
+                                    <span>{guest.profile?.full_name}</span>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          )
+                        ) : null}
+                        {(guestFilter === 'all' || guestFilter === 'maybe') && (
+                          maybeGuestsCombined.length > 0 && (
+                            <div style={styles.guestGroup}>
+                              <h4 style={styles.guestGroupTitle}>Maybe ({maybeGuestsCombined.length})</h4>
+                              {maybeGuestsCombined.map(guest => (
+                                <Link
+                                  key={guest.user_id}
+                                  href={`/profiles/${guest.user_id}`}
+                                  style={{ textDecoration: 'none', color: 'inherit' }}
+                                >
+                                  <div 
+                                    style={{
+                                      ...styles.guestItem,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = 'var(--bg-2)'
+                                      e.currentTarget.style.transform = 'translateX(4px)'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = 'transparent'
+                                      e.currentTarget.style.transform = 'translateX(0)'
+                                    }}
+                                  >
+                                    <Avatar
+                                      src={guest.profile?.profile_picture_url}
+                                      name={guest.profile?.full_name || 'Guest'}
+                                      size={32}
+                                    />
+                                    <span>{guest.profile?.full_name}</span>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          )
+                        )}
+                        {(guestFilter === 'all' || guestFilter === 'not_going') && (
+                          notGoingGuestsCombined.length > 0 && (
+                            <div style={styles.guestGroup}>
+                              <h4 style={styles.guestGroupTitle}>Can't Go ({notGoingGuestsCombined.length})</h4>
+                              {notGoingGuestsCombined.map(guest => (
+                                <Link
+                                  key={guest.user_id}
+                                  href={`/profiles/${guest.user_id}`}
+                                  style={{ textDecoration: 'none', color: 'inherit' }}
+                                >
+                                  <div 
+                                    style={{
+                                      ...styles.guestItem,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = 'var(--bg-2)'
+                                      e.currentTarget.style.transform = 'translateX(4px)'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = 'transparent'
+                                      e.currentTarget.style.transform = 'translateX(0)'
+                                    }}
+                                  >
+                                    <Avatar
+                                      src={guest.profile?.profile_picture_url}
+                                      name={guest.profile?.full_name || 'Guest'}
+                                      size={32}
+                                    />
+                                    <span>{guest.profile?.full_name}</span>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          )
+                        )}
+                        {(guestFilter === 'all' || guestFilter === 'invited') && (
+                          invitedGuestsCombined.length > 0 && (
+                            <div style={styles.guestGroup}>
+                              <h4 style={styles.guestGroupTitle}>Invited ({invitedGuestsCombined.length})</h4>
+                              {invitedGuestsCombined.map(guest => (
+                                <Link
+                                  key={guest.user_id}
+                                  href={`/profiles/${guest.user_id}`}
+                                  style={{ textDecoration: 'none', color: 'inherit' }}
+                                >
+                                  <div 
+                                    style={{
+                                      ...styles.guestItem,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = 'var(--bg-2)'
+                                      e.currentTarget.style.transform = 'translateX(4px)'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = 'transparent'
+                                      e.currentTarget.style.transform = 'translateX(0)'
+                                    }}
+                                  >
+                                    <Avatar
+                                      src={guest.profile?.profile_picture_url}
+                                      name={guest.profile?.full_name || 'Guest'}
+                                      size={32}
+                                    />
+                                    <span>{guest.profile?.full_name}</span>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           ) : (
             <div style={styles.gatedSection}>
@@ -1591,10 +1784,38 @@ const EventDetail: React.FC = () => {
         {/* Edit Button for Host/Co-host */}
         {isHostOrCohost() && (
           <div style={styles.section}>
-            <Link href={`/edit-event/${event.id}`}>
-              <Button variant="secondary" style={{ width: '100%' }}>
+            <Link 
+              href={`/edit-event/${event.id}`}
+              style={{ textDecoration: 'none', display: 'block' }}
+            >
+              <button
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1.5rem',
+                  background: 'var(--bg-2)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--bg)'
+                  e.currentTarget.style.borderColor = 'var(--primary)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-2)'
+                  e.currentTarget.style.borderColor = 'var(--border)'
+                }}
+              >
                 ✏️ Edit Event
-              </Button>
+              </button>
             </Link>
           </div>
         )}
@@ -1878,7 +2099,7 @@ const InviteSectionsSection: React.FC<{ eventId: string; onInvite: () => void }>
       onInvite() // Refresh the invited sections display
     } catch (err: any) {
       console.error('Error toggling section invite:', err)
-      alert(err.message || 'Failed to update section invitation')
+      showError(err.message || 'Failed to update section invitation')
     } finally {
       setLoading(false)
     }
