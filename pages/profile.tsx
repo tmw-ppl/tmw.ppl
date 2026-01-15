@@ -101,6 +101,7 @@ interface Subscription {
 const Profile: React.FC = () => {
   const { user, signOut, loading: authLoading } = useAuth()
   const router = useRouter()
+  const { id } = router.query
   const { showSuccess, showError } = useToast()
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [userEvents, setUserEvents] = useState<UserEvent[]>([])
@@ -129,24 +130,30 @@ const Profile: React.FC = () => {
   const [sectionInvitations, setSectionInvitations] = useState<any[]>([])
   const [invitationsLoading, setInvitationsLoading] = useState(true)
 
+  // Determine which user's profile to show
+  const viewingUserId = (id && typeof id === 'string') ? id : (user?.id || null)
+  const isOwnProfile = !id || (user && id === user.id)
+
   // Require authentication
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/auth')
       return
     }
-    if (user) {
+    if (user && viewingUserId) {
       loadUserProfile()
       loadUserEvents()
-      loadUserRSVPs()
-      loadInvitedEvents()
-      loadSubscribedEvents()
-      loadSectionInvitations()
+      if (isOwnProfile) {
+        loadUserRSVPs()
+        loadInvitedEvents()
+        loadSubscribedEvents()
+        loadSectionInvitations()
+      }
     }
-  }, [user, authLoading, router])
+  }, [user, authLoading, router, viewingUserId, isOwnProfile])
 
   const loadUserProfile = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setLoading(true)
@@ -155,7 +162,7 @@ const Profile: React.FC = () => {
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', viewingUserId)
         .single()
 
       if (error && error.code !== 'PGRST116') {
@@ -202,16 +209,16 @@ const Profile: React.FC = () => {
   }
 
   const loadUserEvents = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setEventsLoading(true)
-      console.log('🎪 Loading events for user:', user.id)
+      console.log('🎪 Loading events for user:', viewingUserId)
 
       const { data: events, error } = await supabase
         .from('events')
         .select('*')
-        .eq('created_by', user.id)
+        .eq('created_by', viewingUserId)
         .order('date', { ascending: false })
 
       if (error) {
@@ -250,11 +257,11 @@ const Profile: React.FC = () => {
   }
 
   const loadUserRSVPs = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setRsvpLoading(true)
-      console.log('🎫 Loading RSVP events for user:', user.id)
+      console.log('🎫 Loading RSVP events for user:', viewingUserId)
 
       const { data: rsvpData, error } = await supabase
         .from('event_rsvps')
@@ -910,8 +917,8 @@ const Profile: React.FC = () => {
         <div className="profile-container">
           <ProfileViewSelector currentView="profile" />
           <div className="profile-header">
-            <h1>Your Profile</h1>
-            <p>Manage your account and preferences</p>
+            <h1>{isOwnProfile ? 'Your Profile' : profileData?.full_name || 'Profile'}</h1>
+            <p>{isOwnProfile ? 'Manage your account and preferences' : 'View profile'}</p>
           </div>
 
           <div className="profile-content">
@@ -928,49 +935,53 @@ const Profile: React.FC = () => {
                     <span>{getInitials(profileData?.full_name || 'User')}</span>
                   </div>
                 )}
-                <div className="avatar-upload">
-                  <input
-                    type="file"
-                    id="profile-picture"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    style={{ display: 'none' }}
-                  />
-                  <label 
-                    htmlFor="profile-picture" 
-                    className="upload-button"
-                  >
-                    {uploadingImage ? '⏳' : '📷'}
-                  </label>
-                </div>
+                {isOwnProfile && (
+                  <div className="avatar-upload">
+                    <input
+                      type="file"
+                      id="profile-picture"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{ display: 'none' }}
+                    />
+                    <label 
+                      htmlFor="profile-picture" 
+                      className="upload-button"
+                    >
+                      {uploadingImage ? '⏳' : '📷'}
+                    </label>
+                  </div>
+                )}
               </div>
               
               <div className="profile-right-column">
                 <div className="profile-details">
                   <h2>{profileData?.full_name || 'User'}</h2>
-                  <p>{user.email}</p>
+                  {isOwnProfile && <p>{user.email}</p>}
                   <p className="member-since">
-                    Member since {formatMemberSince(user.created_at || '')}
+                    Member since {formatMemberSince(profileData?.created_at || user?.created_at || '')}
                   </p>
                 </div>
 
-                <div className="profile-actions">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowEditForm(true)}
-                    disabled={showEditForm}
-                  >
-                    Edit Profile
-                  </Button>
-                  <Button variant="secondary" onClick={handleSignOut}>
-                    Sign Out
-                  </Button>
-                </div>
+                {isOwnProfile && (
+                  <div className="profile-actions">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowEditForm(true)}
+                      disabled={showEditForm}
+                    >
+                      Edit Profile
+                    </Button>
+                    <Button variant="secondary" onClick={handleSignOut}>
+                      Sign Out
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {showEditForm && (
+          {showEditForm && isOwnProfile && (
             <div className="profile-form">
               <h3>Edit Profile</h3>
               <div className="form-group">
@@ -1096,25 +1107,29 @@ const Profile: React.FC = () => {
           )}
 
           <div className="profile-stats">
-            <h3>Your Activity</h3>
+            <h3>{isOwnProfile ? 'Your Activity' : 'Activity'}</h3>
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-number">{userEvents.length}</div>
                 <div className="stat-label">Events Created</div>
               </div>
-              <div className="stat-card">
-                <div className="stat-number">{rsvpEvents.filter(e => e.rsvp_status === 'going').length}</div>
-                <div className="stat-label">Events Going To</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{rsvpEvents.length}</div>
-                <div className="stat-label">Total RSVPs</div>
-              </div>
+              {isOwnProfile && (
+                <>
+                  <div className="stat-card">
+                    <div className="stat-number">{rsvpEvents.filter(e => e.rsvp_status === 'going').length}</div>
+                    <div className="stat-label">Events Going To</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-number">{rsvpEvents.length}</div>
+                    <div className="stat-label">Total RSVPs</div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Section Invitations */}
-          {sectionInvitations.length > 0 && (
+          {/* Section Invitations - Only show for own profile */}
+          {isOwnProfile && sectionInvitations.length > 0 && (
             <div style={{ marginTop: '2rem' }}>
               <h3 style={{ marginBottom: '1rem' }}>📨 Section Invitations ({sectionInvitations.length})</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1226,22 +1241,24 @@ const Profile: React.FC = () => {
                 className={activeTab === 'events' ? 'active' : ''}
                 onClick={() => setActiveTab('events')}
               >
-                🎫 My Events
+                🎫 {isOwnProfile ? 'My Events' : 'Events'}
               </button>
-              <button 
-                className={activeTab === 'groups' ? 'active' : ''}
-                onClick={() => setActiveTab('groups')}
-              >
-                📁 My Sections
-              </button>
+              {isOwnProfile && (
+                <button 
+                  className={activeTab === 'groups' ? 'active' : ''}
+                  onClick={() => setActiveTab('groups')}
+                >
+                  📁 My Sections
+                </button>
+              )}
             </div>
           </div>
 
-          {/* My Events Tab */}
+          {/* Events Tab */}
           {activeTab === 'events' && (
           <div className="user-rsvp-section" style={{ marginTop: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0 }}>My Events</h3>
+              <h3 style={{ margin: 0 }}>{isOwnProfile ? 'My Events' : 'Events'}</h3>
               <Button 
                 variant="secondary" 
                 size="small"
@@ -1253,7 +1270,7 @@ const Profile: React.FC = () => {
             
             {(rsvpLoading || eventsLoading || invitedLoading) ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                Loading your events...
+                Loading {isOwnProfile ? 'your' : ''} events...
               </div>
             ) : (() => {
               const allMyEvents = getAllMyEvents()
@@ -1269,7 +1286,9 @@ const Profile: React.FC = () => {
                     <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎫</div>
                     <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No events yet</h4>
                     <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                      RSVP to events, create your own, or get invited to see them here!
+                      {isOwnProfile 
+                        ? 'RSVP to events, create your own, or get invited to see them here!'
+                        : 'This user hasn\'t created any events yet.'}
                     </p>
                     <Button 
                       variant="primary"

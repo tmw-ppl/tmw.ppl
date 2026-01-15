@@ -11,10 +11,16 @@ const Header: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false)
   const [betaDropdownOpen, setBetaDropdownOpen] = useState(false)
   const betaDropdownRef = useRef<HTMLDivElement>(null)
+  const mobileMenuRef = useRef<HTMLElement>(null)
+  const menuToggleRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768)
+      // Close menu when switching to desktop
+      if (window.innerWidth > 768) {
+        setMobileMenuOpen(false)
+      }
     }
     
     checkMobile()
@@ -33,8 +39,39 @@ const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen)
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        mobileMenuOpen &&
+        mobileMenuRef.current &&
+        menuToggleRef.current &&
+        !mobileMenuRef.current.contains(event.target as Node) &&
+        !menuToggleRef.current.contains(event.target as Node)
+      ) {
+        setMobileMenuOpen(false)
+      }
+    }
+    if (mobileMenuOpen) {
+      // Use a small delay to prevent immediate closure
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside)
+        document.addEventListener('touchstart', handleClickOutside as any)
+      }, 100)
+      return () => {
+        clearTimeout(timeoutId)
+        document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('touchstart', handleClickOutside as any)
+      }
+    }
+  }, [mobileMenuOpen])
+
+  const toggleMobileMenu = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    setMobileMenuOpen(prev => !prev)
   }
 
   const isActive = (path: string) => {
@@ -249,7 +286,7 @@ const Header: React.FC = () => {
           <span>Section</span>
         </Link>
 
-        <nav style={navlinksStyles}>
+        <nav ref={mobileMenuRef} style={navlinksStyles} onClick={(e) => e.stopPropagation()}>
           <Link 
             href="/about" 
             style={getLinkStyles(isActive('/about'))}
@@ -398,11 +435,14 @@ const Header: React.FC = () => {
         </nav>
 
         <button
+          ref={menuToggleRef}
           style={menuToggleStyles}
           aria-label="Toggle navigation menu"
+          aria-expanded={mobileMenuOpen}
           onClick={toggleMobileMenu}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.1)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          type="button"
         >
           {mobileMenuOpen ? '✕' : '☰'}
         </button>

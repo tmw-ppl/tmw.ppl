@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import type { Idea, VoteType, IdeaFilters, CreateIdeaData } from '@/types/ideas'
@@ -9,7 +10,8 @@ import Chip from '@/components/ui/Chip'
 import AnimatedSection from '@/components/AnimatedSection'
 
 const Ideas: React.FC = () => {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [ideas, setIdeas] = useState<Idea[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +31,13 @@ const Ideas: React.FC = () => {
     category: 'general',
     tags: [],
   })
+
+  // Require authentication
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
 
   // Load ideas from Supabase
   const loadIdeas = async () => {
@@ -319,6 +328,11 @@ const Ideas: React.FC = () => {
   useEffect(() => {
     loadIdeas()
   }, [filters])
+
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
+  }
 
   if (loading) {
     return (

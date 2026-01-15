@@ -29,12 +29,12 @@ const Chip: React.FC<ChipProps> = ({ children, active = false, onClick, classNam
         opacity: 1,                    // opacity: 1
         background: 'var(--primary)',  // background: var(--primary)
         borderColor: 'var(--primary)', // border-color: var(--primary)
-        color: '#081018',              // color: #081018
+        color: 'white',                // color: white (better contrast)
       }
     } else {
       return {
         ...baseStyles,
-        opacity: 0.6,                  // opacity: 0.6
+        opacity: 0.7,                  // opacity: 0.7 (slightly more visible)
       }
     }
   }

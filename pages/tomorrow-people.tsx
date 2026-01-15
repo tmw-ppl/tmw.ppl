@@ -1,9 +1,26 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { useRouter } from 'next/router'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 import Card from '@/components/ui/Card'
 import AnimatedSection from '@/components/AnimatedSection'
 
 const TomorrowPeople: React.FC = () => {
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
+
+  // Require authentication
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
+
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
+  }
+
   return (
     <>
       {/* Hero Section */}
