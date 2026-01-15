@@ -14,7 +14,12 @@ const Header: React.FC = () => {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768)
+      // Use a wider threshold for "mobile" to include tablets
+      setIsMobile(window.innerWidth <= 1024)
+      if (window.innerWidth > 1024) {
+        setMobileMenuOpen(false)
+        setBetaDropdownOpen(false)
+      }
     }
     
     checkMobile()
@@ -22,19 +27,28 @@ const Header: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Close beta dropdown when clicking outside
+  // Close mobile menu on route change
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (betaDropdownRef.current && !betaDropdownRef.current.contains(event.target as Node)) {
-        setBetaDropdownOpen(false)
-      }
+    const handleRouteChange = () => {
+      setMobileMenuOpen(false)
+      setBetaDropdownOpen(false)
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    router.events.on('routeChangeComplete', handleRouteChange)
+    return () => router.events.off('routeChangeComplete', handleRouteChange)
+  }, [router])
 
-  const toggleMobileMenu = () => {
+  const toggleMobileMenu = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
     setMobileMenuOpen(!mobileMenuOpen)
+  }
+
+  // Handle link clicks to close menu
+  const handleLinkClick = () => {
+    setMobileMenuOpen(false)
+    setBetaDropdownOpen(false)
   }
 
   const isActive = (path: string) => {
@@ -42,17 +56,18 @@ const Header: React.FC = () => {
   }
 
   const isBetaActive = () => {
-    return ['/projects', '/ideas', '/section', '/wins', '/gallery'].includes(router.pathname)
+    return ['/projects', '/ideas', '/section', '/wins', '/gallery', '/tomorrow-people', '/chats'].includes(router.pathname)
   }
 
   // Header styles
   const headerStyles: React.CSSProperties = {
     position: 'sticky',
     top: 0,
-    zIndex: 100,
-    background: 'rgba(11, 18, 32, 0.8)',
-    backdropFilter: 'blur(10px)',
-    borderBottom: '1px solid var(--border)',
+    zIndex: 100000,
+    backgroundColor: 'var(--section-bg, #0b1220)',
+    backdropFilter: isMobile ? 'none' : 'blur(10px)', // Disable blur on mobile to avoid transparency issues
+    borderBottom: '1px solid var(--section-border, #1f2a44)',
+    width: '100%',
   }
 
   // Navigation container styles
@@ -60,8 +75,10 @@ const Header: React.FC = () => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '1rem 0',
-    gap: '1rem',
+    padding: '0.75rem 1.25rem',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    height: '70px',
   }
 
   // Brand/logo styles
@@ -71,302 +88,166 @@ const Header: React.FC = () => {
     gap: '0.75rem',
     fontWeight: 700,
     fontSize: '1.25rem',
-    color: 'var(--text)',
+    color: 'var(--section-text, #e6f0ff)',
     textDecoration: 'none',
-    transition: 'opacity 0.2s ease',
   }
 
-  // Logo styles
-  const logoStyles: React.CSSProperties = {
-    width: '34px',
-    height: '34px',
-    borderRadius: '10px',
-    background: 'linear-gradient(135deg, #8b5cf6, #3b82f6, #06b6d4, #8b5cf6)',
-    display: 'grid',
-    placeItems: 'center',
-    color: 'white',
-    boxShadow: 'var(--shadow)',
-  }
-
-  // Navigation links styles
-  const navlinksStyles: React.CSSProperties = {
-    display: 'flex',
+  // Navigation links styles for desktop
+  const desktopNavStyles: React.CSSProperties = {
+    display: isMobile ? 'none' : 'flex',
     alignItems: 'center',
     gap: '1.5rem',
-    listStyle: 'none',
-    // Mobile styles applied conditionally
-    ...(isMobile && !mobileMenuOpen ? {
-      position: 'fixed',
-      top: '100%',
-      left: 0,
-      right: 0,
-      background: 'var(--bg)',
-      borderTop: '1px solid var(--border)',
-      flexDirection: 'column',
-      padding: '1rem',
-      gap: '1rem',
-      transform: 'translateY(-100%)',
-      opacity: 0,
-      visibility: 'hidden',
-      transition: 'all 0.3s ease',
-    } : {}),
-    ...(isMobile && mobileMenuOpen ? {
-      position: 'fixed',
-      top: '100%',
-      left: 0,
-      right: 0,
-      background: 'var(--bg)',
-      borderTop: '1px solid var(--border)',
-      flexDirection: 'column',
-      padding: '1rem',
-      gap: '1rem',
-      transform: 'translateY(0)',
-      opacity: 1,
-      visibility: 'visible',
-      transition: 'all 0.3s ease',
-    } : {}),
   }
 
-  // Link styles
-  const getLinkStyles = (active: boolean): React.CSSProperties => ({
-    color: active ? 'var(--text)' : 'var(--muted)',
-    textDecoration: 'none',
-    fontWeight: 500,
-    transition: 'color 0.2s ease',
-  })
-
-  // Dropdown container styles
-  const dropdownContainerStyles: React.CSSProperties = {
-    position: 'relative',
-  }
-
-  // Dropdown trigger styles
-  const getDropdownTriggerStyles = (active: boolean): React.CSSProperties => ({
-    color: active ? 'var(--text)' : 'var(--muted)',
-    textDecoration: 'none',
-    fontWeight: 500,
-    transition: 'color 0.2s ease',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.25rem',
-    background: 'none',
-    border: 'none',
-    padding: 0,
-    fontSize: 'inherit',
-    fontFamily: 'inherit',
-  })
-
-  // Dropdown menu styles
-  const dropdownMenuStyles: React.CSSProperties = {
-    position: 'absolute',
-    top: 'calc(100% + 0.5rem)',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    background: 'var(--bg-2)',
-    border: '1px solid var(--border)',
-    borderRadius: '12px',
-    padding: '0.5rem',
-    minWidth: '140px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-    display: 'flex',
+  // Mobile menu styles
+  const mobileMenuStyles: React.CSSProperties = {
+    display: mobileMenuOpen ? 'flex' : 'none',
+    position: 'fixed',
+    top: '70px',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'var(--section-bg, #0b1220)',
     flexDirection: 'column',
+    padding: '1.5rem',
     gap: '0.25rem',
-    zIndex: 200,
+    zIndex: 100001, // Higher than header
+    overflowY: 'auto',
+    borderTop: '1px solid var(--section-border, #1f2a44)',
   }
 
-  // Dropdown item styles
-  const getDropdownItemStyles = (active: boolean): React.CSSProperties => ({
-    color: active ? 'var(--text)' : 'var(--muted)',
-    textDecoration: 'none',
-    padding: '0.5rem 0.75rem',
-    borderRadius: '8px',
-    transition: 'all 0.2s ease',
-    display: 'block',
-    fontSize: '0.9rem',
-    background: active ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
-  })
-
-  // Menu toggle styles
-  const menuToggleStyles: React.CSSProperties = {
-    display: isMobile ? 'block' : 'none',
-    background: 'none',
+  // Toggle button styles
+  const toggleBtnStyles: React.CSSProperties = {
+    display: isMobile ? 'flex' : 'none',
+    background: 'transparent',
     border: 'none',
     color: 'var(--text)',
-    fontSize: '1.5rem',
+    fontSize: '2rem',
     cursor: 'pointer',
     padding: '0.5rem',
+    zIndex: 200001, // Above mobile menu (which is 200000)
   }
 
+  // Link styling helper
+  const navLinkStyle = (path: string) => ({
+    color: isActive(path) ? 'var(--section-text, #e6f0ff)' : 'var(--section-muted, #b3c1d1)',
+    textDecoration: 'none',
+    fontWeight: 500,
+    padding: isMobile ? '1rem' : '0.5rem',
+    borderRadius: isMobile ? '8px' : '0',
+    background: isMobile && isActive(path) ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+    width: isMobile ? '100%' : 'auto',
+    display: 'block',
+  })
+
   return (
-    <header style={headerStyles}>
-      <div className="container" style={navStyles}>
-        <Link 
-          href="/" 
-          style={brandStyles}
-          aria-label="Section home"
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-        >
-          <span style={logoStyles} aria-hidden="true">
-            <img
-              src="/assets/section-logo-20260114.png"
-              alt="Section Logo"
-              width="20"
-              height="20"
-            />
-          </span>
-          <span>Section</span>
-        </Link>
+    <>
+      <header style={headerStyles}>
+        <div style={navStyles}>
+          <Link href="/" style={brandStyles} onClick={handleLinkClick}>
+            <img src="/assets/section-logo-20260115.png" alt="" width="32" height="32" />
+            <span>Section</span>
+          </Link>
 
-        <nav style={navlinksStyles}>
-          <Link 
-            href="/about" 
-            style={getLinkStyles(isActive('/about'))}
-            onClick={() => setMobileMenuOpen(false)}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = isActive('/about') ? 'var(--text)' : 'var(--muted)'}
-          >
-            About
-          </Link>
-          <Link
-            href="/events"
-            style={getLinkStyles(isActive('/events'))}
-            onClick={() => setMobileMenuOpen(false)}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = isActive('/events') ? 'var(--text)' : 'var(--muted)'}
-          >
-            Events
-          </Link>
-          <Link
-            href="/sections"
-            style={getLinkStyles(isActive('/sections'))}
-            onClick={() => setMobileMenuOpen(false)}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = isActive('/sections') ? 'var(--text)' : 'var(--muted)'}
-          >
-            Sections
-          </Link>
-          <Link 
-            href="/profiles" 
-            style={getLinkStyles(isActive('/profiles'))}
-            onClick={() => setMobileMenuOpen(false)}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = isActive('/profiles') ? 'var(--text)' : 'var(--muted)'}
-          >
-            Profiles
-          </Link>
-          <Link 
-            href="/chats" 
-            style={getLinkStyles(isActive('/chats'))}
-            onClick={() => setMobileMenuOpen(false)}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = isActive('/chats') ? 'var(--text)' : 'var(--muted)'}
-          >
-            Chats
-          </Link>
-          
-          {/* Beta Dropdown */}
-          <div style={dropdownContainerStyles} ref={betaDropdownRef}>
-            <button
-              style={getDropdownTriggerStyles(isBetaActive())}
-              onClick={() => setBetaDropdownOpen(!betaDropdownOpen)}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = isBetaActive() ? 'var(--text)' : 'var(--muted)'}
-            >
-              Beta
-              <span style={{ 
-                fontSize: '0.7rem', 
-                transition: 'transform 0.2s ease',
-                transform: betaDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                display: 'inline-block'
-              }}>▼</span>
-            </button>
-            {betaDropdownOpen && (
-              <div style={dropdownMenuStyles}>
-                <Link
-                  href="/projects"
-                  style={getDropdownItemStyles(isActive('/projects'))}
-                  onClick={() => { setMobileMenuOpen(false); setBetaDropdownOpen(false); }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'; e.currentTarget.style.color = 'var(--text)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/projects') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/projects') ? 'var(--text)' : 'var(--muted)'; }}
-                >
-                  Projects
-                </Link>
-                <Link
-                  href="/ideas"
-                  style={getDropdownItemStyles(isActive('/ideas'))}
-                  onClick={() => { setMobileMenuOpen(false); setBetaDropdownOpen(false); }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'; e.currentTarget.style.color = 'var(--text)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/ideas') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/ideas') ? 'var(--text)' : 'var(--muted)'; }}
-                >
-                  Ideas
-                </Link>
-                <Link
-                  href="/section"
-                  style={getDropdownItemStyles(isActive('/section'))}
-                  onClick={() => { setMobileMenuOpen(false); setBetaDropdownOpen(false); }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'; e.currentTarget.style.color = 'var(--text)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/section') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/section') ? 'var(--text)' : 'var(--muted)'; }}
-                >
-                  Section
-                </Link>
-                <Link
-                  href="/wins"
-                  style={getDropdownItemStyles(isActive('/wins'))}
-                  onClick={() => { setMobileMenuOpen(false); setBetaDropdownOpen(false); }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'; e.currentTarget.style.color = 'var(--text)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/wins') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/wins') ? 'var(--text)' : 'var(--muted)'; }}
-                >
-                  Wins
-                </Link>
-                <Link
-                  href="/gallery"
-                  style={getDropdownItemStyles(isActive('/gallery'))}
-                  onClick={() => { setMobileMenuOpen(false); setBetaDropdownOpen(false); }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)'; e.currentTarget.style.color = 'var(--text)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = isActive('/gallery') ? 'rgba(139, 92, 246, 0.1)' : 'transparent'; e.currentTarget.style.color = isActive('/gallery') ? 'var(--text)' : 'var(--muted)'; }}
-                >
-                  Gallery
-                </Link>
-              </div>
+          {/* Desktop Nav */}
+          <nav style={desktopNavStyles}>
+            <Link href="/about" style={navLinkStyle('/about')}>About</Link>
+            <Link href="/events" style={navLinkStyle('/events')}>Events</Link>
+            <Link href="/sections" style={navLinkStyle('/sections')}>Sections</Link>
+            <Link href="/profiles" style={navLinkStyle('/profiles')}>Profiles</Link>
+            
+            <div style={{ position: 'relative' }} ref={betaDropdownRef}>
+              <button 
+                onClick={() => setBetaDropdownOpen(!betaDropdownOpen)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: isBetaActive() ? 'var(--text)' : 'var(--muted)',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
+                }}
+              >
+                Beta {betaDropdownOpen ? '▴' : '▾'}
+              </button>
+              {betaDropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  background: 'var(--bg-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '0.5rem',
+                  minWidth: '180px',
+                  marginTop: '0.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem'
+                }}>
+                  <Link href="/chats" style={navLinkStyle('/chats')} onClick={() => setBetaDropdownOpen(false)}>Chats</Link>
+                  <Link href="/projects" style={navLinkStyle('/projects')} onClick={() => setBetaDropdownOpen(false)}>Projects</Link>
+                  <Link href="/ideas" style={navLinkStyle('/ideas')} onClick={() => setBetaDropdownOpen(false)}>Ideas</Link>
+                  <Link href="/section" style={navLinkStyle('/section')} onClick={() => setBetaDropdownOpen(false)}>Section</Link>
+                  <Link href="/wins" style={navLinkStyle('/wins')} onClick={() => setBetaDropdownOpen(false)}>Wins</Link>
+                  <Link href="/gallery" style={navLinkStyle('/gallery')} onClick={() => setBetaDropdownOpen(false)}>Gallery</Link>
+                  <Link href="/tomorrow-people" style={navLinkStyle('/tomorrow-people')} onClick={() => setBetaDropdownOpen(false)}>The Tomorrow People</Link>
+                </div>
+              )}
+            </div>
+
+            {loading ? (
+              <span style={{ color: 'var(--muted)' }}>...</span>
+            ) : user ? (
+              <Link href="/profile"><Button variant="primary" size="small">Profile</Button></Link>
+            ) : (
+              <Link href="/auth"><Button variant="primary" size="small">Join</Button></Link>
             )}
-          </div>
+          </nav>
 
-          {loading ? (
-            <Button variant="primary" style={{ opacity: 0.6 }}>
-              Loading...
-            </Button>
-          ) : user ? (
-            <Button
-              variant="primary"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Link href="/profile" style={{ color: 'inherit', textDecoration: 'none' }}>
-                👤 Profile
-              </Link>
-            </Button>
+          {/* Mobile Toggle */}
+          <button style={toggleBtnStyles} onClick={toggleMobileMenu}>
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Menu - Moved outside header to avoid stacking context issues with backdrop-filter */}
+      <nav 
+        style={mobileMenuStyles}
+        className={`mobile-nav-menu ${mobileMenuOpen ? 'open' : ''}`}
+      >
+        <Link href="/about" style={navLinkStyle('/about')} onClick={handleLinkClick}>About</Link>
+        <Link href="/events" style={navLinkStyle('/events')} onClick={handleLinkClick}>Events</Link>
+        <Link href="/sections" style={navLinkStyle('/sections')} onClick={handleLinkClick}>Sections</Link>
+        <Link href="/profiles" style={navLinkStyle('/profiles')} onClick={handleLinkClick}>Profiles</Link>
+        
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', padding: '0 1rem 0.5rem' }}>BETA FEATURES</p>
+          <Link href="/chats" style={navLinkStyle('/chats')} onClick={handleLinkClick}>Chats</Link>
+          <Link href="/projects" style={navLinkStyle('/projects')} onClick={handleLinkClick}>Projects</Link>
+          <Link href="/ideas" style={navLinkStyle('/ideas')} onClick={handleLinkClick}>Ideas</Link>
+          <Link href="/section" style={navLinkStyle('/section')} onClick={handleLinkClick}>Section</Link>
+          <Link href="/wins" style={navLinkStyle('/wins')} onClick={handleLinkClick}>Wins</Link>
+          <Link href="/gallery" style={navLinkStyle('/gallery')} onClick={handleLinkClick}>Gallery</Link>
+          <Link href="/tomorrow-people" style={navLinkStyle('/tomorrow-people')} onClick={handleLinkClick}>The Tomorrow People</Link>
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
+          {user ? (
+            <Link href="/profile" onClick={handleLinkClick} style={{ textDecoration: 'none' }}>
+              <Button variant="primary" fullWidth>My Profile</Button>
+            </Link>
           ) : (
-            <Button
-              variant="primary"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Link href="/auth" style={{ color: 'inherit', textDecoration: 'none' }}>
-                🚀 Join Us
-              </Link>
-            </Button>
+            <Link href="/auth" onClick={handleLinkClick} style={{ textDecoration: 'none' }}>
+              <Button variant="primary" fullWidth>Sign In / Join</Button>
+            </Link>
           )}
-        </nav>
-
-        <button
-          style={menuToggleStyles}
-          aria-label="Toggle navigation menu"
-          onClick={toggleMobileMenu}
-        >
-          ☰
-        </button>
-      </div>
-    </header>
+        </div>
+      </nav>
+    </>
   )
 }
 

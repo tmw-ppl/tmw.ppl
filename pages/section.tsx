@@ -13,7 +13,7 @@ import TypingIndicator from '@/components/channels/TypingIndicator'
 import MessageSearch from '@/components/channels/MessageSearch'
 
 const Section: React.FC = () => {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null)
   const [channels, setChannels] = useState<Channel[]>([])
@@ -35,6 +35,14 @@ const Section: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lastTypingRef = useRef<number>(0)
   const channelNameInputRef = useRef<HTMLInputElement>(null)
+
+  // Require authentication
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth')
+      return
+    }
+  }, [user, authLoading, router])
 
   // Ensure user has a profile before loading channels
   const ensureProfile = async () => {
@@ -75,7 +83,6 @@ const Section: React.FC = () => {
 
   useEffect(() => {
     if (!user) {
-      router.push('/auth')
       return
     }
 

@@ -30,13 +30,13 @@ const Footer: React.FC = () => {
 
   // Logo styles (matching header logo)
   const logoStyles: React.CSSProperties = {
-    width: '34px',
-    height: '34px',
+    width: '40px',
+    height: '40px',
     borderRadius: '10px',
-    background: 'linear-gradient(135deg, #8b5cf6, #3b82f6, #06b6d4, #8b5cf6)',
-    display: 'grid',
-    placeItems: 'center',
-    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
     boxShadow: 'var(--shadow)',
   }
 
@@ -59,10 +59,15 @@ const Footer: React.FC = () => {
         <div style={logoSectionStyles}>
           <span style={logoStyles} aria-hidden="true">
             <img
-              src="/assets/section-logo-20260114.png"
+              src="/assets/section-logo-20260115.png"
               alt="Section Logo"
-              width="20"
-              height="20"
+              width="40"
+              height="40"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              }}
             />
           </span>
           <span>Section</span>

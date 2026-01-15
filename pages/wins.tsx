@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import { useAuth } from '@/contexts/AuthContext'
 import Layout from '../src/components/Layout'
 import Card from '../src/components/ui/Card'
 import Chip from '../src/components/ui/Chip'
@@ -252,10 +254,24 @@ const categoryLabels: Record<Win['category'], string> = {
 }
 
 export default function Wins() {
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [filter, setFilter] = useState<Win['category'] | 'all'>('all')
   const filteredWins = filter === 'all' 
     ? mockWins 
     : mockWins.filter(win => win.category === filter)
+
+  // Require authentication
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
+
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
+  }
 
   const getRankBadge = (rank: number) => {
     if (rank === 1) return '🥇'

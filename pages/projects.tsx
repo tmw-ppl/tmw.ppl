@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
@@ -37,7 +38,8 @@ interface Project {
 }
 
 const Projects: React.FC = () => {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,9 +48,18 @@ const Projects: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState('all')
   const [sortBy, setSortBy] = useState('newest') // 'newest', 'popular', 'funded'
 
+  // Require authentication
   useEffect(() => {
-    loadProjects()
-  }, [])
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
+
+  useEffect(() => {
+    if (user) {
+      loadProjects()
+    }
+  }, [user])
 
   useEffect(() => {
     filterProjects()
@@ -234,6 +245,11 @@ const Projects: React.FC = () => {
     { key: 'fundraising', label: 'Fundraising' },
     { key: 'featured', label: 'Featured' }
   ]
+
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
+  }
 
   if (loading) {
     return (

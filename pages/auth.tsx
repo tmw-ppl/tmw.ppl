@@ -63,9 +63,9 @@ const Auth: React.FC = () => {
         } else {
           localStorage.removeItem('tmw-ppl-remembered-email')
         }
-        console.log('Sign in successful, redirecting to profile...')
+        console.log('Sign in successful, redirecting to events...')
         setTimeout(() => {
-          router.push('/profile')
+          router.push('/events')
         }, 500)
       }
     } catch (err) {

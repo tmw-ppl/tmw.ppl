@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import { useAuth } from '@/contexts/AuthContext'
 import Layout from '../src/components/Layout'
 import Card from '../src/components/ui/Card'
 
@@ -91,8 +93,22 @@ const mockArtPieces: ArtPiece[] = [
 ]
 
 export default function Gallery() {
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [selectedPiece, setSelectedPiece] = useState<ArtPiece | null>(null)
   const [filter, setFilter] = useState<'all' | 'available' | 'sold'>('all')
+
+  // Require authentication
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth')
+    }
+  }, [user, authLoading, router])
+
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
+  }
 
   const filteredPieces = mockArtPieces.filter(piece => {
     if (filter === 'available') return piece.available

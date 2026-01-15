@@ -1,6 +1,5 @@
 import React from 'react'
 import Link from 'next/link'
-import Card from '@/components/ui/Card'
 import AnimatedSection from '@/components/AnimatedSection'
 
 const Home: React.FC = () => {
@@ -11,12 +10,12 @@ const Home: React.FC = () => {
         <div className="container hero-grid">
           <AnimatedSection animationType="slide-right">
             <div>
-              <div className="kicker">A creative tribe for the future</div>
-              <h1>Build, learn, and play with people who make tomorrow.</h1>
+              <div className="kicker">Everybody in your section</div>
+              <h1>Create groups and organize events to meet up in person.</h1>
               <p className="lead">
-                Tomorrow People is a community of builders, artists, and
-                explorers. We mix technology, culture, and real world gatherings
-                to prototype better ways to live and create together.
+                Section is a platform for people to create and organize groups and events 
+                to meet up in person and connect offline. Build meaningful communities, 
+                discover local gatherings, and turn digital connections into real-world relationships.
               </p>
               <div
                 style={{
@@ -27,7 +26,7 @@ const Home: React.FC = () => {
                 }}
               >
                 <Link href="/auth" className="btn primary pulse-glow">
-                  Join Tomorrow People
+                  Get Started
                 </Link>
                 <Link href="/about" className="btn">
                   Learn More
@@ -55,18 +54,16 @@ const Home: React.FC = () => {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
-                      <path d="M9 12l2 2 4-4" />
-                      <path d="M21 12c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1z" />
-                      <path d="M3 12c-.552 0-1-.448-1-1s.448-1 1-1 1 .448 1 1-.448 1-1 1z" />
-                      <path d="M12 3c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 1 .448 1 1z" />
-                      <path d="M12 21c0-.552.448-1 1-1s1 .448 1 1-.448 1-1 1-1-.448-1-1z" />
-                      <circle cx="12" cy="12" r="3" />
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
                   </div>
                   <div>
-                    <strong>Experiments over theory</strong>
+                    <strong>Create Groups</strong>
                     <div style={{ color: 'var(--muted)', fontSize: '14px' }}>
-                      IRL events, maker nights, creator labs
+                      Start communities around any interest or cause
                     </div>
                   </div>
                 </div>
@@ -84,15 +81,16 @@ const Home: React.FC = () => {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
-                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                      <path d="M2 17l10 5 10-5" />
-                      <path d="M2 12l10 5 10-5" />
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
                     </svg>
                   </div>
                   <div>
-                    <strong>Tools that level you up</strong>
+                    <strong>Organize Events</strong>
                     <div style={{ color: 'var(--muted)', fontSize: '14px' }}>
-                      AI, design, video, rapid prototyping
+                      Plan meetups, workshops, and in-person gatherings
                     </div>
                   </div>
                 </div>
@@ -110,32 +108,30 @@ const Home: React.FC = () => {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                      <circle cx="8.5" cy="7" r="4" />
-                      <path d="M20 8v6" />
-                      <path d="M23 11h-6" />
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
                     </svg>
                   </div>
                   <div>
-                    <strong>People who show up</strong>
+                    <strong>Connect Offline</strong>
                     <div style={{ color: 'var(--muted)', fontSize: '14px' }}>
-                      Friendly, ambitious, and collaborative
+                      Turn online connections into real-world friendships
                     </div>
                   </div>
                 </div>
               </div>
               <div className="statgrid">
                 <div className="stat">
-                  <h3>10k+</h3>
-                  <p>Hours creating</p>
+                  <h3>Create</h3>
+                  <p>Your own section</p>
                 </div>
                 <div className="stat">
-                  <h3>100+</h3>
-                  <p>Meetups and jams</p>
+                  <h3>Organize</h3>
+                  <p>In-person events</p>
                 </div>
                 <div className="stat">
-                  <h3>1</h3>
-                  <p>Wild idea at a time</p>
+                  <h3>Connect</h3>
+                  <p>With your community</p>
                 </div>
               </div>
             </aside>
@@ -148,14 +144,13 @@ const Home: React.FC = () => {
         <div className="container">
           <AnimatedSection animationType="fade">
             <div style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
-              <h2 className="section-title">What We're About</h2>
+              <h2 className="section-title">How It Works</h2>
               <p className="section-sub">
-                We're building a community where creators, builders, and explorers come together 
-                to prototype the future. Through hands-on events, collaborative projects, and 
-                shared learning, we turn ideas into reality.
+                Getting started is simple. Create a section, invite members, and start organizing events. 
+                It's all about bringing people together in real life.
               </p>
               <Link href="/about" className="btn secondary" style={{ marginTop: '1rem' }}>
-                Learn More About Us
+                Learn More About Section
               </Link>
             </div>
           </AnimatedSection>
@@ -168,15 +163,15 @@ const Home: React.FC = () => {
           <AnimatedSection animationType="fade">
             <div className="cta">
               <div>
-                <h3 style={{ margin: '0 0 6px' }}>Ready to Build Tomorrow?</h3>
+                <h3 style={{ margin: '0 0 6px' }}>Ready to Get Started?</h3>
                 <p>
-                  Join our community of creators, builders, and explorers. 
-                  Access exclusive events and be part of something bigger.
+                  Join Section today and start building communities, organizing events, 
+                  and connecting with people offline.
                 </p>
               </div>
               <div>
                 <Link href="/auth" className="btn primary">
-                  Join Tomorrow People
+                  Create Your Account
                 </Link>
               </div>
             </div>

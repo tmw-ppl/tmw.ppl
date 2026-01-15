@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import { supabase, type Channel, type ChannelMessage } from '@/lib/supabase'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -16,6 +17,7 @@ type ChatFilter = 'all' | 'sections' | 'events'
 const Chats: React.FC = () => {
   const { user } = useAuth()
   const router = useRouter()
+  const { showSuccess, showError } = useToast()
   const [channels, setChannels] = useState<Channel[]>([])
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null)
   const [messages, setMessages] = useState<ChannelMessage[]>([])
@@ -25,6 +27,8 @@ const Chats: React.FC = () => {
   const [filter, setFilter] = useState<ChatFilter>('all')
   const [subscription, setSubscription] = useState<any>(null)
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
+  const [sectionInvitations, setSectionInvitations] = useState<any[]>([])
+  const [invitationsLoading, setInvitationsLoading] = useState(true)
 
   useEffect(() => {
     if (!user) {
@@ -32,6 +36,7 @@ const Chats: React.FC = () => {
       return
     }
     loadChannels()
+    loadSectionInvitations()
   }, [user, filter])
 
   useEffect(() => {
@@ -224,7 +229,7 @@ const Chats: React.FC = () => {
       loadChannels()
     } catch (err: any) {
       console.error('Error sending message:', err)
-      alert('Failed to send message: ' + (err.message || 'Unknown error'))
+      showError('Failed to send message: ' + (err.message || 'Unknown error'))
     }
   }
 
@@ -259,6 +264,85 @@ const Chats: React.FC = () => {
       return `/events/${ch.event.id}`
     }
     return null
+  }
+
+  const loadSectionInvitations = async () => {
+    if (!user) return
+
+    try {
+      setInvitationsLoading(true)
+      const { data, error } = await supabase
+        .from('section_invitations')
+        .select(`
+          id,
+          section_id,
+          invited_by,
+          message,
+          invited_at,
+          status,
+          section:sections(id, name, description, image_url, creator_id),
+          inviter:profiles!invited_by(id, full_name, profile_picture_url)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('invited_at', { ascending: false })
+        .limit(5)
+
+      if (error) throw error
+
+      setSectionInvitations((data || []) as any[])
+    } catch (err: any) {
+      console.error('Error loading section invitations:', err)
+    } finally {
+      setInvitationsLoading(false)
+    }
+  }
+
+  const handleAcceptInvitation = async (invitationId: string, sectionId: string) => {
+    if (!user) return
+
+    try {
+      const { error } = await (supabase
+        .from('section_invitations') as any)
+        .update({ 
+          status: 'accepted',
+          responded_at: new Date().toISOString()
+        })
+        .eq('id', invitationId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Refresh data
+      await loadSectionInvitations()
+      await loadChannels()
+      showSuccess('Invitation accepted! You are now a member of this section.')
+    } catch (err: any) {
+      console.error('Error accepting invitation:', err)
+      showError('Failed to accept invitation: ' + (err.message || 'Unknown error'))
+    }
+  }
+
+  const handleDeclineInvitation = async (invitationId: string) => {
+    if (!user) return
+
+    try {
+      const { error } = await (supabase
+        .from('section_invitations') as any)
+        .update({ 
+          status: 'declined',
+          responded_at: new Date().toISOString()
+        })
+        .eq('id', invitationId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      await loadSectionInvitations()
+    } catch (err: any) {
+      console.error('Error declining invitation:', err)
+      showError('Failed to decline invitation: ' + (err.message || 'Unknown error'))
+    }
   }
 
   if (loading) {
@@ -308,6 +392,67 @@ const Chats: React.FC = () => {
             </Button>
           </div>
         </div>
+
+        {/* Section Invitations */}
+        {sectionInvitations.length > 0 && (
+          <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+            <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              📨 Invitations ({sectionInvitations.length})
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {sectionInvitations.map((invitation: any) => {
+                const section = invitation.section
+                const inviter = invitation.inviter
+                
+                return (
+                  <div
+                    key={invitation.id}
+                    style={{
+                      background: 'var(--bg-2)',
+                      border: '1px solid var(--primary)',
+                      borderRadius: '8px',
+                      padding: '0.75rem',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {section?.name || 'Unknown Section'}
+                    </div>
+                    <div style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                      Invited by {inviter?.full_name || 'Someone'}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <Button
+                        variant="primary"
+                        size="small"
+                        onClick={() => handleAcceptInvitation(invitation.id, section.id)}
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      >
+                        ✓
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => handleDeclineInvitation(invitation.id)}
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      >
+                        ✕
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => router.push(`/sections/${section.id}`)}
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Channel List */}
         <div style={{ flex: 1, overflowY: 'auto' }}>

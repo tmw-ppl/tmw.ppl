@@ -20,9 +20,15 @@ const EventComments: React.FC<EventCommentsProps> = ({ eventId, canAccess }) => 
   const [loadError, setLoadError] = useState<string | null>(null)
   const commentsEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const previousCommentCountRef = useRef<number>(0)
+  const isInitialLoadRef = useRef<boolean>(true)
+  const hasScrolledRef = useRef<boolean>(false)
 
   useEffect(() => {
     if (canAccess && eventId) {
+      isInitialLoadRef.current = true
+      previousCommentCountRef.current = 0
+      hasScrolledRef.current = false
       loadComments()
     }
   }, [eventId, canAccess])
@@ -60,8 +66,41 @@ const EventComments: React.FC<EventCommentsProps> = ({ eventId, canAccess }) => 
   }, [eventId, canAccess])
 
   useEffect(() => {
-    // Auto-scroll to bottom when new comments arrive
-    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Skip all scrolling on initial load - this prevents page from scrolling to bottom
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false
+      previousCommentCountRef.current = comments.length
+      hasScrolledRef.current = false
+      // Explicitly prevent any scrolling on initial load
+      return
+    }
+
+    // Only scroll if comment count increased (new comment added) and we haven't already scrolled
+    if (comments.length > previousCommentCountRef.current && !hasScrolledRef.current) {
+      // Small delay to ensure DOM is updated, and only scroll within the comments container
+      setTimeout(() => {
+        if (commentsEndRef.current) {
+          // Find the scrollable comments container by traversing up the DOM
+          let parent = commentsEndRef.current.parentElement
+          while (parent) {
+            const style = window.getComputedStyle(parent)
+            if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+              // Manually scroll the container instead of using scrollIntoView on the page
+              parent.scrollTop = parent.scrollHeight
+              hasScrolledRef.current = true
+              return
+            }
+            parent = parent.parentElement
+          }
+          // If no scrollable container found, don't scroll at all
+          hasScrolledRef.current = true
+        }
+      }, 100)
+      previousCommentCountRef.current = comments.length
+    } else if (comments.length <= previousCommentCountRef.current) {
+      // Reset scroll flag if comments were deleted
+      hasScrolledRef.current = false
+    }
   }, [comments])
 
   const loadComments = async () => {
@@ -347,6 +386,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxHeight: '400px',
     overflowY: 'auto',
     marginBottom: '1rem',
+    position: 'relative',
   },
   commentItem: {
     display: 'flex',

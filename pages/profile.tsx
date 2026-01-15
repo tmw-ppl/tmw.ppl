@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import ProfileViewSelector from '@/components/ProfileViewSelector'
@@ -98,8 +99,10 @@ interface Subscription {
 }
 
 const Profile: React.FC = () => {
-  const { user, signOut } = useAuth()
+  const { user, signOut, loading: authLoading } = useAuth()
   const router = useRouter()
+  const { id } = router.query
+  const { showSuccess, showError } = useToast()
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [userEvents, setUserEvents] = useState<UserEvent[]>([])
   const [rsvpEvents, setRsvpEvents] = useState<RSVPEvent[]>([])
@@ -124,21 +127,47 @@ const Profile: React.FC = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [activeTab, setActiveTab] = useState<'events' | 'groups'>('events')
+  const [sectionInvitations, setSectionInvitations] = useState<any[]>([])
+  const [invitationsLoading, setInvitationsLoading] = useState(true)
 
+  // Determine which user's profile to show - wait for router to be ready
+  const viewingUserId = useMemo(() => {
+    if (router.isReady && id && typeof id === 'string') {
+      return id
+    }
+    return user?.id || null
+  }, [router.isReady, id, user?.id])
+  
+  const isOwnProfile = useMemo(() => {
+    if (!router.isReady) return true // Default to own profile until router is ready
+    if (!id) return true // No id param means own profile
+    return user && id === user.id
+  }, [router.isReady, id, user?.id])
+
+  // Require authentication
   useEffect(() => {
-    if (!user) {
+    if (!authLoading && !user) {
       router.push('/auth')
       return
     }
-    loadUserProfile()
-    loadUserEvents()
-    loadUserRSVPs()
-    loadInvitedEvents()
-    loadSubscribedEvents()
-  }, [user, router])
+    // Wait for router to be ready before loading profile data
+    if (!router.isReady) {
+      return
+    }
+    if (user && viewingUserId) {
+      loadUserProfile()
+      loadUserEvents()
+      if (isOwnProfile) {
+        loadUserRSVPs()
+        loadInvitedEvents()
+        loadSubscribedEvents()
+        loadSectionInvitations()
+      }
+    }
+  }, [user, authLoading, router.isReady, router.query.id, viewingUserId, isOwnProfile])
 
   const loadUserProfile = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setLoading(true)
@@ -147,7 +176,7 @@ const Profile: React.FC = () => {
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', viewingUserId)
         .single()
 
       if (error && error.code !== 'PGRST116') {
@@ -194,16 +223,16 @@ const Profile: React.FC = () => {
   }
 
   const loadUserEvents = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setEventsLoading(true)
-      console.log('🎪 Loading events for user:', user.id)
+      console.log('🎪 Loading events for user:', viewingUserId)
 
       const { data: events, error } = await supabase
         .from('events')
         .select('*')
-        .eq('created_by', user.id)
+        .eq('created_by', viewingUserId)
         .order('date', { ascending: false })
 
       if (error) {
@@ -242,11 +271,11 @@ const Profile: React.FC = () => {
   }
 
   const loadUserRSVPs = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setRsvpLoading(true)
-      console.log('🎫 Loading RSVP events for user:', user.id)
+      console.log('🎫 Loading RSVP events for user:', viewingUserId)
 
       const { data: rsvpData, error } = await supabase
         .from('event_rsvps')
@@ -526,6 +555,85 @@ const Profile: React.FC = () => {
     }
   }
 
+  const loadSectionInvitations = async () => {
+    if (!user) return
+
+    try {
+      setInvitationsLoading(true)
+      const { data, error } = await supabase
+        .from('section_invitations')
+        .select(`
+          id,
+          section_id,
+          invited_by,
+          message,
+          invited_at,
+          status,
+          section:sections(id, name, description, image_url, creator_id),
+          inviter:profiles!invited_by(id, full_name, profile_picture_url)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('invited_at', { ascending: false })
+
+      if (error) throw error
+
+      setSectionInvitations((data || []) as any[])
+    } catch (err: any) {
+      console.error('Error loading section invitations:', err)
+    } finally {
+      setInvitationsLoading(false)
+    }
+  }
+
+  const handleAcceptInvitation = async (invitationId: string, sectionId: string) => {
+    if (!user) return
+
+    try {
+      const { error } = await (supabase
+        .from('section_invitations') as any)
+        .update({ 
+          status: 'accepted',
+          responded_at: new Date().toISOString()
+        })
+        .eq('id', invitationId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Refresh data
+      await loadSectionInvitations()
+      await loadSubscribedEvents()
+      showSuccess('Invitation accepted! You are now a member of this section.')
+    } catch (err: any) {
+      console.error('Error accepting invitation:', err)
+      showError('Failed to accept invitation: ' + (err.message || 'Unknown error'))
+    }
+  }
+
+  const handleDeclineInvitation = async (invitationId: string) => {
+    if (!user) return
+
+    try {
+      const { error } = await (supabase
+        .from('section_invitations') as any)
+        .update({ 
+          status: 'declined',
+          responded_at: new Date().toISOString()
+        })
+        .eq('id', invitationId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Refresh invitations
+      await loadSectionInvitations()
+    } catch (err: any) {
+      console.error('Error declining invitation:', err)
+      showError('Failed to decline invitation: ' + (err.message || 'Unknown error'))
+    }
+  }
+
   const handleUnsubscribe = async (sectionId: string) => {
     if (!user) return
 
@@ -538,7 +646,7 @@ const Profile: React.FC = () => {
 
       if (error) {
         console.error('Error leaving section:', error)
-        alert('Failed to leave section. Please try again.')
+        showError('Failed to leave section. Please try again.')
         return
       }
 
@@ -794,6 +902,11 @@ const Profile: React.FC = () => {
     return null
   }
 
+  // Show nothing while checking auth or redirecting
+  if (authLoading || !user) {
+    return null
+  }
+
   if (loading) {
     return (
       <section className="profile-section">
@@ -818,8 +931,8 @@ const Profile: React.FC = () => {
         <div className="profile-container">
           <ProfileViewSelector currentView="profile" />
           <div className="profile-header">
-            <h1>Your Profile</h1>
-            <p>Manage your account and preferences</p>
+            <h1>{isOwnProfile ? 'Your Profile' : profileData?.full_name || 'Profile'}</h1>
+            <p>{isOwnProfile ? 'Manage your account and preferences' : 'View profile'}</p>
           </div>
 
           <div className="profile-content">
@@ -836,49 +949,53 @@ const Profile: React.FC = () => {
                     <span>{getInitials(profileData?.full_name || 'User')}</span>
                   </div>
                 )}
-                <div className="avatar-upload">
-                  <input
-                    type="file"
-                    id="profile-picture"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    style={{ display: 'none' }}
-                  />
-                  <label 
-                    htmlFor="profile-picture" 
-                    className="upload-button"
-                  >
-                    {uploadingImage ? '⏳' : '📷'}
-                  </label>
-                </div>
+                {isOwnProfile && (
+                  <div className="avatar-upload">
+                    <input
+                      type="file"
+                      id="profile-picture"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{ display: 'none' }}
+                    />
+                    <label 
+                      htmlFor="profile-picture" 
+                      className="upload-button"
+                    >
+                      {uploadingImage ? '⏳' : '📷'}
+                    </label>
+                  </div>
+                )}
               </div>
               
               <div className="profile-right-column">
                 <div className="profile-details">
                   <h2>{profileData?.full_name || 'User'}</h2>
-                  <p>{user.email}</p>
+                  {isOwnProfile && <p>{user.email}</p>}
                   <p className="member-since">
-                    Member since {formatMemberSince(user.created_at || '')}
+                    Member since {formatMemberSince(profileData?.created_at || user?.created_at || '')}
                   </p>
                 </div>
 
-                <div className="profile-actions">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowEditForm(true)}
-                    disabled={showEditForm}
-                  >
-                    Edit Profile
-                  </Button>
-                  <Button variant="secondary" onClick={handleSignOut}>
-                    Sign Out
-                  </Button>
-                </div>
+                {isOwnProfile && (
+                  <div className="profile-actions">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowEditForm(true)}
+                      disabled={showEditForm}
+                    >
+                      Edit Profile
+                    </Button>
+                    <Button variant="secondary" onClick={handleSignOut}>
+                      Sign Out
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {showEditForm && (
+          {showEditForm && isOwnProfile && (
             <div className="profile-form">
               <h3>Edit Profile</h3>
               <div className="form-group">
@@ -1004,22 +1121,126 @@ const Profile: React.FC = () => {
           )}
 
           <div className="profile-stats">
-            <h3>Your Activity</h3>
+            <h3>{isOwnProfile ? 'Your Activity' : 'Activity'}</h3>
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-number">{userEvents.length}</div>
                 <div className="stat-label">Events Created</div>
               </div>
-              <div className="stat-card">
-                <div className="stat-number">{rsvpEvents.filter(e => e.rsvp_status === 'going').length}</div>
-                <div className="stat-label">Events Going To</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{rsvpEvents.length}</div>
-                <div className="stat-label">Total RSVPs</div>
-              </div>
+              {isOwnProfile && (
+                <>
+                  <div className="stat-card">
+                    <div className="stat-number">{rsvpEvents.filter(e => e.rsvp_status === 'going').length}</div>
+                    <div className="stat-label">Events Going To</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-number">{rsvpEvents.length}</div>
+                    <div className="stat-label">Total RSVPs</div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
+
+          {/* Section Invitations - Only show for own profile */}
+          {isOwnProfile && sectionInvitations.length > 0 && (
+            <div style={{ marginTop: '2rem' }}>
+              <h3 style={{ marginBottom: '1rem' }}>📨 Section Invitations ({sectionInvitations.length})</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {sectionInvitations.map((invitation: any) => {
+                  const section = invitation.section
+                  const inviter = invitation.inviter
+                  
+                  return (
+                    <div
+                      key={invitation.id}
+                      style={{
+                        background: 'var(--card)',
+                        border: '2px solid var(--primary)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        display: 'flex',
+                        gap: '1rem',
+                        alignItems: 'flex-start'
+                      }}
+                    >
+                      {section?.image_url ? (
+                        <img
+                          src={section.image_url}
+                          alt={section.name}
+                          style={{
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '8px',
+                            objectFit: 'cover',
+                            flexShrink: 0
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '8px',
+                          background: 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.5rem',
+                          flexShrink: 0
+                        }}>
+                          📁
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>
+                          {section?.name || 'Unknown Section'}
+                        </h4>
+                        <p style={{ margin: '0 0 0.5rem 0', color: 'var(--muted)', fontSize: '0.9rem' }}>
+                          {inviter?.full_name || 'Someone'} invited you to join this section
+                        </p>
+                        {invitation.message && (
+                          <p style={{ 
+                            margin: '0 0 0.75rem 0', 
+                            color: 'var(--text)', 
+                            fontSize: '0.9rem',
+                            fontStyle: 'italic',
+                            padding: '0.75rem',
+                            background: 'var(--bg-2)',
+                            borderRadius: '6px'
+                          }}>
+                            "{invitation.message}"
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                          <Button
+                            variant="primary"
+                            size="small"
+                            onClick={() => handleAcceptInvitation(invitation.id, section.id)}
+                          >
+                            ✓ Accept
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => handleDeclineInvitation(invitation.id)}
+                          >
+                            ✕ Decline
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => router.push(`/sections/${section.id}`)}
+                          >
+                            View Section →
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Tabs */}
           <div style={{ 
@@ -1034,22 +1255,24 @@ const Profile: React.FC = () => {
                 className={activeTab === 'events' ? 'active' : ''}
                 onClick={() => setActiveTab('events')}
               >
-                🎫 My Events
+                🎫 {isOwnProfile ? 'My Events' : 'Events'}
               </button>
-              <button 
-                className={activeTab === 'groups' ? 'active' : ''}
-                onClick={() => setActiveTab('groups')}
-              >
-                📁 My Sections
-              </button>
+              {isOwnProfile && (
+                <button 
+                  className={activeTab === 'groups' ? 'active' : ''}
+                  onClick={() => setActiveTab('groups')}
+                >
+                  📁 My Sections
+                </button>
+              )}
             </div>
           </div>
 
-          {/* My Events Tab */}
+          {/* Events Tab */}
           {activeTab === 'events' && (
           <div className="user-rsvp-section" style={{ marginTop: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0 }}>My Events</h3>
+              <h3 style={{ margin: 0 }}>{isOwnProfile ? 'My Events' : 'Events'}</h3>
               <Button 
                 variant="secondary" 
                 size="small"
@@ -1061,7 +1284,7 @@ const Profile: React.FC = () => {
             
             {(rsvpLoading || eventsLoading || invitedLoading) ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                Loading your events...
+                Loading {isOwnProfile ? 'your' : ''} events...
               </div>
             ) : (() => {
               const allMyEvents = getAllMyEvents()
@@ -1077,7 +1300,9 @@ const Profile: React.FC = () => {
                     <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎫</div>
                     <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>No events yet</h4>
                     <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                      RSVP to events, create your own, or get invited to see them here!
+                      {isOwnProfile 
+                        ? 'RSVP to events, create your own, or get invited to see them here!'
+                        : 'This user hasn\'t created any events yet.'}
                     </p>
                     <Button 
                       variant="primary"

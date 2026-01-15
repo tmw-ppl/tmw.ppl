@@ -20,48 +20,12 @@ interface Profile {
   updated_at: string
 }
 
-// Fun word lists for generating chat names
-const adjectives = [
-  'cosmic', 'sunny', 'swift', 'cozy', 'bright', 'gentle', 'happy', 'wild',
-  'calm', 'brave', 'clever', 'dreamy', 'eager', 'fancy', 'golden', 'jazzy',
-  'lucky', 'mellow', 'noble', 'quirky', 'radiant', 'stellar', 'vibrant', 'witty',
-  'zesty', 'serene', 'vivid', 'mystic', 'cosmic', 'electric', 'groovy', 'retro'
-]
-
-const nouns = [
-  'butterfly', 'meadow', 'falcon', 'river', 'mountain', 'forest', 'sunset',
-  'moonlight', 'thunder', 'whisper', 'voyage', 'garden', 'crystal', 'phoenix',
-  'nebula', 'aurora', 'horizon', 'oasis', 'cascade', 'echo', 'spark', 'wave',
-  'breeze', 'comet', 'prism', 'twilight', 'ember', 'velvet', 'zephyr', 'bloom'
-]
-
-// Generate a deterministic fun name based on two user IDs
-const generateFunChatName = (id1: string, id2: string): string => {
-  const sortedIds = [id1, id2].sort()
-  const combined = sortedIds.join('')
-  
-  // Create a simple hash from the combined string
-  let hash = 0
-  for (let i = 0; i < combined.length; i++) {
-    const char = combined.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash // Convert to 32-bit integer
-  }
-  hash = Math.abs(hash)
-  
-  const adjective = adjectives[hash % adjectives.length]
-  const noun = nouns[(hash >> 8) % nouns.length]
-  
-  return `${adjective}-${noun}`
-}
-
 const Profiles: React.FC = () => {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
-  const [messagingUserId, setMessagingUserId] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('latest') // 'latest', 'first', 'alphabetical'
+  const [sortBy, setSortBy] = useState('alphabetical') // 'latest', 'first', 'alphabetical'
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
@@ -88,36 +52,17 @@ const Profiles: React.FC = () => {
     }
   }, [user, authLoading])
 
-  // Reload profiles when sort changes
+  // Re-filter and sort when sortBy changes (client-side only, no reload)
   useEffect(() => {
     if (profiles.length > 0) {
-      loadProfiles()
+      filterProfiles()
     }
   }, [sortBy])
 
-  const loadProfiles = async (sortOrder = sortBy) => {
+  const loadProfiles = async () => {
     try {
       setLoading(true)
       console.log('🔍 Loading profiles from database...')
-      
-      // Determine sort order based on sortBy state
-      let orderBy = 'created_at'
-      let ascending = false
-      
-      switch (sortOrder) {
-        case 'first':
-          orderBy = 'created_at'
-          ascending = true
-          break
-        case 'latest':
-          orderBy = 'created_at'
-          ascending = false
-          break
-        case 'alphabetical':
-          orderBy = 'full_name'
-          ascending = true
-          break
-      }
       
       if (!user) {
         setError('You must be logged in to view profiles.')
@@ -125,11 +70,11 @@ const Profiles: React.FC = () => {
         return
       }
 
+      // Load all profiles without sorting (we'll sort client-side)
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .or(`private.is.null,private.eq.false,id.eq.${user.id}`)
-        .order(orderBy, { ascending })
 
       console.log('📊 Profiles response:', { data, error, count: data?.length })
 
@@ -166,7 +111,7 @@ const Profiles: React.FC = () => {
 
   useEffect(() => {
     filterProfiles()
-  }, [searchTerm, activeFilter, profiles])
+  }, [searchTerm, activeFilter, profiles, sortBy])
 
   const filterProfiles = () => {
     let filtered = [...profiles]
@@ -178,7 +123,8 @@ const Profiles: React.FC = () => {
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase()
       filtered = filtered.filter((profile) => {
-        const searchableText = `${profile.full_name || ''} ${profile.email || ''} ${profile.bio || ''}`.toLowerCase()
+        // Only search by name and bio, not email or phone
+        const searchableText = `${profile.full_name || ''} ${profile.bio || ''}`.toLowerCase()
         const matches = searchableText.includes(searchLower)
         console.log(`👤 Profile ${profile.full_name}: ${matches ? 'MATCH' : 'NO MATCH'}`)
         return matches
@@ -191,109 +137,31 @@ const Profiles: React.FC = () => {
       // TODO: Add skills/interests to profiles table in the future
     }
 
+    // Apply client-side sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'alphabetical':
+          return (a.full_name || '').localeCompare(b.full_name || '')
+        case 'latest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case 'first':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        default:
+          return 0
+      }
+    })
+
     console.log(`✅ Profiles after filtering: ${filtered.length}`)
     setFilteredProfiles(filtered)
   }
 
-  const handleMessage = async (profileId: string, profileName: string) => {
-    if (!user) {
-      alert('Please sign in to message community members.')
-      return
-    }
-
-    if (profileId === user.id) {
-      alert("You can't message yourself!")
-      return
-    }
-
-    setMessagingUserId(profileId)
-
-    try {
-      // Generate a fun, deterministic chat name based on both user IDs
-      const dmChannelName = generateFunChatName(user.id, profileId)
-
-      // Check if DM channel already exists
-      const { data: existingChannel, error: searchError } = await supabase
-        .from('channels')
-        .select('id')
-        .eq('name', dmChannelName)
-        .eq('type', 'private')
-        .single()
-
-      if (existingChannel) {
-        // Channel exists, navigate to it
-        const channel = existingChannel as { id: string }
-        router.push(`/section?channel=${channel.id}`)
-        return
-      }
-
-      // Create new DM channel
-      const { data: newChannel, error: createError } = await ((supabase
-        .from('channels') as any)
-        .insert({
-          name: dmChannelName,
-          description: `Direct message with ${profileName}`,
-          type: 'private',
-          created_by: user.id,
-          is_archived: false,
-          is_read_only: false
-        })
-        .select()
-        .single())
-
-      if (createError) {
-        console.error('Error creating DM channel:', createError)
-        alert('Failed to create message channel. Please try again.')
-        return
-      }
-
-      // Add both users as members
-      const channelId = (newChannel as any)?.id
-      if (!channelId) {
-        console.error('Failed to get channel ID')
-        return
-      }
-      const { error: memberError } = await ((supabase
-        .from('channel_members') as any)
-        .insert([
-          {
-            channel_id: channelId,
-            user_id: user.id,
-            role: 'owner',
-            is_muted: false,
-            is_banned: false,
-            notifications_enabled: true,
-            joined_at: new Date().toISOString(),
-            last_read_at: new Date().toISOString()
-          },
-          {
-            channel_id: channelId,
-            user_id: profileId,
-            role: 'member',
-            is_muted: false,
-            is_banned: false,
-            notifications_enabled: true,
-            joined_at: new Date().toISOString(),
-            last_read_at: new Date().toISOString()
-          }
-        ]))
-
-      if (memberError) {
-        console.error('Error adding members to DM channel:', memberError)
-      }
-
-      // Navigate to the new channel
-      router.push(`/section?channel=${channelId}`)
-    } catch (err) {
-      console.error('Error setting up DM:', err)
-      alert('Failed to set up messaging. Please try again.')
-    } finally {
-      setMessagingUserId(null)
-    }
-  }
-
   const handleViewProfile = (profileId: string) => {
-    router.push(`/profiles/${profileId}`)
+    // Always go to /profile, with id param if viewing someone else
+    if (user && profileId === user.id) {
+      router.push('/profile')
+    } else {
+      router.push(`/profile?id=${profileId}`)
+    }
   }
 
   const copySkill = async (skill: string) => {
@@ -315,7 +183,7 @@ const Profiles: React.FC = () => {
           </div>
           <p className="lead">
             Discover creative minds, connect with collaborators, and find your
-            next project partner in the Tomorrow People community.
+            next project partner to add to your Section.
           </p>
           <Loading message={authLoading ? "Loading..." : "Redirecting to sign in..."} />
         </div>
@@ -344,7 +212,7 @@ const Profiles: React.FC = () => {
           </div>
           <p className="lead">
             Discover creative minds, connect with collaborators, and find your
-            next project partner in the Tomorrow People community.
+            next project partner to add to your Section.
           </p>
           <Loading message="Loading community profiles..." />
         </div>
@@ -373,7 +241,7 @@ const Profiles: React.FC = () => {
           </div>
           <p className="lead">
             Discover creative minds, connect with collaborators, and find your
-            next project partner in the Tomorrow People community.
+            next project partner to add to your Section.
           </p>
           <div className="error-message">
             <p>{error}</p>
@@ -392,9 +260,9 @@ const Profiles: React.FC = () => {
           <span style={{
             background: 'var(--primary)',
             color: 'white',
-            padding: '0.25rem 0.75rem',
+            padding: '0.5rem 1rem',
             borderRadius: '20px',
-            fontSize: '0.875rem',
+            fontSize: '1rem',
             fontWeight: '600'
           }}>
             {profiles.length} {profiles.length === 1 ? 'Member' : 'Members'}
@@ -402,62 +270,59 @@ const Profiles: React.FC = () => {
         </div>
         <p className="lead">
           Discover creative minds, connect with collaborators, and find your
-          next project partner in the Tomorrow People community.
+          next project partner to add to your Section.
         </p>
 
-        {/* Search and Filter Section */}
-        <div className="search-section">
-          <div className="search-bar">
+        {/* Search and Sort Section */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          gap: '1rem', 
+          marginTop: '1.5rem',
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap',
+          padding: 0
+        }}>
+          <div className="search-bar" style={{ flex: 1, minWidth: '200px', margin: 0 }}>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, skills, or interests..."
+              placeholder="Search by name..."
               className="search-input"
             />
             <button className="search-btn">🔍</button>
-          </div>
-
-          <div className="filters" aria-label="Profile Filters">
-            {filters.map((filter) => (
-              <Chip
-                key={filter.key}
-                onClick={() => setActiveFilter(filter.key)}
-                className={activeFilter === filter.key ? 'active' : 'inactive'}
-              >
-                {filter.label}
-              </Chip>
-            ))}
           </div>
 
           {/* Sort Options */}
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '1rem', 
-            marginTop: '1rem',
+            gap: '0.75rem',
             fontSize: '0.875rem',
-            color: 'var(--text-muted)'
+            color: 'var(--text-muted)',
+            marginLeft: 'auto'
           }}>
-            <span>Sort by:</span>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <span style={{ whiteSpace: 'nowrap' }}>Sort by:</span>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <Chip
+                onClick={() => setSortBy('alphabetical')}
+                active={sortBy === 'alphabetical'}
+              >
+                A-Z
+              </Chip>
               <Chip
                 onClick={() => setSortBy('latest')}
-                className={sortBy === 'latest' ? 'active' : 'inactive'}
+                active={sortBy === 'latest'}
               >
                 Latest to Join
               </Chip>
               <Chip
                 onClick={() => setSortBy('first')}
-                className={sortBy === 'first' ? 'active' : 'inactive'}
+                active={sortBy === 'first'}
               >
                 First Joined
-              </Chip>
-              <Chip
-                onClick={() => setSortBy('alphabetical')}
-                className={sortBy === 'alphabetical' ? 'active' : 'inactive'}
-              >
-                A-Z
               </Chip>
             </div>
           </div>
@@ -468,7 +333,10 @@ const Profiles: React.FC = () => {
             <Card 
               key={profile.id} 
               className="profile-card"
-              style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+              style={{ 
+                cursor: 'pointer', 
+                transition: 'all 0.2s'
+              }}
               onClick={() => handleViewProfile(profile.id)}
               onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
                 e.currentTarget.style.borderColor = 'var(--primary)'
@@ -479,77 +347,33 @@ const Profiles: React.FC = () => {
                 e.currentTarget.style.transform = 'translateY(0)'
               }}
             >
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <Avatar 
-                  src={profile.profile_picture_url} 
-                  name={profile.full_name} 
-                  size={80}
-                />
-                
-                <div style={{ flex: 1 }}>
-                  <div className="profile-header">
-                    <h3 className="profile-name">{profile.full_name}</h3>
-                    <span className="profile-email" style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>
-                      {profile.email}
-                    </span>
-                    {user && profile.id === user.id && (
-                      <span style={{ 
-                        marginLeft: '0.5rem', 
-                        padding: '2px 6px', 
-                        background: 'var(--primary)', 
-                        color: 'white', 
-                        borderRadius: '4px', 
-                        fontSize: '0.75rem',
-                        fontWeight: '600'
-                      }}>
-                        YOU
-                      </span>
-                    )}
-                  </div>
-
-                  {profile.bio && (
-                    <p className="profile-bio" style={{ margin: '0.5rem 0', color: 'var(--text)' }}>
-                      {profile.bio}
-                    </p>
-                  )}
-
-                  {profile.phone && (
-                    <div style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
-                      📞 {profile.phone}
-                    </div>
-                  )}
-
-                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: '1rem' }}>
-                    Member since {new Date(profile.created_at).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      year: 'numeric' 
-                    })}
-                  </div>
-
-                  <div className="profile-actions" style={{ display: 'flex', gap: '0.5rem' }}>
-                    <Button
-                      size="small"
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation()
-                        handleMessage(profile.id, profile.full_name)
-                      }}
-                      disabled={messagingUserId === profile.id}
-                    >
-                      {messagingUserId === profile.id ? 'Opening...' : 'Message'}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation()
-                        handleViewProfile(profile.id)
-                      }}
-                    >
-                      View Profile
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <Avatar 
+                src={profile.profile_picture_url} 
+                name={profile.full_name} 
+                size={60}
+              />
+              <h3 className="profile-name" style={{ 
+                marginTop: '0.5rem', 
+                marginBottom: 0,
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                wordBreak: 'break-word'
+              }}>
+                {profile.full_name}
+                {user && profile.id === user.id && (
+                  <span style={{ 
+                    marginLeft: '0.5rem', 
+                    padding: '2px 6px', 
+                    background: 'var(--primary)', 
+                    color: 'white', 
+                    borderRadius: '4px', 
+                    fontSize: '0.75rem',
+                    fontWeight: '600'
+                  }}>
+                    YOU
+                  </span>
+                )}
+              </h3>
             </Card>
           ))}
 
