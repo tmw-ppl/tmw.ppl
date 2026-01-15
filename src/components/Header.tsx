@@ -13,6 +13,7 @@ const Header: React.FC = () => {
   const betaDropdownRef = useRef<HTMLDivElement>(null)
   const mobileMenuRef = useRef<HTMLElement>(null)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
+  const justToggledRef = useRef(false)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -41,37 +42,51 @@ const Header: React.FC = () => {
 
   // Close mobile menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    if (!mobileMenuOpen) return
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      // Ignore if we just toggled the menu (prevents immediate closure on mobile)
+      if (justToggledRef.current) {
+        return
+      }
+
+      const target = event.target as Node
       if (
-        mobileMenuOpen &&
         mobileMenuRef.current &&
         menuToggleRef.current &&
-        !mobileMenuRef.current.contains(event.target as Node) &&
-        !menuToggleRef.current.contains(event.target as Node)
+        !mobileMenuRef.current.contains(target) &&
+        !menuToggleRef.current.contains(target)
       ) {
         setMobileMenuOpen(false)
       }
     }
-    if (mobileMenuOpen) {
-      // Use a small delay to prevent immediate closure
-      const timeoutId = setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside)
-        document.addEventListener('touchstart', handleClickOutside as any)
-      }, 100)
-      return () => {
-        clearTimeout(timeoutId)
-        document.removeEventListener('mousedown', handleClickOutside)
-        document.removeEventListener('touchstart', handleClickOutside as any)
-      }
+
+    // Use a delay for mobile to prevent immediate closure
+    // Mobile browsers often fire touch events immediately after the toggle
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('touchstart', handleClickOutside, { passive: true })
+    }, 300)
+
+    return () => {
+      clearTimeout(timeoutId)
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
     }
   }, [mobileMenuOpen])
 
-  const toggleMobileMenu = (e?: React.MouseEvent) => {
+  const toggleMobileMenu = (e?: React.MouseEvent | React.TouchEvent) => {
     if (e) {
       e.preventDefault()
       e.stopPropagation()
     }
+    // Set flag to ignore outside clicks immediately after toggle
+    justToggledRef.current = true
     setMobileMenuOpen(prev => !prev)
+    // Clear flag after a delay
+    setTimeout(() => {
+      justToggledRef.current = false
+    }, 400)
   }
 
   const isActive = (path: string) => {
@@ -439,7 +454,15 @@ const Header: React.FC = () => {
           style={menuToggleStyles}
           aria-label="Toggle navigation menu"
           aria-expanded={mobileMenuOpen}
-          onClick={toggleMobileMenu}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            toggleMobileMenu(e)
+          }}
+          onTouchStart={(e) => {
+            // Prevent touch event from bubbling to click-outside handler
+            e.stopPropagation()
+          }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.1)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           type="button"
