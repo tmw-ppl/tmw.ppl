@@ -456,6 +456,44 @@ export default function SectionPage() {
     }
   }
 
+  const handleLeaveSection = async () => {
+    if (!user || !section || isCreator) return
+
+    const confirmed = window.confirm(
+      `Are you sure you want to leave "${section.name}"? You will no longer have access to this section's events and chat.`
+    )
+
+    if (!confirmed) return
+
+    try {
+      // Find the membership record
+      const { data: membership, error: findError } = await supabase
+        .from('section_members')
+        .select('id')
+        .eq('section_id', (section as any).id)
+        .eq('user_id', user.id)
+        .single()
+
+      if (findError) throw findError
+
+      // Delete the membership
+      const { error: deleteError } = await supabase
+        .from('section_members')
+        .delete()
+        .eq('id', (membership as any).id)
+
+      if (deleteError) throw deleteError
+
+      showSuccess('You have left the section successfully!')
+      
+      // Redirect to sections list
+      router.push('/sections')
+    } catch (err: any) {
+      console.error('Error leaving section:', err)
+      showError('Failed to leave section: ' + (err.message || 'Unknown error'))
+    }
+  }
+
   const calendarEvents = useMemo(() => {
     return events.map(event => ({
       id: event.id,
@@ -604,6 +642,20 @@ export default function SectionPage() {
               }}>
                 {isCreator ? '👑 Creator' : '🛡️ Admin'}
               </span>
+            )}
+            {isMember && !isCreator && (
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={handleLeaveSection}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#ef4444'
+                }}
+              >
+                🚪 Leave Section
+              </Button>
             )}
           </div>
         </div>

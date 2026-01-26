@@ -1,7 +1,35 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 const Footer: React.FC = () => {
+  const [isLightTheme, setIsLightTheme] = useState(false)
+
+  // Detect light theme
+  useEffect(() => {
+    const checkTheme = () => {
+      const htmlElement = document.documentElement
+      setIsLightTheme(htmlElement.classList.contains('light-theme') || 
+                     window.matchMedia('(prefers-color-scheme: light)').matches)
+    }
+    
+    checkTheme()
+    
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+    
+    // Also listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)')
+    mediaQuery.addEventListener('change', checkTheme)
+    
+    return () => {
+      observer.disconnect()
+      mediaQuery.removeEventListener('change', checkTheme)
+    }
+  }, [])
   // Footer styles
   const footerStyles: React.CSSProperties = {
     borderTop: '1px solid var(--border)',
@@ -59,7 +87,7 @@ const Footer: React.FC = () => {
         <div style={logoSectionStyles}>
           <span style={logoStyles} aria-hidden="true">
             <img
-              src="/assets/section-logo-20260115.png"
+              src={isLightTheme ? "/assets/section-logo-dark.png" : "/assets/section-logo-20260115.png"}
               alt="Section Logo"
               width="40"
               height="40"
