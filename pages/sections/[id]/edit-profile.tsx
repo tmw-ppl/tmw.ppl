@@ -126,7 +126,7 @@ const EditSectionProfilePage: React.FC = () => {
         }
       }
 
-      router.push('/profile-v3')
+      router.push('/profile')
     } catch (err) {
       console.error('Error saving profile:', err)
       setError('Failed to save profile')
@@ -157,7 +157,7 @@ const EditSectionProfilePage: React.FC = () => {
             <h2 style={{ marginBottom: '1rem', color: 'var(--text)' }}>
               {error || 'Section not found'}
             </h2>
-            <Button onClick={() => router.push('/profile-v3')}>
+            <Button onClick={() => router.push('/profile-v2')}>
               ← Back to Profile
             </Button>
           </div>
@@ -171,7 +171,7 @@ const EditSectionProfilePage: React.FC = () => {
       <div className="container" style={{ maxWidth: '700px' }}>
         {/* Back Button */}
         <button
-          onClick={() => router.push('/profile-v3')}
+          onClick={() => router.push('/profile-v2')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -194,7 +194,7 @@ const EditSectionProfilePage: React.FC = () => {
           fields={fields}
           initialData={profileData}
           onSave={handleSave}
-          onCancel={() => router.push('/profile-v3')}
+          onCancel={() => router.push('/profile-v2')}
           isSaving={saving}
         />
       </div>
