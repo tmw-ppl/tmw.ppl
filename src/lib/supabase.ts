@@ -24,11 +24,17 @@ if ((!supabaseUrl || !supabaseKey) && process.env.NODE_ENV !== 'production') {
   )
 }
 
-// In production, require environment variables
+// In production, warn if environment variables are missing (but don't throw during build)
+// During build/static generation, env vars might not be available, so we allow fallback values
+// The actual error will be thrown at runtime when Supabase is used if vars are still missing
 if ((!supabaseUrl || !supabaseKey) && process.env.NODE_ENV === 'production') {
-  throw new Error(
-    'Missing Supabase environment variables in production. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-  )
+  // Only log a warning, don't throw - this allows the build to complete
+  // The app will fail at runtime if Supabase is actually used without proper credentials
+  if (typeof window !== 'undefined') {
+    console.error(
+      'Missing Supabase environment variables in production. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
+    )
+  }
 }
 
 // Create a singleton instance to prevent multiple GoTrueClient instances
