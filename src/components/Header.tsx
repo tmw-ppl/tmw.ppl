@@ -10,6 +10,7 @@ const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [betaDropdownOpen, setBetaDropdownOpen] = useState(false)
+  const [isLightTheme, setIsLightTheme] = useState(false)
   const betaDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -25,6 +26,33 @@ const Header: React.FC = () => {
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Detect light theme
+  useEffect(() => {
+    const checkTheme = () => {
+      const htmlElement = document.documentElement
+      setIsLightTheme(htmlElement.classList.contains('light-theme') || 
+                     window.matchMedia('(prefers-color-scheme: light)').matches)
+    }
+    
+    checkTheme()
+    
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+    
+    // Also listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)')
+    mediaQuery.addEventListener('change', checkTheme)
+    
+    return () => {
+      observer.disconnect()
+      mediaQuery.removeEventListener('change', checkTheme)
+    }
   }, [])
 
   // Close mobile menu on route change
@@ -145,7 +173,12 @@ const Header: React.FC = () => {
       <header style={headerStyles}>
         <div style={navStyles}>
           <Link href="/" style={brandStyles} onClick={handleLinkClick}>
-            <img src="/assets/section-logo-20260115.png" alt="" width="32" height="32" />
+            <img 
+              src={isLightTheme ? "/assets/section-logo-dark.png" : "/assets/section-logo-20260115.png"} 
+              alt="" 
+              width="32" 
+              height="32" 
+            />
             <span>Section</span>
           </Link>
 

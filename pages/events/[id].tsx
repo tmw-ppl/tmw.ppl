@@ -1029,7 +1029,7 @@ const EventDetail: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', flex: 1 }}>
               {/* Main host */}
               <Link 
-                href={`/profiles?search=${encodeURIComponent(event.creator?.full_name || '')}`}
+                href={`/profile?id=${event.created_by}`}
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -1060,7 +1060,7 @@ const EventDetail: React.FC = () => {
                       {idx === 0 && <span style={{ color: 'var(--muted)', margin: '0 0.25rem' }}>&</span>}
                       {idx > 0 && <span style={{ color: 'var(--muted)', margin: '0 0.25rem' }}>,</span>}
                       <Link 
-                        href={`/profiles?search=${encodeURIComponent(cohost.full_name || '')}`}
+                        href={`/profile?id=${cohost.id}`}
                         style={{ 
                           display: 'flex', 
                           alignItems: 'center', 
@@ -1577,7 +1577,7 @@ const EventDetail: React.FC = () => {
                         .map((guest, idx) => (
                         <Link
                           key={guest.user_id}
-                          href={`/profiles/${guest.user_id}`}
+                          href={`/profile?id=${guest.user_id}`}
                           style={{
                             textDecoration: 'none',
                             position: 'relative',
@@ -1641,7 +1641,7 @@ const EventDetail: React.FC = () => {
                               {goingGuestsCombined.map(guest => (
                                 <Link
                                   key={guest.user_id}
-                                  href={`/profiles/${guest.user_id}`}
+                                  href={`/profile?id=${guest.user_id}`}
                                   style={{ textDecoration: 'none', color: 'inherit' }}
                                 >
                                   <div 
@@ -1679,7 +1679,7 @@ const EventDetail: React.FC = () => {
                               {maybeGuestsCombined.map(guest => (
                                 <Link
                                   key={guest.user_id}
-                                  href={`/profiles/${guest.user_id}`}
+                                  href={`/profile?id=${guest.user_id}`}
                                   style={{ textDecoration: 'none', color: 'inherit' }}
                                 >
                                   <div 
@@ -1716,7 +1716,7 @@ const EventDetail: React.FC = () => {
                               {notGoingGuestsCombined.map(guest => (
                                 <Link
                                   key={guest.user_id}
-                                  href={`/profiles/${guest.user_id}`}
+                                  href={`/profile?id=${guest.user_id}`}
                                   style={{ textDecoration: 'none', color: 'inherit' }}
                                 >
                                   <div 
@@ -1753,7 +1753,7 @@ const EventDetail: React.FC = () => {
                               {invitedGuestsCombined.map(guest => (
                                 <Link
                                   key={guest.user_id}
-                                  href={`/profiles/${guest.user_id}`}
+                                  href={`/profile?id=${guest.user_id}`}
                                   style={{ textDecoration: 'none', color: 'inherit' }}
                                 >
                                   <div 

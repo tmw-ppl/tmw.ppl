@@ -74,7 +74,6 @@ const Profiles: React.FC = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .or(`private.is.null,private.eq.false,id.eq.${user.id}`)
 
       console.log('📊 Profiles response:', { data, error, count: data?.length })
 

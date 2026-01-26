@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -24,6 +24,7 @@ interface ProfileData {
 const ProfileV3: React.FC = () => {
   const { user, signOut, loading: authLoading } = useAuth()
   const router = useRouter()
+  const { id } = router.query
   
   // Profile State
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
@@ -51,6 +52,20 @@ const ProfileV3: React.FC = () => {
   // Tab State
   const [activeTab, setActiveTab] = useState<'sections' | 'settings'>('sections')
 
+  // Determine which user's profile to show - wait for router to be ready
+  const viewingUserId = useMemo(() => {
+    if (router.isReady && id && typeof id === 'string') {
+      return id
+    }
+    return user?.id || null
+  }, [router.isReady, id, user?.id])
+  
+  const isOwnProfile = useMemo(() => {
+    if (!router.isReady) return true // Default to own profile until router is ready
+    if (!id) return true // No id param means own profile
+    return user && id === user.id
+  }, [router.isReady, id, user?.id])
+
   useEffect(() => {
     // Wait for auth to finish loading before checking user
     if (authLoading) {
@@ -62,19 +77,26 @@ const ProfileV3: React.FC = () => {
       return
     }
     
-    loadUserProfile()
-    loadUserSections()
-  }, [user, authLoading, router])
+    // Wait for router to be ready before loading profile
+    if (!router.isReady) return
+    
+    if (user && viewingUserId) {
+      loadUserProfile()
+      if (isOwnProfile) {
+        loadUserSections()
+      }
+    }
+  }, [user, authLoading, router.isReady, router.query.id, viewingUserId, isOwnProfile])
 
   const loadUserProfile = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setLoading(true)
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', viewingUserId)
         .single()
 
       if (error && error.code !== 'PGRST116') {
@@ -84,17 +106,19 @@ const ProfileV3: React.FC = () => {
 
       if (profile) {
         setProfileData(profile as ProfileData)
-        setEditForm({
-          full_name: (profile as any).full_name || '',
-          bio: (profile as any).bio || '',
-          interests: (profile as any).interests || '',
-          phone: (profile as any).phone || '',
-          private: (profile as any).private || false,
-        })
+        if (isOwnProfile) {
+          setEditForm({
+            full_name: (profile as any).full_name || '',
+            bio: (profile as any).bio || '',
+            interests: (profile as any).interests || '',
+            phone: (profile as any).phone || '',
+            private: (profile as any).private || false,
+          })
+        }
       } else {
         const displayName = user.user_metadata?.full_name || 'User'
         setProfileData({
-          id: user.id,
+          id: viewingUserId,
           full_name: displayName,
           bio: '',
           interests: '',
@@ -102,13 +126,15 @@ const ProfileV3: React.FC = () => {
           created_at: user.created_at || '',
           updated_at: user.created_at || '',
         })
-        setEditForm({
-          full_name: displayName,
-          bio: '',
-          interests: '',
-          phone: '',
-          private: false,
-        })
+        if (isOwnProfile) {
+          setEditForm({
+            full_name: displayName,
+            bio: '',
+            interests: '',
+            phone: '',
+            private: false,
+          })
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error)
@@ -119,7 +145,7 @@ const ProfileV3: React.FC = () => {
   }
 
   const loadUserSections = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setSectionsLoading(true)
@@ -128,7 +154,7 @@ const ProfileV3: React.FC = () => {
       const { data: membersData, error: membersError } = await (supabase
         .from('section_members') as any)
         .select('section_id, is_admin, status, joined_at')
-        .eq('user_id', user.id)
+        .eq('user_id', viewingUserId)
         .eq('status', 'approved')
 
       if (membersError) {
@@ -158,7 +184,7 @@ const ProfileV3: React.FC = () => {
       const { data: visibilityData } = await (supabase
         .from('section_membership_visibility') as any)
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', viewingUserId)
         .in('section_id', sectionIds)
 
       // Get profile fields for each section
@@ -173,7 +199,7 @@ const ProfileV3: React.FC = () => {
       const { data: profileDataResults } = await (supabase
         .from('section_profile_data') as any)
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', viewingUserId)
         .in('section_id', sectionIds)
 
       // Get member counts for each section
@@ -420,13 +446,15 @@ const ProfileV3: React.FC = () => {
           marginBottom: '2rem'
         }}>
           <div>
-            <h1 style={{ margin: 0, color: 'var(--text)' }}>Your Profile</h1>
+            <h1 style={{ margin: 0, color: 'var(--text)' }}>
+              {isOwnProfile ? 'Your Profile' : `${profileData?.full_name || 'User'}'s Profile`}
+            </h1>
             <p style={{ margin: '0.5rem 0 0', color: 'var(--muted)' }}>
-              Manage your profile across all your sections
+              {isOwnProfile ? 'Manage your profile across all your sections' : 'View their profile across all sections'}
             </p>
           </div>
           
-          {!isPreviewMode && (
+          {!isPreviewMode && isOwnProfile && (
             <Button 
               variant="secondary"
               onClick={() => setIsPreviewMode(true)}
@@ -575,7 +603,7 @@ const ProfileV3: React.FC = () => {
               </div>
 
               {/* Actions */}
-              {!isPreviewMode && (
+              {!isPreviewMode && isOwnProfile && (
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <Button onClick={() => setShowEditForm(true)} disabled={showEditForm}>
                     ✏️ Edit Profile
@@ -590,7 +618,7 @@ const ProfileV3: React.FC = () => {
         </div>
 
         {/* Edit Profile Form */}
-        {showEditForm && !isPreviewMode && (
+        {showEditForm && !isPreviewMode && isOwnProfile && (
           <div style={{
             background: 'var(--card)',
             border: '1px solid var(--border)',

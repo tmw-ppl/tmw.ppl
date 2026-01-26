@@ -107,6 +107,7 @@ interface SocialStats {
 const ProfileV2: React.FC = () => {
   const { user, signOut, loading: authLoading } = useAuth()
   const router = useRouter()
+  const { id } = router.query
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [userEvents, setUserEvents] = useState<UserEvent[]>([])
   const [rsvpEvents, setRsvpEvents] = useState<RSVPEvent[]>([])
@@ -143,6 +144,20 @@ const ProfileV2: React.FC = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
+  // Determine which user's profile to show - wait for router to be ready
+  const viewingUserId = useMemo(() => {
+    if (router.isReady && id && typeof id === 'string') {
+      return id
+    }
+    return user?.id || null
+  }, [router.isReady, id, user?.id])
+  
+  const isOwnProfile = useMemo(() => {
+    if (!router.isReady) return true // Default to own profile until router is ready
+    if (!id) return true // No id param means own profile
+    return user && id === user.id
+  }, [router.isReady, id, user?.id])
+
   useEffect(() => {
     // Wait for auth to finish loading before checking user
     if (authLoading) return
@@ -151,12 +166,20 @@ const ProfileV2: React.FC = () => {
       router.push('/auth')
       return
     }
-    loadUserProfile()
-    loadUserEvents()
-    loadUserRSVPs()
-    loadSubscribedEvents()
-    loadNotifications()
-  }, [user, authLoading, router])
+    
+    // Wait for router to be ready before loading profile
+    if (!router.isReady) return
+    
+    if (user && viewingUserId) {
+      loadUserProfile()
+      loadUserEvents()
+      if (isOwnProfile) {
+        loadUserRSVPs()
+        loadSubscribedEvents()
+        loadNotifications()
+      }
+    }
+  }, [user, authLoading, router.isReady, router.query.id, viewingUserId, isOwnProfile])
 
   useEffect(() => {
     if (userEvents.length > 0 || rsvpEvents.length > 0) {
@@ -165,14 +188,14 @@ const ProfileV2: React.FC = () => {
   }, [userEvents.length, rsvpEvents.length])
 
   const loadUserProfile = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setLoading(true)
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', viewingUserId)
         .single()
 
       if (error && error.code !== 'PGRST116') {
@@ -182,17 +205,19 @@ const ProfileV2: React.FC = () => {
 
       if (profile) {
         setProfileData(profile as ProfileData)
-        setEditForm({
-          full_name: (profile as any).full_name || '',
-          bio: (profile as any).bio || '',
-          interests: (profile as any).interests || '',
-          phone: (profile as any).phone || '',
-          private: (profile as any).private || false,
-        })
+        if (isOwnProfile) {
+          setEditForm({
+            full_name: (profile as any).full_name || '',
+            bio: (profile as any).bio || '',
+            interests: (profile as any).interests || '',
+            phone: (profile as any).phone || '',
+            private: (profile as any).private || false,
+          })
+        }
       } else {
         const displayName = user.user_metadata?.full_name || 'User'
         setProfileData({
-          id: user.id,
+          id: viewingUserId,
           full_name: displayName,
           bio: '',
           interests: '',
@@ -200,13 +225,15 @@ const ProfileV2: React.FC = () => {
           created_at: user.created_at || '',
           updated_at: user.created_at || '',
         })
-        setEditForm({
-          full_name: displayName,
-          bio: '',
-          interests: '',
-          phone: '',
-          private: false,
-        })
+        if (isOwnProfile) {
+          setEditForm({
+            full_name: displayName,
+            bio: '',
+            interests: '',
+            phone: '',
+            private: false,
+          })
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error)
@@ -217,14 +244,14 @@ const ProfileV2: React.FC = () => {
   }
 
   const loadUserEvents = async () => {
-    if (!user) return
+    if (!user || !viewingUserId) return
 
     try {
       setEventsLoading(true)
       const { data: events, error } = await supabase
         .from('events')
         .select('*')
-        .eq('created_by', user.id)
+        .eq('created_by', viewingUserId)
         .order('date', { ascending: false })
 
       if (error) {
@@ -984,7 +1011,7 @@ const ProfileV2: React.FC = () => {
                 borderRadius: '50%',
                 width: '36px',
                 height: '36px',
-                display: 'flex',
+                display: isOwnProfile ? 'flex' : 'none',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
@@ -1013,14 +1040,17 @@ const ProfileV2: React.FC = () => {
                 color: 'var(--text)',
               }}>
                 {profileData?.full_name || 'User'}
+                {isOwnProfile ? '' : "'s Profile"}
               </h1>
-              <p style={{ 
-                color: 'var(--text-muted)', 
-                marginBottom: '0.5rem',
-                fontSize: '1rem',
-              }}>
-                {user.email}
-              </p>
+              {isOwnProfile && (
+                <p style={{ 
+                  color: 'var(--text-muted)', 
+                  marginBottom: '0.5rem',
+                  fontSize: '1rem',
+                }}>
+                  {user.email}
+                </p>
+              )}
               {profileData?.bio && (
                 <p style={{ 
                   color: 'var(--text)', 
@@ -1037,30 +1067,34 @@ const ProfileV2: React.FC = () => {
                 marginTop: '1rem',
                 flexWrap: 'wrap',
               }}>
-                <Button
-                  variant="secondary"
-                  size="small"
-                  onClick={() => setShowEditForm(true)}
-                >
-                  ✏️ Edit Profile
-                </Button>
-                <Button
-                  variant="primary"
-                  size="small"
-                  onClick={() => router.push('/create-event')}
-                >
-                  ➕ Create Event
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="small"
-                  onClick={async () => {
-                    await signOut()
-                    router.push('/')
-                  }}
-                >
-                  🚪 Sign Out
-                </Button>
+                {isOwnProfile && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => setShowEditForm(true)}
+                    >
+                      ✏️ Edit Profile
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="small"
+                      onClick={() => router.push('/create-event')}
+                    >
+                      ➕ Create Event
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={async () => {
+                        await signOut()
+                        router.push('/')
+                      }}
+                    >
+                      🚪 Sign Out
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1112,10 +1146,10 @@ const ProfileV2: React.FC = () => {
           marginBottom: '2rem',
           flexWrap: 'wrap',
         }}>
-          {(['overview', 'events', 'calendar', 'notifications'] as const).map((tab) => (
+          {(['overview', 'events', 'calendar', ...(isOwnProfile ? ['notifications'] : [])] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => setActiveTab(tab as 'overview' | 'events' | 'calendar' | 'notifications')}
               style={{
                 padding: '0.75rem 1.5rem',
                 borderRadius: '12px',

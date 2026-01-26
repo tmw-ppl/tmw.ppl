@@ -37,8 +37,12 @@ const ProfileViewSelector: React.FC<{ currentView: ProfileView }> = ({ currentVi
     // Load saved preference
     const saved = localStorage.getItem(STORAGE_KEY) as ProfileView | null
     if (saved && saved !== currentView && PROFILE_VIEWS.some(v => v.value === saved)) {
-      // Redirect to saved preference if different
-      router.push(`/${saved}`)
+      // Redirect to saved preference if different, preserving query params
+      const query = router.query.id ? { id: router.query.id } : {}
+      router.push({
+        pathname: `/${saved}`,
+        query
+      })
     }
   }, [])
 
@@ -49,8 +53,12 @@ const ProfileViewSelector: React.FC<{ currentView: ProfileView }> = ({ currentVi
     localStorage.setItem(STORAGE_KEY, view)
     setSelectedView(view)
     
-    // Navigate to selected view
-    router.push(`/${view}`)
+    // Navigate to selected view, preserving the id query parameter if present
+    const query = router.query.id ? { id: router.query.id } : {}
+    router.push({
+      pathname: `/${view}`,
+      query
+    })
   }
 
   return (
