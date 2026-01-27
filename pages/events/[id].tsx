@@ -838,7 +838,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
   }
 
   // Base URL for Open Graph
-  const baseUrl = 'https://tmw-ppl-section.vercel.app'
+  const baseUrl = 'https://mysection.vercel.app'
   const defaultLogoUrl = `${baseUrl}/assets/section-logo-20260115.png`
   
   // Render Open Graph meta tags even when not authenticated (for crawlers)
