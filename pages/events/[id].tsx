@@ -870,7 +870,10 @@ const EventDetail: React.FC = () => {
   })
 
   // Get base URL for Open Graph images
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || '')
+  // Use environment variable for SSR, fallback to window.location for client-side
+  const baseUrl = typeof window !== 'undefined' 
+    ? window.location.origin 
+    : (process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '')
   
   // Ensure image URL is absolute for Open Graph (iMessage requires absolute URLs)
   const getAbsoluteImageUrl = (imageUrl: string | null | undefined): string | undefined => {
@@ -888,6 +891,16 @@ const EventDetail: React.FC = () => {
   }
 
   const ogImageUrl = getAbsoluteImageUrl(event.image_url)
+  
+  // Log for debugging
+  if (typeof window !== 'undefined') {
+    console.log('Open Graph Debug:', {
+      eventImageUrl: event.image_url,
+      ogImageUrl,
+      baseUrl,
+      hasImage: !!ogImageUrl
+    })
+  }
 
   return (
     <>

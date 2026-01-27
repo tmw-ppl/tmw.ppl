@@ -41,23 +41,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <link rel="apple-touch-icon" sizes="60x60" href="/assets/section-logo-20260115.png" />
         <link rel="apple-touch-icon" sizes="57x57" href="/assets/section-logo-20260115.png" />
         
-        {/* Open Graph Meta Tags */}
+        {/* Open Graph Meta Tags - Defaults (can be overridden by individual pages) */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Section - Community Event Sections" />
         <meta property="og:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
-        <meta property="og:image" content="/assets/section-logo-20260115.png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Section Logo" />
+        {/* Note: og:image removed from Layout - individual pages should set their own */}
         <meta property="og:url" content="https://tmw.ppl" />
         <meta property="og:site_name" content="Section" />
         
-        {/* Twitter Card Meta Tags */}
+        {/* Twitter Card Meta Tags - Defaults (can be overridden by individual pages) */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Section - Community Event Sections" />
         <meta name="twitter:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
-        <meta name="twitter:image" content="/assets/section-logo-20260115.png" />
-        <meta name="twitter:image:alt" content="Section Logo" />
+        {/* Note: twitter:image removed from Layout - individual pages should set their own */}
         
         {/* Additional Meta Tags */}
         <meta name="description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
