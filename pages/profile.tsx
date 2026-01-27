@@ -139,6 +139,8 @@ const Profile: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   
   // Sections State
   const [sections, setSections] = useState<SectionWithMembership[]>([])
@@ -824,6 +826,50 @@ const Profile: React.FC = () => {
     }
   }
 
+  const handleDeleteAccount = async () => {
+    if (!user) {
+      setError('You must be logged in to delete your account')
+      return
+    }
+
+    if (!confirm('Are you absolutely sure? This will permanently delete all your data and cannot be undone.')) {
+      return
+    }
+
+    try {
+      setDeleting(true)
+      setError('')
+
+      // Call the database function to delete all user data
+      const { error: deleteError } = await (supabase.rpc as any)('delete_user_account', {
+        user_id_to_delete: user.id
+      })
+
+      if (deleteError) {
+        console.error('Error deleting user data:', deleteError)
+        throw deleteError
+      }
+
+      // Note: The auth.users record deletion requires Supabase Admin API
+      // For now, we'll sign the user out. The auth user deletion should be handled
+      // via a server-side API route or Supabase Edge Function with service role key
+      // TODO: Create an API route to handle auth.users deletion using service role
+
+      // Sign out the user
+      await signOut()
+      
+      // Redirect to home page
+      router.push('/')
+      
+      // Show success message (though user won't see it since they're signed out)
+      setSuccess('Your account has been deleted successfully')
+    } catch (error: any) {
+      console.error('Error deleting account:', error)
+      setError(error.message || 'Failed to delete account. Please try again or contact support.')
+      setDeleting(false)
+    }
+  }
+
   const handleSaveProfile = async () => {
     if (!user || !editForm.full_name.trim()) {
       setError('Name is required')
@@ -1416,6 +1462,18 @@ const Profile: React.FC = () => {
                       }}
                     >
                       🚪 Sign Out
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: 'var(--danger)',
+                        borderColor: 'var(--danger)',
+                      }}
+                    >
+                      🗑️ Delete Account
                     </Button>
                   </>
                 )}
@@ -2766,6 +2824,95 @@ const Profile: React.FC = () => {
                     Cancel
                   </Button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Account Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '1rem',
+          }}>
+            <div style={{
+              background: 'var(--card)',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid var(--border)',
+            }}>
+              <h2 style={{
+                fontSize: '1.5rem',
+                fontWeight: '600',
+                marginBottom: '1rem',
+                color: 'var(--text)',
+              }}>
+                Delete Account
+              </h2>
+              <p style={{
+                color: 'var(--muted)',
+                marginBottom: '1.5rem',
+                lineHeight: '1.6',
+              }}>
+                Are you sure you want to delete your account? This action cannot be undone. All of your data will be permanently deleted, including:
+              </p>
+              <ul style={{
+                color: 'var(--muted)',
+                marginBottom: '1.5rem',
+                paddingLeft: '1.5rem',
+                lineHeight: '1.8',
+              }}>
+                <li>Your profile and personal information</li>
+                <li>All events you created</li>
+                <li>All sections you created</li>
+                <li>All projects and ideas you created</li>
+                <li>Your RSVPs and event participation</li>
+                <li>Your memberships and subscriptions</li>
+                <li>All messages and channel activity</li>
+              </ul>
+              <p style={{
+                color: 'var(--danger)',
+                marginBottom: '1.5rem',
+                fontWeight: '600',
+              }}>
+                ⚠️ This action is permanent and cannot be reversed.
+              </p>
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
+                marginTop: '1.5rem',
+              }}>
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  style={{
+                    background: 'var(--danger)',
+                    borderColor: 'var(--danger)',
+                  }}
+                >
+                  {deleting ? 'Deleting...' : 'Delete My Account'}
+                </Button>
               </div>
             </div>
           </div>
