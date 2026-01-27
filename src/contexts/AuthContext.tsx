@@ -93,28 +93,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         data: {
           full_name: name,
           phone: phone
-        } as any
+        } as any,
+        emailRedirectTo: `${window.location.origin}/confirm`
       }
     })
 
-    // Create profile record if signup was successful
+    // Ensure profile exists (database trigger should create it, but this is a fallback)
     if (data.user && !error) {
       try {
-        const { error: profileError } = await supabase
+        // Check if profile already exists (trigger may have created it)
+        const { data: existingProfile } = await supabase
           .from('profiles')
-          .insert({
-            id: data.user.id,
-            full_name: name,
-            email: email,
-            phone: phone,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          } as any)
-        if (profileError) {
-          console.error('Error creating profile:', profileError)
+          .select('id')
+          .eq('id', data.user.id)
+          .single()
+
+        // Only create if it doesn't exist
+        if (!existingProfile) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              full_name: name,
+              email: email,
+              phone: phone,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            } as any)
+          if (profileError) {
+            console.error('Error creating profile:', profileError)
+          }
+        } else {
+          // Profile exists, but update it with the latest signup data in case metadata changed
+          const { error: updateError } = await (supabase
+            .from('profiles') as any)
+            .update({
+              full_name: name,
+              email: email,
+              phone: phone,
+              updated_at: new Date().toISOString()
+            } as any)
+            .eq('id', data.user.id)
+          if (updateError) {
+            console.error('Error updating profile:', updateError)
+          }
         }
       } catch (profileError) {
-        console.error('Error creating profile:', profileError)
+        console.error('Error ensuring profile exists:', profileError)
       }
     }
 

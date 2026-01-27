@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 
-type ProfileView = 'profile' | 'profile-v2' | 'profile-v3'
+type ProfileView = 'profile'
 
 interface ProfileViewOption {
   value: ProfileView
@@ -12,18 +12,8 @@ interface ProfileViewOption {
 const PROFILE_VIEWS: ProfileViewOption[] = [
   {
     value: 'profile',
-    label: 'Classic View',
-    description: 'Original profile with events and groups'
-  },
-  {
-    value: 'profile-v2',
-    label: 'Enhanced View',
-    description: 'Improved profile layout'
-  },
-  {
-    value: 'profile-v3',
-    label: 'Sections View',
-    description: 'Section-based profiles with custom fields'
+    label: 'Profile',
+    description: 'Your profile with events, sections, and social links'
   }
 ]
 

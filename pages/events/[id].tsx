@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import Head from 'next/head'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { supabase, type Event, type Profile, type EventInvitation } from '@/lib/supabase'
@@ -868,8 +869,30 @@ const EventDetail: React.FC = () => {
     userRsvpStatus: event.user_rsvp_status
   })
 
+  // Get base URL for Open Graph images
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+
   return (
-    <div style={styles.container}>
+    <>
+      <Head>
+        <title>{event.title}</title>
+        <meta name="description" content={event.description || `Join us for ${event.title}`} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`${baseUrl}/events/${event.id}`} />
+        <meta property="og:title" content={event.title} />
+        <meta property="og:description" content={event.description || `Join us for ${event.title}`} />
+        {event.image_url && <meta property="og:image" content={event.image_url} />}
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={`${baseUrl}/events/${event.id}`} />
+        <meta name="twitter:title" content={event.title} />
+        <meta name="twitter:description" content={event.description || `Join us for ${event.title}`} />
+        {event.image_url && <meta name="twitter:image" content={event.image_url} />}
+      </Head>
+      <div style={styles.container}>
       {/* Hero Section with Cover Image */}
       <div style={styles.heroSection}>
         {event.image_url ? (
@@ -2015,6 +2038,7 @@ const EventDetail: React.FC = () => {
         </div>
       )}
     </div>
+    </>
   )
 }
 

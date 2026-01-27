@@ -260,7 +260,7 @@ const Events: React.FC = () => {
       setLoading(true)
       const { data: eventsData, error } = await supabase
         .from('events')
-        .select(`*, creator:profiles!created_by (full_name, email)`)
+        .select(`*, creator:profiles!created_by (id, full_name, email, profile_picture_url)`)
         .eq('published', true)
         .order('date', { ascending: true })
 
@@ -583,6 +583,60 @@ const Events: React.FC = () => {
     return formatEventDateTime(isoDateTime, undefined, { showTimezone: false, dateStyle: 'medium', timeStyle: 'short' })
   }
 
+  // Format date/time for event cards: "Thu · 9am" or "Thu · 5:45pm"
+  const formatEventCardDateTime = (dateString: string, timeString?: string): string => {
+    try {
+      let date: Date
+      if (dateString.includes('T')) {
+        date = new Date(dateString)
+      } else {
+        const isoDateTime = migrateLegacyDateTime(dateString, timeString)
+        date = new Date(isoDateTime)
+      }
+
+      // Get day abbreviation (Thu, Fri, Sat, etc.)
+      const dayAbbr = date.toLocaleDateString('en-US', { weekday: 'short' })
+      
+      // Format time (9am, 5:45pm, etc.)
+      let timeStr = ''
+      if (timeString) {
+        // Parse time string
+        const timeMatch = timeString.match(/(\d{1,2}):?(\d{2})?\s*(am|pm|AM|PM)?/i)
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1])
+          const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0
+          const period = timeMatch[3]?.toLowerCase()
+          
+          // Convert to 12-hour format if needed
+          if (!period) {
+            // Assume 24-hour format
+            const isPM = hours >= 12
+            if (hours > 12) hours -= 12
+            if (hours === 0) hours = 12
+            timeStr = minutes > 0 ? `${hours}:${String(minutes).padStart(2, '0')}${isPM ? 'pm' : 'am'}` : `${hours}${isPM ? 'pm' : 'am'}`
+          } else {
+            timeStr = minutes > 0 ? `${hours}:${String(minutes).padStart(2, '0')}${period}` : `${hours}${period}`
+          }
+        } else {
+          // Fallback: use the time string as-is
+          timeStr = timeString
+        }
+      } else {
+        // No time provided, use formatted time from date
+        const hours = date.getHours()
+        const minutes = date.getMinutes()
+        const isPM = hours >= 12
+        const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours)
+        timeStr = minutes > 0 ? `${displayHours}:${String(minutes).padStart(2, '0')}${isPM ? 'pm' : 'am'}` : `${displayHours}${isPM ? 'pm' : 'am'}`
+      }
+      
+      return `${dayAbbr} · ${timeStr}`
+    } catch (error) {
+      console.error('Error formatting event card date/time:', error)
+      return dateString
+    }
+  }
+
   // Styles
   const styles = {
     page: { minHeight: '100vh', padding: '0' },
@@ -622,190 +676,9 @@ const Events: React.FC = () => {
     toggleBtnActive: { background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)' },
   }
 
-  // Render upcoming event card (for carousel)
+  // Render upcoming event card (uses same design as main list)
   const renderUpcomingCard = (event: EventWithRSVP) => {
-    const eventDateTime = event.date.includes('T') ? event.date : migrateLegacyDateTime(event.date, event.time)
-    const formattedDateTime = formatDateTime(event.date, event.time)
-    const creatorName = (event.creator as any)?.full_name || 'Unknown'
-    
-    // Get RSVP status badge
-    const getRSVPBadge = () => {
-      if (!user) return null
-      if (event.user_rsvp_status === 'going') {
-        return (
-          <span style={{
-            position: 'absolute',
-            top: '0.75rem',
-            right: '0.75rem',
-            background: 'var(--success)',
-            color: 'white',
-            padding: '0.25rem 0.75rem',
-            borderRadius: '20px',
-            fontSize: '0.75rem',
-            fontWeight: '600',
-            zIndex: 1
-          }}>
-            ✓ Going
-          </span>
-        )
-      }
-      if (event.user_rsvp_status === 'maybe') {
-        return (
-          <span style={{
-            position: 'absolute',
-            top: '0.75rem',
-            right: '0.75rem',
-            background: 'var(--warning)',
-            color: 'white',
-            padding: '0.25rem 0.75rem',
-            borderRadius: '20px',
-            fontSize: '0.75rem',
-            fontWeight: '600',
-            zIndex: 1
-          }}>
-            ? Maybe
-          </span>
-        )
-      }
-      return null
-    }
-    
-    return (
-      <Link 
-        key={event.id} 
-        href={`/events/${event.id}`} 
-        style={{ textDecoration: 'none', color: 'inherit' }}
-      >
-        <Card style={{
-          width: '100%',
-          overflow: 'hidden',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: 0
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-4px)'
-          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)'
-          e.currentTarget.style.boxShadow = 'var(--shadow)'
-        }}
-        >
-          {/* Banner Image */}
-          <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden' }}>
-            {event.image_url ? (
-              <img 
-                src={event.image_url} 
-                alt={event.title} 
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover'
-                }}
-              />
-            ) : (
-              <div style={{
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '3rem'
-              }}>
-                📅
-              </div>
-            )}
-            {getRSVPBadge()}
-          </div>
-
-          {/* Content */}
-          <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              margin: '0 0 0.75rem 0',
-              lineHeight: '1.3',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden'
-            }}>
-              {event.title}
-            </h3>
-
-            {/* Date/Time */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '0.5rem',
-              color: 'var(--muted)',
-              fontSize: '0.9rem'
-            }}>
-              <span>📅</span>
-              <span>{formattedDateTime}</span>
-            </div>
-
-            {/* Location */}
-            {event.location && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '0.5rem',
-                color: 'var(--muted)',
-                fontSize: '0.9rem'
-              }}>
-                <span>📍</span>
-                <span style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {event.location}
-                </span>
-              </div>
-            )}
-
-            {/* Host */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '0.75rem',
-              color: 'var(--muted)',
-              fontSize: '0.9rem'
-            }}>
-              <span>👤</span>
-              <span>Hosted by {creatorName}</span>
-            </div>
-
-            {/* RSVP Count */}
-            <div style={{
-              marginTop: 'auto',
-              paddingTop: '0.75rem',
-              borderTop: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-              fontSize: '0.85rem',
-              color: 'var(--muted)'
-            }}>
-              <span>✅ {event.rsvp_count || 0} going</span>
-              {event.maybe_count && event.maybe_count > 0 && (
-                <span>🤔 {event.maybe_count} maybe</span>
-              )}
-            </div>
-          </div>
-        </Card>
-      </Link>
-    )
+    return renderEventGridCard(event)
   }
 
   // Render category card (Luma style)
@@ -856,59 +729,190 @@ const Events: React.FC = () => {
     </div>
   )
 
-  // Render event grid card
+  // Render event list card (new design matching Partiful style)
   const renderEventGridCard = (event: EventWithRSVP) => {
     const eventDateTime = event.date.includes('T') ? event.date : migrateLegacyDateTime(event.date, event.time)
     const isPast = !isEventUpcoming(eventDateTime)
-    const isLoading = rsvpLoading === event.id
-    const atCapacity = isAtCapacity(event)
-    const canUserRSVP = canRSVP(event)
+    const dateTimeChip = formatEventCardDateTime(event.date, event.time)
+    const creator = event.creator as any
+    const creatorName = creator?.full_name || 'Unknown'
+    const creatorPicture = creator?.profile_picture_url
+    
+    // Get RSVP status text and emoji (only if user has RSVP'd)
+    let rsvpStatus = ''
+    let rsvpEmoji = ''
+    if (event.user_rsvp_status === 'going') {
+      rsvpStatus = 'Going'
+      rsvpEmoji = '👍'
+    } else if (event.user_rsvp_status === 'maybe') {
+      rsvpStatus = 'Maybe'
+      rsvpEmoji = '🤔'
+    } else if (event.user_rsvp_status === 'not_going') {
+      rsvpStatus = "Can't Go"
+      rsvpEmoji = '😢'
+    }
 
     return (
-      <Link key={event.id} href={`/events/${event.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
-        <div style={{ ...styles.eventCardGrid, opacity: isPast ? 0.6 : 1 }}>
-          {event.image_url ? (
-            <img src={event.image_url} alt={event.title} style={styles.eventImage} />
-          ) : (
-            <div style={{ ...styles.eventImage, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '3rem' }}>
-              📅
-            </div>
-          )}
-          <div style={styles.eventContent}>
-            <h3 style={styles.eventTitle}>{event.title}</h3>
-            <p style={styles.eventMeta}>{formatDateTime(event.date, event.time)}</p>
-            {event.location && <p style={styles.eventMeta}>📍 {event.location}</p>}
-            {event.creator && <p style={styles.eventMeta}>by {event.creator.full_name}</p>}
-            
-            {event.tags && event.tags.length > 0 && (
-              <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.5rem', marginBottom: 'auto' }}>
-                {event.tags.slice(0, 2).map(tag => (
-                  <span key={tag} style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '999px', background: 'var(--border)', color: 'var(--muted)' }}>
-                    {tag}
-                  </span>
-                ))}
+      <Link 
+        key={event.id} 
+        href={`/events/${event.id}`} 
+        style={{ 
+          textDecoration: 'none', 
+          color: 'inherit', 
+          display: 'block',
+        }}
+      >
+        <div 
+          style={{
+            display: 'flex',
+            gap: '1rem',
+            padding: '1rem',
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            opacity: isPast ? 0.7 : 1,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--bg-2)'
+            e.currentTarget.style.borderColor = 'var(--primary)'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'var(--card)'
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.transform = 'translateY(0)'
+          }}
+        >
+          {/* Square Image on Left */}
+          <div style={{ flexShrink: 0 }}>
+            {event.image_url ? (
+              <img 
+                src={event.image_url} 
+                alt={event.title} 
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                }}
+              />
+            ) : (
+              <div style={{
+                width: '80px',
+                height: '80px',
+                background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '2rem',
+              }}>
+                📅
               </div>
             )}
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.75rem' }} onClick={e => e.stopPropagation()}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
-                {(event.rsvp_count || 0) > 0 ? `✅ ${event.rsvp_count} going` : ''}
-              </span>
-              {!isPast && user && canUserRSVP && (
-                <Button
-                  variant={event.user_rsvp_status === 'going' ? 'secondary' : 'primary'}
-                  size="small"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    event.user_rsvp_status === 'going' ? handleRemoveRSVP(event.id) : handleRSVP(event.id, 'going')
+          </div>
+
+          {/* Event Details */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {/* Date/Time Chip */}
+            <div style={{
+              display: 'inline-block',
+              padding: '0.25rem 0.75rem',
+              background: 'var(--bg-2)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              color: 'var(--text)',
+              width: 'fit-content',
+            }}>
+              {dateTimeChip}
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              fontSize: '1rem',
+              fontWeight: '600',
+              margin: 0,
+              color: 'var(--text)',
+              lineHeight: '1.3',
+            }}>
+              {event.title}
+            </h3>
+
+            {/* Host/RSVP Status */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.875rem',
+              color: 'var(--muted)',
+            }}>
+              {/* Creator Profile Picture */}
+              {creatorPicture ? (
+                <img
+                  src={creatorPicture}
+                  alt={creatorName}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
                   }}
-                  disabled={isLoading || (atCapacity && !event.waitlist_enabled && !event.user_rsvp_status)}
-                >
-                  {isLoading ? '...' : event.user_rsvp_status === 'going' ? '✓ Going' : atCapacity ? 'Full' : 'RSVP'}
-                </Button>
+                />
+              ) : (
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '0.625rem',
+                  fontWeight: '600',
+                }}>
+                  {creatorName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              
+              {/* Creator Name or RSVP Status */}
+              {event.user_rsvp_status ? (
+                <>
+                  <span>{creatorName}</span>
+                  <span>{rsvpEmoji}</span>
+                  <span>{rsvpStatus}</span>
+                </>
+              ) : (
+                <span>{creatorName}</span>
               )}
             </div>
+          </div>
+
+          {/* Vertical Ellipsis */}
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'flex-start', paddingTop: '0.25rem' }}>
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                // TODO: Add event menu/options
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                fontSize: '1.25rem',
+                lineHeight: 1,
+              }}
+            >
+              ⋮
+            </button>
           </div>
         </div>
       </Link>
@@ -964,9 +968,6 @@ const Events: React.FC = () => {
         <AnimatedSection animationType="fade">
           <div style={styles.header}>
             <h1 style={styles.title}>Discover Events</h1>
-            <p style={styles.subtitle}>
-              Hands-on nights, rooftop jams, show-and-tells, and pop-up collabs. Add them to your calendar and come say hi.
-            </p>
           </div>
         </AnimatedSection>
 
@@ -984,9 +985,9 @@ const Events: React.FC = () => {
               
               <div 
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr',
-                  gap: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
                   width: '100%'
                 }}
               >
@@ -1059,14 +1060,14 @@ const Events: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Events Grid */}
+                {/* Events List */}
                 {paginatedEvents.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--muted)' }}>
                     <p>No events found. Try adjusting your filters.</p>
                   </div>
                 ) : (
                   <>
-                    <div style={styles.eventsGrid}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {paginatedEvents.map(renderEventGridCard)}
                     </div>
 
