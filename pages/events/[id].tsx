@@ -2,14 +2,28 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Head from 'next/head'
+import { GetServerSideProps } from 'next'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { supabase, type Event, type Profile, type EventInvitation } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import Avatar from '@/components/ui/Avatar'
 import EventComments from '@/components/events/EventComments'
 import { formatEventDateTime, isEventUpcoming, migrateLegacyDateTime } from '@/utils/dateTime'
+
+// Server-side data for Open Graph meta tags
+interface EventMetaData {
+  id: string
+  title: string
+  description: string | null
+  image_url: string | null
+}
+
+interface EventDetailProps {
+  eventMeta: EventMetaData | null
+}
 
 interface EventWithRSVP extends Event {
   rsvp_count?: number
@@ -25,7 +39,7 @@ interface RSVPUser {
   profile?: Profile & { profile_picture_url?: string }
 }
 
-const EventDetail: React.FC = () => {
+const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
   const router = useRouter()
   const { id } = router.query
   const { user, loading: authLoading } = useAuth()
@@ -823,9 +837,54 @@ const EventDetail: React.FC = () => {
     return true
   }
 
-  // Show nothing while checking auth or redirecting
+  // Base URL for Open Graph
+  const baseUrl = 'https://tmw-ppl-section.vercel.app'
+  const defaultLogoUrl = `${baseUrl}/assets/section-logo-20260115.png`
+  
+  // Render Open Graph meta tags even when not authenticated (for crawlers)
+  // This uses server-side fetched eventMeta data
+  const renderOGHead = () => {
+    if (!eventMeta) return null
+    
+    const ogImageUrl = eventMeta.image_url || defaultLogoUrl
+    const ogTitle = eventMeta.title
+    const ogDescription = eventMeta.description || `Join us for ${eventMeta.title}`
+    
+    return (
+      <Head>
+        <title>{ogTitle}</title>
+        <meta key="description" name="description" content={ogDescription} />
+        
+        {/* Open Graph / Facebook / iMessage */}
+        <meta key="og:type" property="og:type" content="website" />
+        <meta key="og:url" property="og:url" content={`${baseUrl}/events/${eventMeta.id}`} />
+        <meta key="og:title" property="og:title" content={ogTitle} />
+        <meta key="og:description" property="og:description" content={ogDescription} />
+        <meta key="og:image" property="og:image" content={ogImageUrl} />
+        <meta key="og:image:width" property="og:image:width" content="1200" />
+        <meta key="og:image:height" property="og:image:height" content="630" />
+        <meta key="og:image:type" property="og:image:type" content="image/jpeg" />
+        
+        {/* Twitter */}
+        <meta key="twitter:card" name="twitter:card" content="summary_large_image" />
+        <meta key="twitter:url" name="twitter:url" content={`${baseUrl}/events/${eventMeta.id}`} />
+        <meta key="twitter:title" name="twitter:title" content={ogTitle} />
+        <meta key="twitter:description" name="twitter:description" content={ogDescription} />
+        <meta key="twitter:image" name="twitter:image" content={ogImageUrl} />
+      </Head>
+    )
+  }
+
+  // Show meta tags + loading while checking auth or redirecting
   if (authLoading || !user) {
-    return null
+    return (
+      <>
+        {renderOGHead()}
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <p>Loading...</p>
+        </div>
+      </>
+    )
   }
 
   if (loading) {
@@ -869,54 +928,12 @@ const EventDetail: React.FC = () => {
     userRsvpStatus: event.user_rsvp_status
   })
 
-  // Get base URL for Open Graph images
-  // Use environment variable for SSR, fallback to window.location for client-side
-  const baseUrl = typeof window !== 'undefined' 
-    ? window.location.origin 
-    : (process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '')
+  // OG meta tags are rendered via renderOGHead() using server-side data
+  // This ensures crawlers see the tags even before client-side auth
   
-  // Ensure image URL is absolute for Open Graph (iMessage requires absolute URLs)
-  const getAbsoluteImageUrl = (imageUrl: string | null | undefined): string | undefined => {
-    if (!imageUrl) return undefined
-    // If already absolute URL, return as is
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      return imageUrl
-    }
-    // If relative URL, make it absolute
-    if (imageUrl.startsWith('/')) {
-      return `${baseUrl}${imageUrl}`
-    }
-    // If it's a Supabase storage URL, it should already be absolute
-    return imageUrl
-  }
-
-  // Use event image if available, otherwise fallback to default section logo (must be absolute URL)
-  const defaultLogoUrl = 'https://tmw-ppl-section.vercel.app/assets/section-logo-20260115.png'
-  const ogImageUrl = getAbsoluteImageUrl(event.image_url) || defaultLogoUrl
-
   return (
     <>
-      <Head>
-        <title>{event.title}</title>
-        <meta key="description" name="description" content={event.description || `Join us for ${event.title}`} />
-        
-        {/* Open Graph / Facebook / iMessage - use key prop to override Layout defaults */}
-        <meta key="og:type" property="og:type" content="website" />
-        <meta key="og:url" property="og:url" content={`${baseUrl}/events/${event.id}`} />
-        <meta key="og:title" property="og:title" content={event.title} />
-        <meta key="og:description" property="og:description" content={event.description || `Join us for ${event.title}`} />
-        <meta key="og:image" property="og:image" content={ogImageUrl} />
-        <meta key="og:image:width" property="og:image:width" content="1200" />
-        <meta key="og:image:height" property="og:image:height" content="630" />
-        <meta key="og:image:type" property="og:image:type" content="image/jpeg" />
-        
-        {/* Twitter - use key prop to override Layout defaults */}
-        <meta key="twitter:card" name="twitter:card" content="summary_large_image" />
-        <meta key="twitter:url" name="twitter:url" content={`${baseUrl}/events/${event.id}`} />
-        <meta key="twitter:title" name="twitter:title" content={event.title} />
-        <meta key="twitter:description" name="twitter:description" content={event.description || `Join us for ${event.title}`} />
-        <meta key="twitter:image" name="twitter:image" content={ogImageUrl} />
-      </Head>
+      {renderOGHead()}
       <div style={styles.container}>
       {/* Hero Section with Cover Image */}
       <div style={styles.heroSection}>
@@ -2806,6 +2823,54 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     transition: 'all 0.2s',
   },
+}
+
+// Server-side data fetching for Open Graph meta tags
+// This runs on the server before the page is rendered
+export const getServerSideProps: GetServerSideProps<EventDetailProps> = async (context) => {
+  const { id } = context.params || {}
+  
+  if (!id || typeof id !== 'string') {
+    return { props: { eventMeta: null } }
+  }
+
+  try {
+    // Create a server-side Supabase client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase environment variables')
+      return { props: { eventMeta: null } }
+    }
+
+    const serverSupabase = createClient(supabaseUrl, supabaseKey)
+
+    // Fetch only the data needed for meta tags (no auth required for published events)
+    const { data: eventData, error } = await serverSupabase
+      .from('events')
+      .select('id, title, description, image_url, published')
+      .eq('id', id)
+      .single()
+
+    if (error || !eventData || !eventData.published) {
+      return { props: { eventMeta: null } }
+    }
+
+    return {
+      props: {
+        eventMeta: {
+          id: eventData.id,
+          title: eventData.title,
+          description: eventData.description,
+          image_url: eventData.image_url,
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching event meta:', error)
+    return { props: { eventMeta: null } }
+  }
 }
 
 export default EventDetail
