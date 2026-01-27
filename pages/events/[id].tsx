@@ -2837,17 +2837,21 @@ export const getServerSideProps: GetServerSideProps<EventDetailProps> = async (c
 
   try {
     // Create a server-side Supabase client
+    // Use service role key to bypass RLS (safe in getServerSideProps - server only)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // Prefer service role key (bypasses RLS), fall back to anon key
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('[OG Meta] Missing Supabase environment variables:', { 
         hasUrl: !!supabaseUrl, 
-        hasKey: !!supabaseKey 
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY 
       })
       return { props: { eventMeta: null } }
     }
 
+    console.log('[OG Meta] Using key type:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : 'anon')
     const serverSupabase = createClient(supabaseUrl, supabaseKey)
 
     // Fetch only the data needed for meta tags
