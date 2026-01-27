@@ -870,7 +870,24 @@ const EventDetail: React.FC = () => {
   })
 
   // Get base URL for Open Graph images
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || '')
+  
+  // Ensure image URL is absolute for Open Graph (iMessage requires absolute URLs)
+  const getAbsoluteImageUrl = (imageUrl: string | null | undefined): string | undefined => {
+    if (!imageUrl) return undefined
+    // If already absolute URL, return as is
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl
+    }
+    // If relative URL, make it absolute
+    if (imageUrl.startsWith('/')) {
+      return `${baseUrl}${imageUrl}`
+    }
+    // If it's a Supabase storage URL, it should already be absolute
+    return imageUrl
+  }
+
+  const ogImageUrl = getAbsoluteImageUrl(event.image_url)
 
   return (
     <>
@@ -878,19 +895,26 @@ const EventDetail: React.FC = () => {
         <title>{event.title}</title>
         <meta name="description" content={event.description || `Join us for ${event.title}`} />
         
-        {/* Open Graph / Facebook */}
+        {/* Open Graph / Facebook / iMessage */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`${baseUrl}/events/${event.id}`} />
         <meta property="og:title" content={event.title} />
         <meta property="og:description" content={event.description || `Join us for ${event.title}`} />
-        {event.image_url && <meta property="og:image" content={event.image_url} />}
+        {ogImageUrl && (
+          <>
+            <meta property="og:image" content={ogImageUrl} />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta property="og:image:type" content="image/jpeg" />
+          </>
+        )}
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content={`${baseUrl}/events/${event.id}`} />
         <meta name="twitter:title" content={event.title} />
         <meta name="twitter:description" content={event.description || `Join us for ${event.title}`} />
-        {event.image_url && <meta name="twitter:image" content={event.image_url} />}
+        {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
       </Head>
       <div style={styles.container}>
       {/* Hero Section with Cover Image */}
