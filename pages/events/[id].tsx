@@ -890,44 +890,32 @@ const EventDetail: React.FC = () => {
     return imageUrl
   }
 
-  const ogImageUrl = getAbsoluteImageUrl(event.image_url)
-  
-  // Log for debugging
-  if (typeof window !== 'undefined') {
-    console.log('Open Graph Debug:', {
-      eventImageUrl: event.image_url,
-      ogImageUrl,
-      baseUrl,
-      hasImage: !!ogImageUrl
-    })
-  }
+  // Use event image if available, otherwise fallback to default section logo (must be absolute URL)
+  const defaultLogoUrl = 'https://tmw-ppl-section.vercel.app/assets/section-logo-20260115.png'
+  const ogImageUrl = getAbsoluteImageUrl(event.image_url) || defaultLogoUrl
 
   return (
     <>
       <Head>
         <title>{event.title}</title>
-        <meta name="description" content={event.description || `Join us for ${event.title}`} />
+        <meta key="description" name="description" content={event.description || `Join us for ${event.title}`} />
         
-        {/* Open Graph / Facebook / iMessage */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${baseUrl}/events/${event.id}`} />
-        <meta property="og:title" content={event.title} />
-        <meta property="og:description" content={event.description || `Join us for ${event.title}`} />
-        {ogImageUrl && (
-          <>
-            <meta property="og:image" content={ogImageUrl} />
-            <meta property="og:image:width" content="1200" />
-            <meta property="og:image:height" content="630" />
-            <meta property="og:image:type" content="image/jpeg" />
-          </>
-        )}
+        {/* Open Graph / Facebook / iMessage - use key prop to override Layout defaults */}
+        <meta key="og:type" property="og:type" content="website" />
+        <meta key="og:url" property="og:url" content={`${baseUrl}/events/${event.id}`} />
+        <meta key="og:title" property="og:title" content={event.title} />
+        <meta key="og:description" property="og:description" content={event.description || `Join us for ${event.title}`} />
+        <meta key="og:image" property="og:image" content={ogImageUrl} />
+        <meta key="og:image:width" property="og:image:width" content="1200" />
+        <meta key="og:image:height" property="og:image:height" content="630" />
+        <meta key="og:image:type" property="og:image:type" content="image/jpeg" />
         
-        {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content={`${baseUrl}/events/${event.id}`} />
-        <meta name="twitter:title" content={event.title} />
-        <meta name="twitter:description" content={event.description || `Join us for ${event.title}`} />
-        {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
+        {/* Twitter - use key prop to override Layout defaults */}
+        <meta key="twitter:card" name="twitter:card" content="summary_large_image" />
+        <meta key="twitter:url" name="twitter:url" content={`${baseUrl}/events/${event.id}`} />
+        <meta key="twitter:title" name="twitter:title" content={event.title} />
+        <meta key="twitter:description" name="twitter:description" content={event.description || `Join us for ${event.title}`} />
+        <meta key="twitter:image" name="twitter:image" content={ogImageUrl} />
       </Head>
       <div style={styles.container}>
       {/* Hero Section with Cover Image */}
