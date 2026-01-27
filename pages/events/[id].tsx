@@ -2831,6 +2831,7 @@ export const getServerSideProps: GetServerSideProps<EventDetailProps> = async (c
   const { id } = context.params || {}
   
   if (!id || typeof id !== 'string') {
+    console.log('[OG Meta] No event ID provided')
     return { props: { eventMeta: null } }
   }
 
@@ -2840,20 +2841,37 @@ export const getServerSideProps: GetServerSideProps<EventDetailProps> = async (c
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
     if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase environment variables')
+      console.error('[OG Meta] Missing Supabase environment variables:', { 
+        hasUrl: !!supabaseUrl, 
+        hasKey: !!supabaseKey 
+      })
       return { props: { eventMeta: null } }
     }
 
     const serverSupabase = createClient(supabaseUrl, supabaseKey)
 
-    // Fetch only the data needed for meta tags (no auth required for published events)
+    // Fetch only the data needed for meta tags
+    // Note: This query may fail if RLS is enabled on events table without a public SELECT policy
     const { data: eventData, error } = await serverSupabase
       .from('events')
-      .select('id, title, description, image_url, published')
+      .select('id, title, description, image_url')
       .eq('id', id)
       .single()
 
-    if (error || !eventData || !eventData.published) {
+    console.log('[OG Meta] Query result:', { 
+      eventId: id, 
+      hasData: !!eventData, 
+      error: error?.message,
+      title: eventData?.title 
+    })
+
+    if (error) {
+      console.error('[OG Meta] Supabase error:', error)
+      return { props: { eventMeta: null } }
+    }
+
+    if (!eventData) {
+      console.log('[OG Meta] No event data found for ID:', id)
       return { props: { eventMeta: null } }
     }
 
@@ -2868,7 +2886,7 @@ export const getServerSideProps: GetServerSideProps<EventDetailProps> = async (c
       }
     }
   } catch (error) {
-    console.error('Error fetching event meta:', error)
+    console.error('[OG Meta] Exception:', error)
     return { props: { eventMeta: null } }
   }
 }
