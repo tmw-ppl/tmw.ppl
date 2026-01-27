@@ -644,18 +644,38 @@ export default function SectionPage() {
               </span>
             )}
             {isMember && !isCreator && (
-              <Button
-                variant="secondary"
-                size="small"
+              <button
                 onClick={handleLeaveSection}
                 style={{
-                  background: 'rgba(239, 68, 68, 0.1)',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
                   border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#ef4444'
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'
+                  e.currentTarget.style.borderColor = '#ef4444'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.2)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
                 }}
               >
                 🚪 Leave Section
-              </Button>
+              </button>
             )}
           </div>
         </div>

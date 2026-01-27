@@ -41,23 +41,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <link rel="apple-touch-icon" sizes="60x60" href="/assets/section-logo-20260115.png" />
         <link rel="apple-touch-icon" sizes="57x57" href="/assets/section-logo-20260115.png" />
         
-        {/* Open Graph Meta Tags */}
-        <meta property="og:type" content="website" />
-        <meta property="og:title" content="Section - Community Event Sections" />
-        <meta property="og:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
-        <meta property="og:image" content="/assets/section-logo-20260115.png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Section Logo" />
-        <meta property="og:url" content="https://tmw.ppl" />
+        {/* Open Graph Meta Tags - Defaults (use key prop so pages can override) */}
+        <meta key="og:type" property="og:type" content="website" />
+        <meta key="og:title" property="og:title" content="Section - Community Event Sections" />
+        <meta key="og:description" property="og:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
+        <meta key="og:image" property="og:image" content="https://mysection.vercel.app/assets/section-logo-20260115.png" />
+        <meta key="og:image:width" property="og:image:width" content="1200" />
+        <meta key="og:image:height" property="og:image:height" content="630" />
+        <meta key="og:image:alt" property="og:image:alt" content="Section Logo" />
+        <meta key="og:url" property="og:url" content="https://mysection.vercel.app" />
         <meta property="og:site_name" content="Section" />
         
-        {/* Twitter Card Meta Tags */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Section - Community Event Sections" />
-        <meta name="twitter:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
-        <meta name="twitter:image" content="/assets/section-logo-20260115.png" />
-        <meta name="twitter:image:alt" content="Section Logo" />
+        {/* Twitter Card Meta Tags - Defaults (use key prop so pages can override) */}
+        <meta key="twitter:card" name="twitter:card" content="summary_large_image" />
+        <meta key="twitter:title" name="twitter:title" content="Section - Community Event Sections" />
+        <meta key="twitter:description" name="twitter:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
+        <meta key="twitter:image" name="twitter:image" content="https://mysection.vercel.app/assets/section-logo-20260115.png" />
+        <meta key="twitter:image:alt" name="twitter:image:alt" content="Section Logo" />
         
         {/* Additional Meta Tags */}
         <meta name="description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
