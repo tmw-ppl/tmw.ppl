@@ -43,6 +43,18 @@ Set these environment variables in your deployment platform (Vercel, etc.):
 
 - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key
+- `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key (for server-side operations)
+- `NEXT_PUBLIC_SITE_URL` - Your site URL (e.g., `https://mysection.vercel.app`) - **Recommended for password reset links**
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` - Google Maps API key (optional, for location autocomplete)
+
+### URL Configuration
+
+The app automatically detects the correct base URL:
+1. **Production**: Uses `NEXT_PUBLIC_SITE_URL` if set, otherwise falls back to `VERCEL_URL` or default
+2. **Development**: Uses `http://localhost:3000`
+3. **Password Reset**: Uses the detected base URL + `/reset-password`
+
+**Important**: Set `NEXT_PUBLIC_SITE_URL` in Vercel to ensure password reset emails use the correct URL.
 
 ## Important Notes
 
@@ -50,4 +62,5 @@ Set these environment variables in your deployment platform (Vercel, etc.):
 - ✅ Restart dev server after changing env vars
 - ✅ Use different projects for staging/prod
 - ✅ Never hardcode credentials in code
+- ✅ Set `NEXT_PUBLIC_SITE_URL` in production for correct password reset links
 

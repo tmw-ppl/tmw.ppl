@@ -837,8 +837,11 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
     return true
   }
 
-  // Base URL for Open Graph
-  const baseUrl = 'https://mysection.vercel.app'
+  // Base URL for Open Graph - use dynamic URL based on environment
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                  (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 
+                  'https://mysection.vercel.app'))
   const defaultLogoUrl = `${baseUrl}/assets/section-logo-20260115.png`
   
   // Render Open Graph meta tags even when not authenticated (for crawlers)

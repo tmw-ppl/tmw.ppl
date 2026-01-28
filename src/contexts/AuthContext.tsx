@@ -160,8 +160,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const resetPassword = async (email: string) => {
+    // Get the base URL dynamically based on environment
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                    (typeof window !== 'undefined' ? window.location.origin : 'https://mysection.vercel.app')
+    
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${baseUrl}/reset-password`,
     })
     return { data, error }
   }
