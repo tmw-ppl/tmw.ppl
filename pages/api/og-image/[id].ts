@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
-// API route that redirects to the event's image
-// This helps with iMessage previews which may not like cross-domain images
+// API route that serves the event's image directly (not a redirect)
+// This helps with iMessage previews which may not follow redirects
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -18,7 +18,6 @@ export default async function handler(
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseKey) {
-      // Fallback to default logo
       return res.redirect(302, '/assets/section-logo-20260115.png')
     }
 
@@ -31,15 +30,29 @@ export default async function handler(
       .single()
 
     if (error || !event?.image_url) {
-      // Fallback to default logo
       return res.redirect(302, '/assets/section-logo-20260115.png')
     }
 
-    // Set cache headers for the redirect
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600')
+    // Fetch the actual image from Supabase storage
+    const imageResponse = await fetch(event.image_url)
     
-    // Redirect to the actual image
-    return res.redirect(302, event.image_url)
+    if (!imageResponse.ok) {
+      return res.redirect(302, '/assets/section-logo-20260115.png')
+    }
+
+    // Get content type from the response
+    const contentType = imageResponse.headers.get('content-type') || 'image/png'
+    
+    // Get the image as a buffer
+    const imageBuffer = await imageResponse.arrayBuffer()
+
+    // Set cache headers
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400')
+    res.setHeader('Content-Type', contentType)
+    res.setHeader('Content-Length', imageBuffer.byteLength)
+    
+    // Send the image directly
+    return res.send(Buffer.from(imageBuffer))
   } catch (err) {
     console.error('Error fetching event image:', err)
     return res.redirect(302, '/assets/section-logo-20260115.png')
