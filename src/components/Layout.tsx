@@ -46,9 +46,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <meta key="og:title" property="og:title" content="Section - Community Event Sections" />
         <meta key="og:description" property="og:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
         <meta key="og:image" property="og:image" content="https://mysection.vercel.app/assets/section-logo-20260115.png" />
-        <meta key="og:image:width" property="og:image:width" content="1200" />
-        <meta key="og:image:height" property="og:image:height" content="630" />
-        <meta key="og:image:alt" property="og:image:alt" content="Section Logo" />
         <meta key="og:url" property="og:url" content="https://mysection.vercel.app" />
         <meta property="og:site_name" content="Section" />
         
