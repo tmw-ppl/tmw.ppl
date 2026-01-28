@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase, type Event } from '@/lib/supabase'
 import { createEventDateTime, parseEventDateTime } from '@/utils/dateTime'
+import LocationAutocomplete from '@/components/ui/LocationAutocomplete'
 
 interface CoHost {
   id: string
@@ -1925,16 +1926,24 @@ const EditEvent: React.FC = () => {
                 </button>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <input
-                  type="text"
-                  value={formData.is_virtual ? formData.virtual_link : formData.location}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    [formData.is_virtual ? 'virtual_link' : 'location']: e.target.value 
-                  }))}
-                  placeholder={formData.is_virtual ? 'Paste meeting link (Zoom, Meet, etc.)' : 'Add location or address'}
-                  style={{ padding: '0.5rem', fontSize: '0.875rem' }}
-                />
+                {formData.is_virtual ? (
+                  <input
+                    type="text"
+                    value={formData.virtual_link}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      virtual_link: e.target.value 
+                    }))}
+                    placeholder="Paste meeting link (Zoom, Meet, etc.)"
+                    style={{ padding: '0.5rem', fontSize: '0.875rem' }}
+                  />
+                ) : (
+                  <LocationAutocomplete
+                    value={formData.location}
+                    onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+                    placeholder="Add location or address"
+                  />
+                )}
               </div>
             </div>
 
