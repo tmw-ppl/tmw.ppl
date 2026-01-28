@@ -859,6 +859,9 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
         <title>{ogTitle}</title>
         <meta key="description" name="description" content={ogDescription} />
         
+        {/* Generic image meta (some crawlers look for this) */}
+        <meta key="image" name="image" content={ogImageUrl} />
+        
         {/* Open Graph / Facebook / iMessage */}
         <meta key="og:type" property="og:type" content="website" />
         <meta key="og:url" property="og:url" content={`${baseUrl}/events/${eventMeta.id}`} />
@@ -866,15 +869,15 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
         <meta key="og:description" property="og:description" content={ogDescription} />
         <meta key="og:image" property="og:image" content={ogImageUrl} />
         <meta key="og:image:secure_url" property="og:image:secure_url" content={ogImageUrl} />
-        <meta key="og:image:type" property="og:image:type" content="image/png" />
-        <meta key="og:image:width" property="og:image:width" content="1200" />
-        <meta key="og:image:height" property="og:image:height" content="630" />
+        <meta key="og:image:alt" property="og:image:alt" content={ogTitle} />
         
         {/* Twitter - use summary_large_image for big preview */}
         <meta key="twitter:card" name="twitter:card" content="summary_large_image" />
+        <meta key="twitter:site" name="twitter:site" content="@mysection" />
         <meta key="twitter:title" name="twitter:title" content={ogTitle} />
         <meta key="twitter:description" name="twitter:description" content={ogDescription} />
         <meta key="twitter:image" name="twitter:image" content={ogImageUrl} />
+        <meta key="twitter:image:alt" name="twitter:image:alt" content={ogTitle} />
       </Head>
     )
   }
