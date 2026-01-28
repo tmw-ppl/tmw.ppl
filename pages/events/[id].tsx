@@ -846,7 +846,11 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
   const renderOGHead = () => {
     if (!eventMeta) return null
     
-    const ogImageUrl = eventMeta.image_url || defaultLogoUrl
+    // Use our own domain for the image URL (helps with iMessage previews)
+    // The /api/og-image/[id] route redirects to the actual image
+    const ogImageUrl = eventMeta.image_url 
+      ? `${baseUrl}/api/og-image/${eventMeta.id}`
+      : defaultLogoUrl
     const ogTitle = eventMeta.title
     const ogDescription = eventMeta.description || `Join us for ${eventMeta.title}`
     
