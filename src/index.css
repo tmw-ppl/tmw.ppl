@@ -60,18 +60,6 @@
   --hot: var(--section-hot);
   --card: var(--section-card);
   --border: var(--section-border);
-  
-  /* Toast animations */
-  @keyframes slideIn {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
 
   /* Status colors */
   --danger: #ef4444;
@@ -92,6 +80,18 @@
   --grad: radial-gradient(1200px 600px at 10% -10%, rgba(96,165,250,.20), transparent 50%),
            radial-gradient(900px 500px at 90% 10%, rgba(52,211,153,.18), transparent 55%),
            radial-gradient(800px 400px at 50% 120%, rgba(245,158,11,.14), transparent 50%);
+}
+
+/* Toast animations - must be at root level, not nested */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Light theme overrides */
@@ -963,6 +963,55 @@ textarea:focus {
 
 input[type="checkbox"] {
   margin-right: 8px;
+}
+
+/* Date and Time input explicit styling - ensures visibility in production */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  background-color: var(--bg-2, #0e1626);
+  color: var(--text, #e6f0ff);
+  border: 1px solid var(--border, #1f2a44);
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus {
+  outline: none;
+  border-color: var(--primary, #8b5cf6);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* Date/time input calendar/clock icon styling */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+}
+
+/* Select dropdown explicit styling */
+select {
+  background-color: var(--bg-2, #0e1626);
+  color: var(--text, #e6f0ff);
+  border: 1px solid var(--border, #1f2a44);
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--primary, #8b5cf6);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
 /* Projects page styles */
