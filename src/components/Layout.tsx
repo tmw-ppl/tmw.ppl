@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Header from './Header'
 import Footer from './Footer'
 import { useSmoothScroll } from '../hooks/useSmoothScroll'
+import { getBaseUrl } from '../utils/url'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -45,15 +46,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <meta key="og:type" property="og:type" content="website" />
         <meta key="og:title" property="og:title" content="Section - Community Event Sections" />
         <meta key="og:description" property="og:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
-        <meta key="og:image" property="og:image" content="https://mysection.vercel.app/assets/section-logo-20260115.png" />
-        <meta key="og:url" property="og:url" content="https://mysection.vercel.app" />
+        <meta key="og:image" property="og:image" content={`${getBaseUrl()}/assets/section-logo-20260115.png`} />
+        <meta key="og:url" property="og:url" content={getBaseUrl()} />
         <meta property="og:site_name" content="Section" />
         
         {/* Twitter Card Meta Tags - Defaults (use key prop so pages can override) */}
         <meta key="twitter:card" name="twitter:card" content="summary_large_image" />
         <meta key="twitter:title" name="twitter:title" content="Section - Community Event Sections" />
         <meta key="twitter:description" name="twitter:description" content="Discover and join event sections created by the community. Organize your events and connect with like-minded people." />
-        <meta key="twitter:image" name="twitter:image" content="https://mysection.vercel.app/assets/section-logo-20260115.png" />
+        <meta key="twitter:image" name="twitter:image" content={`${getBaseUrl()}/assets/section-logo-20260115.png`} />
         <meta key="twitter:image:alt" name="twitter:image:alt" content="Section Logo" />
         
         {/* Additional Meta Tags */}

@@ -16,8 +16,19 @@ const ResetPassword: React.FC = () => {
   const { updatePassword, session } = useAuth()
   const router = useRouter()
 
-  // Listen for PASSWORD_RECOVERY event from Supabase
+  // Listen for PASSWORD_RECOVERY event from Supabase and handle URL hash fragments
   useEffect(() => {
+    // Check for password recovery tokens in URL hash (Supabase sends tokens in hash fragment)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    const accessToken = hashParams.get('access_token')
+    const type = hashParams.get('type')
+    
+    // If we have a recovery token in the URL, process it
+    if (accessToken && type === 'recovery') {
+      // Supabase will automatically process the hash fragment and trigger PASSWORD_RECOVERY event
+      // We just need to wait for it
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'PASSWORD_RECOVERY') {
@@ -42,10 +53,19 @@ const ResetPassword: React.FC = () => {
           setIsRecoveryMode(true)
           setCheckingSession(false)
         } else {
-          // Give a bit more time for URL hash to be processed
+          // Give more time for URL hash to be processed by Supabase
+          // Supabase processes hash fragments automatically, but it may take a moment
           setTimeout(() => {
-            setCheckingSession(false)
-          }, 1500)
+            // Check again after delay
+            supabase.auth.getSession().then(({ data: { session: delayedSession } }) => {
+              if (delayedSession) {
+                setIsRecoveryMode(true)
+              }
+              setCheckingSession(false)
+            }).catch(() => {
+              setCheckingSession(false)
+            })
+          }, 2000)
         }
       } catch (err) {
         setCheckingSession(false)

@@ -7,6 +7,8 @@ interface AuthContextType {
   loading: boolean
   signUp: (email: string, password: string, name: string, phone: string) => Promise<{ data: any; error: any }>
   signIn: (email: string, password: string) => Promise<{ data: any; error: any }>
+  signInWithGoogle: () => Promise<{ error: any }>
+  signInWithFacebook: () => Promise<{ error: any }>
   signOut: () => Promise<{ error: any }>
   resetPassword: (email: string) => Promise<{ data: any; error: any }>
   updatePassword: (newPassword: string) => Promise<{ data: any; error: any }>
@@ -25,6 +27,8 @@ export const useAuth = () => {
       loading: true,
       signUp: async () => ({ data: null, error: { message: 'Auth not initialized' } }),
       signIn: async () => ({ data: null, error: { message: 'Auth not initialized' } }),
+      signInWithGoogle: async () => ({ error: { message: 'Auth not initialized' } }),
+      signInWithFacebook: async () => ({ error: { message: 'Auth not initialized' } }),
       signOut: async () => ({ error: { message: 'Auth not initialized' } }),
       resetPassword: async () => ({ data: null, error: { message: 'Auth not initialized' } }),
       updatePassword: async () => ({ data: null, error: { message: 'Auth not initialized' } }),
@@ -75,6 +79,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(session)
           setUser(session?.user ?? null)
           setLoading(false)
+
+          // Create/update profile when user signs in (including OAuth)
+          if (event === 'SIGNED_IN' && session?.user) {
+            try {
+              const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', session.user.id)
+                .single()
+
+              const userMetadata = session.user.user_metadata || {}
+              const profileData: any = {
+                id: session.user.id,
+                email: session.user.email || userMetadata.email,
+                full_name: userMetadata.full_name || userMetadata.name || userMetadata.display_name || '',
+                avatar_url: userMetadata.avatar_url || userMetadata.picture || null,
+                updated_at: new Date().toISOString(),
+              }
+
+              if (!existingProfile) {
+                // Create new profile
+                profileData.created_at = new Date().toISOString()
+                const { error: insertError } = await supabase
+                  .from('profiles')
+                  .insert(profileData)
+                if (insertError) {
+                  console.error('Error creating profile from OAuth:', insertError)
+                }
+              } else {
+                // Update existing profile with latest OAuth data
+                const { error: updateError } = await (supabase
+                  .from('profiles') as any)
+                  .update(profileData)
+                  .eq('id', session.user.id)
+                if (updateError) {
+                  console.error('Error updating profile from OAuth:', updateError)
+                }
+              }
+            } catch (profileError) {
+              console.error('Error ensuring profile exists from OAuth:', profileError)
+            }
+          }
         }
       }
     )
@@ -154,14 +200,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return { data, error }
   }
 
+  const signInWithGoogle = async () => {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof window !== 'undefined' ? window.location.origin : 'https://mysection.vercel.app')
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${baseUrl}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    })
+    return { error }
+  }
+
+  const signInWithFacebook = async () => {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof window !== 'undefined' ? window.location.origin : 'https://mysection.vercel.app')
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: {
+        redirectTo: `${baseUrl}/auth/callback`,
+      },
+    })
+    return { error }
+  }
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     return { error }
   }
 
   const resetPassword = async (email: string) => {
+    // Get the base URL dynamically based on environment
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof window !== 'undefined' ? window.location.origin : 'https://mysection.vercel.app')
+
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${baseUrl}/reset-password`,
     })
     return { data, error }
   }
@@ -179,6 +259,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     signUp,
     signIn,
+    signInWithGoogle,
+    signInWithFacebook,
     signOut,
     resetPassword,
     updatePassword,
