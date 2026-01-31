@@ -192,7 +192,9 @@ const Profile: React.FC = () => {
     if (userEvents.length > 0 || rsvpEvents.length > 0) {
       loadBadges()
     }
-  }, [userEvents.length, rsvpEvents.length])
+    // Update stats whenever events or RSVPs change
+    updateSocialStats()
+  }, [userEvents, rsvpEvents])
 
   // Clean up URL: remove id parameter when viewing own profile
   useEffect(() => {
@@ -396,6 +398,7 @@ const Profile: React.FC = () => {
 
     try {
       setEventsLoading(true)
+      // Query events - hard-deleted events won't appear, but we ensure we only get valid events
       const { data: events, error } = await supabase
         .from('events')
         .select('*')
@@ -407,8 +410,11 @@ const Profile: React.FC = () => {
         return
       }
 
+      // Filter out any null or invalid events (safety check)
+      const validEvents = (events || []).filter((event: any) => event && event.id)
+
       const eventsWithCounts = await Promise.all(
-        (events || []).map(async (event: any) => {
+        validEvents.map(async (event: any) => {
           const { data: rsvpData } = await supabase
             .from('event_rsvps')
             .select('status')
@@ -428,7 +434,7 @@ const Profile: React.FC = () => {
       )
 
       setUserEvents(eventsWithCounts as UserEvent[])
-      updateSocialStats(eventsWithCounts as UserEvent[], rsvpEvents)
+      // Stats will be updated via useEffect when userEvents state changes
     } catch (error) {
       console.error('Error loading user events:', error)
     } finally {
@@ -494,7 +500,7 @@ const Profile: React.FC = () => {
       )
 
       setRsvpEvents(transformedRSVPs)
-      updateSocialStats(userEvents, transformedRSVPs)
+      // Stats will be updated via useEffect when rsvpEvents state changes
     } catch (error) {
       console.error('Error loading user RSVPs:', error)
     } finally {
@@ -625,9 +631,10 @@ const Profile: React.FC = () => {
     }
   }
 
-  const updateSocialStats = (events: UserEvent[], rsvps: RSVPEvent[]) => {
-    const eventsCreated = events.length
-    const eventsAttended = rsvps.filter(e => e.rsvp_status === 'going').length
+  const updateSocialStats = () => {
+    // Always use current state to ensure accurate counts
+    const eventsCreated = userEvents.length
+    const eventsAttended = rsvpEvents.filter(e => e.rsvp_status === 'going').length
 
     setSocialStats({
       eventsCreated,
@@ -1517,21 +1524,21 @@ const Profile: React.FC = () => {
 
         {/* Events Tab */}
         {activeTab === 'events' && (
-          <div className="profile-v2-card" style={{
-            background: 'var(--card)',
-            borderRadius: '20px',
-            padding: '2rem',
-            border: '1px solid var(--border)',
-            boxShadow: 'var(--shadow)',
-          }}>
+            <div className="profile-v2-card" style={{
+              background: 'var(--card)',
+              borderRadius: '20px',
+              padding: '2rem',
+              border: '1px solid var(--border)',
+              boxShadow: 'var(--shadow)',
+            }}>
             {/* Action Buttons and Search */}
             <div style={{
-              display: 'flex',
+                    display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center',
+                    alignItems: 'center',
               marginBottom: '2rem',
               flexWrap: 'wrap',
-              gap: '1rem',
+                    gap: '1rem',
             }}>
               {isOwnProfile && (
                 <Button
@@ -1548,10 +1555,10 @@ const Profile: React.FC = () => {
               >
                 🔍 Search
               </Button>
-            </div>
+                      </div>
 
             {/* Filter Chips */}
-            <div style={{
+                      <div style={{ 
               display: 'flex',
               gap: '0.5rem',
               marginBottom: '2rem',
@@ -1579,7 +1586,7 @@ const Profile: React.FC = () => {
                     border: 'none',
                     background: eventsViewFilter === filter.key ? 'var(--primary)' : 'var(--bg-2)',
                     color: eventsViewFilter === filter.key ? 'white' : 'var(--text)',
-                    fontSize: '0.875rem',
+                        fontSize: '0.875rem', 
                     fontWeight: '500',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
@@ -1600,14 +1607,14 @@ const Profile: React.FC = () => {
                     </span>
                   )}
                 </button>
-              ))}
-            </div>
+                ))}
+              </div>
 
             {/* Events List - Filtered by View */}
             {eventsLoading ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                 Loading events...
-              </div>
+            </div>
             ) : (() => {
               // Filter events based on selected view
               let filteredEvents: UserEvent[] = []
@@ -1677,33 +1684,33 @@ const Profile: React.FC = () => {
                     {/* Today */}
                     {groupedUpcomingEvents.today.length > 0 && (
                   <div>
-                    <h3 style={{ 
+              <h3 style={{ 
                       fontSize: '1.25rem',
-                      fontWeight: '700',
-                      color: 'var(--text)',
+                fontWeight: '700',
+                color: 'var(--text)',
                       marginBottom: '1rem',
-                    }}>
+              }}>
                       Today
-                    </h3>
+              </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {groupedUpcomingEvents.today.map((event) => (
                         <div
                           key={event.id}
                           onClick={() => router.push(`/events/${event.id}`)}
-                          style={{
+                    style={{
                             background: 'var(--bg-2)',
-                            borderRadius: '12px',
+                      borderRadius: '12px',
                             padding: '1rem 1.25rem',
                             border: '1px solid var(--border)',
-                            cursor: 'pointer',
+                      cursor: 'pointer',
                             transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) => {
+                    }}
+                    onMouseEnter={(e) => {
                             e.currentTarget.style.background = 'var(--card)'
                             e.currentTarget.style.borderColor = 'var(--primary)'
                             e.currentTarget.style.transform = 'translateX(4px)'
-                          }}
-                          onMouseLeave={(e) => {
+                    }}
+                    onMouseLeave={(e) => {
                             e.currentTarget.style.background = 'var(--bg-2)'
                             e.currentTarget.style.borderColor = 'var(--border)'
                             e.currentTarget.style.transform = 'translateX(0)'
@@ -1713,7 +1720,7 @@ const Profile: React.FC = () => {
                             <div style={{ flex: 1 }}>
                               <h4 style={{ 
                                 fontSize: '1rem', 
-                                fontWeight: '600',
+                      fontWeight: '600',
                                 color: 'var(--text)',
                                 margin: '0 0 0.25rem 0',
                               }}>
@@ -1729,11 +1736,11 @@ const Profile: React.FC = () => {
                                 {event.time && <span>⏰ {event.time}</span>}
                                 {event.location && <span>📍 {event.location}</span>}
                                 {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
-                              </div>
-                            </div>
+                    </div>
+                  </div>
                             {isOwnProfile && (
-                              <Button
-                                variant="secondary"
+                <Button
+                  variant="secondary"
                                 size="small"
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -1741,10 +1748,10 @@ const Profile: React.FC = () => {
                                 }}
                               >
                                 Edit
-                              </Button>
+                </Button>
                             )}
-                          </div>
-                        </div>
+              </div>
+            </div>
                       ))}
                     </div>
                   </div>
@@ -1753,38 +1760,38 @@ const Profile: React.FC = () => {
                 {/* This Week */}
                 {groupedUpcomingEvents.thisWeek.length > 0 && (
                   <div>
-                    <h3 style={{ 
+                <h3 style={{ 
                       fontSize: '1.25rem',
-                      fontWeight: '700',
-                      color: 'var(--text)',
+                  fontWeight: '700',
+                  color: 'var(--text)',
                       marginBottom: '1rem',
-                    }}>
+                }}>
                       This Week
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {groupedUpcomingEvents.thisWeek.map((event) => (
                         <div
                           key={event.id}
                           onClick={() => router.push(`/events/${event.id}`)}
-                          style={{
-                            background: 'var(--bg-2)',
-                            borderRadius: '12px',
+                        style={{
+                          background: 'var(--bg-2)',
+                          borderRadius: '12px',
                             padding: '1rem 1.25rem',
                             border: '1px solid var(--border)',
                             cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) => {
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
                             e.currentTarget.style.background = 'var(--card)'
                             e.currentTarget.style.borderColor = 'var(--primary)'
                             e.currentTarget.style.transform = 'translateX(4px)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-2)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'var(--bg-2)'
                             e.currentTarget.style.borderColor = 'var(--border)'
-                            e.currentTarget.style.transform = 'translateX(0)'
-                          }}
-                        >
+                          e.currentTarget.style.transform = 'translateX(0)'
+                        }}
+                      >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                             <div style={{ flex: 1 }}>
                               <h4 style={{ 
@@ -1806,8 +1813,8 @@ const Profile: React.FC = () => {
                                 {event.time && <span>⏰ {event.time}</span>}
                                 {event.location && <span>📍 {event.location}</span>}
                                 {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
-                              </div>
-                            </div>
+                </div>
+              </div>
                             {isOwnProfile && (
                               <Button
                                 variant="secondary"
@@ -1824,8 +1831,8 @@ const Profile: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+          </div>
+        )}
 
                 {/* This Month */}
                 {groupedUpcomingEvents.thisMonth.length > 0 && (
@@ -1843,12 +1850,12 @@ const Profile: React.FC = () => {
                         <div
                           key={event.id}
                           onClick={() => router.push(`/events/${event.id}`)}
-                          style={{
-                            background: 'var(--bg-2)',
-                            borderRadius: '12px',
+                style={{
+                  background: 'var(--bg-2)',
+                  borderRadius: '12px',
                             padding: '1rem 1.25rem',
-                            border: '1px solid var(--border)',
-                            cursor: 'pointer',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
                             transition: 'all 0.2s',
                           }}
                           onMouseEnter={(e) => {
@@ -1872,13 +1879,13 @@ const Profile: React.FC = () => {
                               }}>
                                 {event.title}
                               </h4>
-                              <div style={{ 
-                                display: 'flex', 
-                                gap: '1rem',
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
                                 fontSize: '0.875rem',
                                 color: 'var(--text-muted)',
-                                flexWrap: 'wrap',
-                              }}>
+                flexWrap: 'wrap',
+              }}>
                                 <span>📅 {new Date(event.date).toLocaleDateString()}</span>
                                 {event.time && <span>⏰ {event.time}</span>}
                                 {event.location && <span>📍 {event.location}</span>}
@@ -1886,23 +1893,23 @@ const Profile: React.FC = () => {
                               </div>
                             </div>
                             {isOwnProfile && (
-                              <Button
-                                variant="secondary"
-                                size="small"
+                <Button
+                  variant="secondary"
+                  size="small"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   router.push(`/edit-event/${event.id}`)
                                 }}
                               >
                                 Edit
-                              </Button>
+                </Button>
                             )}
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+              </div>
+            )}
 
                 {/* Future Events */}
                 {groupedUpcomingEvents.future.length > 0 && (
@@ -1917,93 +1924,93 @@ const Profile: React.FC = () => {
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {groupedUpcomingEvents.future.map((event) => (
-                        <div
-                          key={event.id}
+                  <div
+                    key={event.id}
                           onClick={() => router.push(`/events/${event.id}`)}
-                          style={{
-                            background: 'var(--bg-2)',
+                    style={{
+                      background: 'var(--bg-2)',
                             borderRadius: '12px',
                             padding: '1rem 1.25rem',
                             border: '1px solid var(--border)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) => {
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
                             e.currentTarget.style.background = 'var(--card)'
                             e.currentTarget.style.borderColor = 'var(--primary)'
                             e.currentTarget.style.transform = 'translateX(4px)'
-                          }}
-                          onMouseLeave={(e) => {
+                    }}
+                    onMouseLeave={(e) => {
                             e.currentTarget.style.background = 'var(--bg-2)'
                             e.currentTarget.style.borderColor = 'var(--border)'
                             e.currentTarget.style.transform = 'translateX(0)'
-                          }}
-                        >
+                    }}
+                  >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                             <div style={{ flex: 1 }}>
-                              <h4 style={{ 
+                      <h4 style={{ 
                                 fontSize: '1rem', 
-                                fontWeight: '600',
-                                color: 'var(--text)',
+                        fontWeight: '600',
+                        color: 'var(--text)',
                                 margin: '0 0 0.25rem 0',
-                              }}>
-                                {event.title}
-                              </h4>
-                              <div style={{ 
-                                display: 'flex', 
-                                gap: '1rem',
-                                fontSize: '0.875rem',
-                                color: 'var(--text-muted)',
+                      }}>
+                        {event.title}
+                      </h4>
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '1rem',
+                      fontSize: '0.875rem',
+                      color: 'var(--text-muted)',
                                 flexWrap: 'wrap',
-                              }}>
-                                <span>📅 {new Date(event.date).toLocaleDateString()}</span>
-                                {event.time && <span>⏰ {event.time}</span>}
+                    }}>
+                      <span>📅 {new Date(event.date).toLocaleDateString()}</span>
+                      {event.time && <span>⏰ {event.time}</span>}
                                 {event.location && <span>📍 {event.location}</span>}
                                 {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
-                              </div>
-                            </div>
+                    </div>
+                      </div>
                             {isOwnProfile && (
-                              <Button
-                                variant="secondary"
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  router.push(`/edit-event/${event.id}`)
-                                }}
-                              >
-                                Edit
-                              </Button>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/edit-event/${event.id}`)
+                        }}
+                      >
+                        Edit
+                      </Button>
                             )}
-                          </div>
-                        </div>
-                      ))}
                     </div>
                   </div>
-                )}
+                ))}
+                    </div>
+              </div>
+            )}
 
                     {/* Empty State */}
                     {groupedUpcomingEvents.today.length === 0 && 
                      groupedUpcomingEvents.thisWeek.length === 0 && 
                      groupedUpcomingEvents.thisMonth.length === 0 && 
                      groupedUpcomingEvents.future.length === 0 && (
-                      <div style={{ 
+              <div style={{ 
                         textAlign: 'center', 
                         padding: '3rem',
                         color: 'var(--text-muted)',
                       }}>
                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎪</div>
                         <p>No upcoming events</p>
-                      </div>
+              </div>
                     )}
-                  </div>
+                </div>
                 )
               } else {
                 // Render filtered list for other views
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {filteredEvents.length === 0 ? (
-                      <div style={{ 
-                        textAlign: 'center', 
+                <div style={{ 
+                  textAlign: 'center', 
                         padding: '3rem',
                         color: 'var(--text-muted)',
                       }}>
@@ -2019,28 +2026,28 @@ const Profile: React.FC = () => {
                           {eventsViewFilter === 'past' && 'No past events'}
                           {eventsViewFilter === 'invites' && 'No invites'}
                         </p>
-                      </div>
-                    ) : (
+                </div>
+              ) : (
                       filteredEvents.map((event) => (
-                        <div
-                          key={event.id}
+                    <div 
+                      key={event.id} 
                           onClick={() => router.push(`/events/${event.id}`)}
-                          style={{
-                            background: 'var(--bg-2)',
+                      style={{
+                        background: 'var(--bg-2)',
                             borderRadius: '12px',
                             padding: '1rem 1.25rem',
-                            border: '1px solid var(--border)',
+                        border: '1px solid var(--border)',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                           }}
-                          onMouseEnter={(e) => {
+                      onMouseEnter={(e) => {
                             e.currentTarget.style.background = 'var(--card)'
-                            e.currentTarget.style.borderColor = 'var(--primary)'
+                        e.currentTarget.style.borderColor = 'var(--primary)'
                             e.currentTarget.style.transform = 'translateX(4px)'
-                          }}
-                          onMouseLeave={(e) => {
+                      }}
+                      onMouseLeave={(e) => {
                             e.currentTarget.style.background = 'var(--bg-2)'
-                            e.currentTarget.style.borderColor = 'var(--border)'
+                        e.currentTarget.style.borderColor = 'var(--border)'
                             e.currentTarget.style.transform = 'translateX(0)'
                           }}
                         >
@@ -2052,21 +2059,21 @@ const Profile: React.FC = () => {
                                 color: 'var(--text)',
                                 margin: '0 0 0.25rem 0',
                               }}>
-                                {event.title}
-                              </h4>
-                              <div style={{ 
-                                display: 'flex', 
-                                gap: '1rem',
-                                fontSize: '0.875rem',
-                                color: 'var(--text-muted)',
+                          {event.title}
+                        </h4>
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '1rem',
+                        fontSize: '0.875rem',
+                        color: 'var(--text-muted)',
                                 flexWrap: 'wrap',
                               }}>
                                 <span>📅 {new Date(event.date).toLocaleDateString()}</span>
                                 {event.time && <span>⏰ {event.time}</span>}
                                 {event.location && <span>📍 {event.location}</span>}
                                 {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
-                              </div>
-                            </div>
+                        </div>
+                          </div>
                             {isOwnProfile && eventsViewFilter === 'hosting' && (
                               <Button
                                 variant="secondary"
@@ -2082,8 +2089,8 @@ const Profile: React.FC = () => {
                           </div>
                         </div>
                       ))
-                    )}
-                  </div>
+                        )}
+                      </div>
                 )
               }
             })()}
@@ -2100,7 +2107,7 @@ const Profile: React.FC = () => {
                   background: 'rgba(0, 0, 0, 0.7)',
                   backdropFilter: 'blur(4px)',
                   zIndex: 1000,
-                  display: 'flex',
+                        display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'center',
                   padding: '2rem',
@@ -2121,46 +2128,46 @@ const Profile: React.FC = () => {
                     maxWidth: '600px',
                     maxHeight: '80vh',
                     overflow: 'hidden',
-                    display: 'flex',
+                          display: 'flex', 
                     flexDirection: 'column',
                     boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Modal Header */}
-                  <div style={{
+                          <div style={{ 
                     padding: '1.5rem',
                     borderBottom: '1px solid var(--border)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}>
+                            display: 'flex', 
+                            alignItems: 'center', 
+                justifyContent: 'space-between', 
+              }}>
                     <h2 style={{
-                      fontSize: '1.5rem',
-                      fontWeight: '700',
-                      color: 'var(--text)',
-                      margin: 0,
-                    }}>
+                  fontSize: '1.5rem',
+                  fontWeight: '700',
+                  color: 'var(--text)',
+                  margin: 0,
+                }}>
                       Search Events
                     </h2>
-                    <button
-                      onClick={() => {
+                          <button
+                            onClick={() => {
                         setShowSearchModal(false)
                         setSearchModalQuery('')
-                      }}
-                      style={{
+                            }}
+                            style={{
                         background: 'transparent',
                         border: 'none',
                         fontSize: '1.5rem',
                         color: 'var(--text-muted)',
-                        cursor: 'pointer',
+                              cursor: 'pointer',
                         padding: '0.25rem',
                         lineHeight: 1,
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </div>
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
 
                   {/* Search Input */}
                   <div style={{
@@ -2191,7 +2198,7 @@ const Profile: React.FC = () => {
                     overflowY: 'auto',
                     padding: '1rem',
                   }}>
-                    {(() => {
+                  {(() => {
                       const allEvents = [...userEvents, ...rsvpEvents.map(e => ({
                         id: e.id,
                         title: e.title,
@@ -2217,21 +2224,21 @@ const Profile: React.FC = () => {
                         : []
 
                       if (!searchModalQuery) {
-                        return (
-                          <div style={{
-                            textAlign: 'center',
+                      return (
+                        <div style={{ 
+                          textAlign: 'center', 
                             padding: '3rem 2rem',
                             color: 'var(--text-muted)',
-                          }}>
+                        }}>
                             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
                             <p>Start typing to search for events...</p>
-                          </div>
-                        )
-                      }
+                        </div>
+                      )
+                    }
 
                       if (filtered.length === 0) {
-                        return (
-                          <div style={{
+                    return (
+                      <div style={{ 
                             textAlign: 'center',
                             padding: '3rem 2rem',
                             color: 'var(--text-muted)',
@@ -2257,30 +2264,30 @@ const Profile: React.FC = () => {
                               .filter(e => new Date(e.date) >= new Date())
                               .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                               .map((event) => (
-                                <div
-                                  key={event.id}
+                          <div 
+                            key={event.id} 
                                   onClick={() => {
                                     router.push(`/events/${event.id}`)
                                     setShowSearchModal(false)
                                     setSearchModalQuery('')
                                   }}
-                                  style={{
-                                    background: 'var(--bg-2)',
+                            style={{
+                              background: 'var(--bg-2)',
                                     borderRadius: '12px',
                                     padding: '1rem',
-                                    border: '1px solid var(--border)',
+                              border: '1px solid var(--border)',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s',
                                     display: 'flex',
                                     gap: '1rem',
                                   }}
-                                  onMouseEnter={(e) => {
+                            onMouseEnter={(e) => {
                                     e.currentTarget.style.background = 'var(--card)'
-                                    e.currentTarget.style.borderColor = 'var(--primary)'
-                                  }}
-                                  onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = 'var(--primary)'
+                            }}
+                            onMouseLeave={(e) => {
                                     e.currentTarget.style.background = 'var(--bg-2)'
-                                    e.currentTarget.style.borderColor = 'var(--border)'
+                              e.currentTarget.style.borderColor = 'var(--border)'
                                   }}
                                 >
                                   {event.image_url && (
@@ -2302,25 +2309,25 @@ const Profile: React.FC = () => {
                                       color: 'var(--text)',
                                       margin: '0 0 0.25rem 0',
                                     }}>
-                                      {event.title}
-                                    </h4>
-                                    <div style={{
-                                      fontSize: '0.875rem',
-                                      color: 'var(--text-muted)',
-                                    }}>
+                                {event.title}
+                              </h4>
+                            <div style={{ 
+                              fontSize: '0.875rem',
+                              color: 'var(--text-muted)',
+                            }}>
                                       {new Date(event.date).toLocaleDateString()} {event.time && `· ${event.time}`}
-                                    </div>
-                                  </div>
+                              </div>
+                                </div>
                                 </div>
                               ))}
-                          </div>
-                        </div>
+                            </div>
+                            </div>
                       )
                     })()}
-                  </div>
-                </div>
-              </div>
-            )}
+                            </div>
+                          </div>
+                      </div>
+              )}
 
           </div>
         )}
