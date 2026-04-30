@@ -162,7 +162,7 @@ supabase db diff
 supabase migration list --linked
 ```
 
-📖 **See [PUSHING_TO_REMOTE.md](./PUSHING_TO_REMOTE.md) for complete guide**
+📖 **See [PUSHING_TO_REMOTE.md](../supabase/PUSHING_TO_REMOTE.md) for complete guide**
 
 ## Local Connection
 

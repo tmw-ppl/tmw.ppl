@@ -111,7 +111,7 @@ npm run supabase:push
 # Or: supabase db push
 ```
 
-📖 **See [PUSHING_TO_REMOTE.md](./PUSHING_TO_REMOTE.md) for detailed guide**
+📖 **See [PUSHING_TO_REMOTE.md](../supabase/PUSHING_TO_REMOTE.md) for detailed guide**
 
 ## Useful Commands
 

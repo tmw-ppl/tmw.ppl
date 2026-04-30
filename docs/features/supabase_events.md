@@ -279,9 +279,8 @@ async function migrateEvents() {
 - Offline support
 
 ## 🔗 **Related Documentation**
-- [Supabase Auth Setup](./docs/archive/supabase-auth-setup.md)
-- [Google Sheets Setup](./docs/archive/google-sheets-setup.md) (Archived)
-- [Airtable Setup](./docs/archive/airtable-setup.md) (Archived)
+- [Supabase Auth Setup](../archive/supabase-auth-setup.md)
+- [Google Sheets Setup](../archive/google-sheets-setup.md) (Archived)
 
 ---
 

@@ -188,6 +188,8 @@ const Header: React.FC = () => {
             <Link href="/events" style={navLinkStyle('/events')}>Events</Link>
             <Link href="/sections" style={navLinkStyle('/sections')}>Sections</Link>
             <Link href="/profiles" style={navLinkStyle('/profiles')}>Profiles</Link>
+            <Link href="/leaderboard" style={navLinkStyle('/leaderboard')}>🏆 Leaderboard</Link>
+            <Link href="/funding" style={navLinkStyle('/funding')}>💰 Funding</Link>
             
             <div style={{ position: 'relative' }} ref={betaDropdownRef}>
               <button 
@@ -256,6 +258,8 @@ const Header: React.FC = () => {
         <Link href="/events" style={navLinkStyle('/events')} onClick={handleLinkClick}>Events</Link>
         <Link href="/sections" style={navLinkStyle('/sections')} onClick={handleLinkClick}>Sections</Link>
         <Link href="/profiles" style={navLinkStyle('/profiles')} onClick={handleLinkClick}>Profiles</Link>
+        <Link href="/leaderboard" style={navLinkStyle('/leaderboard')} onClick={handleLinkClick}>🏆 Leaderboard</Link>
+        <Link href="/funding" style={navLinkStyle('/funding')} onClick={handleLinkClick}>💰 Funding</Link>
         
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
           <p style={{ color: 'var(--muted)', fontSize: '0.8rem', padding: '0 1rem 0.5rem' }}>BETA FEATURES</p>

@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import Avatar from '@/components/ui/Avatar'
 import EventComments from '@/components/events/EventComments'
+import EventLocationMap from '@/components/EventLocationMap'
 import { formatEventDateTime, isEventUpcoming, migrateLegacyDateTime } from '@/utils/dateTime'
 
 // Server-side data for Open Graph meta tags
@@ -1092,10 +1093,15 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
 
           {/* Location */}
           {event.location && (
-            <div style={styles.eventMeta}>
-              <span style={styles.metaIcon}>📍</span>
-              <span>{event.location}</span>
-            </div>
+            <>
+              <div style={styles.eventMeta}>
+                <span style={styles.metaIcon}>📍</span>
+                <span>{event.location}</span>
+              </div>
+              <div style={{ marginTop: '0.75rem', marginBottom: '0.5rem' }}>
+                <EventLocationMap address={event.location} height={240} />
+              </div>
+            </>
           )}
 
           {/* Hosts */}

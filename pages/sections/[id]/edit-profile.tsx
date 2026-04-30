@@ -10,7 +10,7 @@ const EditSectionProfilePage: React.FC = () => {
   const router = useRouter()
   const { id } = router.query
   const { user } = useAuth()
-  
+
   const [section, setSection] = useState<Section | null>(null)
   const [fields, setFields] = useState<SectionProfileField[]>([])
   const [profileData, setProfileData] = useState<Record<string, string>>({})
@@ -83,9 +83,9 @@ const EditSectionProfilePage: React.FC = () => {
         .eq('user_id', user!.id)
 
       const dataMap: Record<string, string> = {}
-      ;(profileDataResults || []).forEach((d: any) => {
-        dataMap[d.field_id] = d.value
-      })
+        ; (profileDataResults || []).forEach((d: any) => {
+          dataMap[d.field_id] = d.value
+        })
       setProfileData(dataMap)
     } catch (err) {
       console.error('Error loading section:', err)
@@ -157,7 +157,7 @@ const EditSectionProfilePage: React.FC = () => {
             <h2 style={{ marginBottom: '1rem', color: 'var(--text)' }}>
               {error || 'Section not found'}
             </h2>
-            <Button onClick={() => router.push('/profile-v2')}>
+            <Button onClick={() => router.push('/profile')}>
               ← Back to Profile
             </Button>
           </div>
@@ -171,7 +171,7 @@ const EditSectionProfilePage: React.FC = () => {
       <div className="container" style={{ maxWidth: '700px' }}>
         {/* Back Button */}
         <button
-          onClick={() => router.push('/profile-v2')}
+          onClick={() => router.push('/profile')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -194,7 +194,7 @@ const EditSectionProfilePage: React.FC = () => {
           fields={fields}
           initialData={profileData}
           onSave={handleSave}
-          onCancel={() => router.push('/profile-v2')}
+          onCancel={() => router.push('/profile')}
           isSaving={saving}
         />
       </div>

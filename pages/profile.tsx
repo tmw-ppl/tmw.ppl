@@ -96,6 +96,18 @@ interface Subscription {
   creator_name: string
 }
 
+interface SectionInvite {
+  id: string
+  section_id: string
+  invited_by: string
+  invited_at: string
+  message?: string
+  section: {
+    name: string
+    image_url?: string
+  }
+}
+
 interface SocialStats {
   eventsCreated: number
   eventsAttended: number
@@ -141,11 +153,12 @@ const Profile: React.FC = () => {
   const [success, setSuccess] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  
+
   // Sections State
   const [sections, setSections] = useState<SectionWithMembership[]>([])
   const [sectionsLoading, setSectionsLoading] = useState(true)
-  
+  const [sectionInvites, setSectionInvites] = useState<SectionInvite[]>([])
+
   // Social Links State
   const [socialLinks, setSocialLinks] = useState<Array<{ id?: string; platform: string; label?: string; url: string }>>([])
 
@@ -156,7 +169,7 @@ const Profile: React.FC = () => {
     }
     return user?.id || null
   }, [router.isReady, id, user?.id])
-  
+
   const isOwnProfile = useMemo(() => {
     if (!router.isReady) return true // Default to own profile until router is ready
     if (!id) return true // No id param means own profile
@@ -166,15 +179,15 @@ const Profile: React.FC = () => {
   useEffect(() => {
     // Wait for auth to finish loading before checking user
     if (authLoading) return
-    
+
     if (!user) {
       router.push('/auth')
       return
     }
-    
+
     // Wait for router to be ready before loading profile
     if (!router.isReady) return
-    
+
     if (user && viewingUserId) {
       loadUserProfile()
       loadUserEvents()
@@ -184,6 +197,7 @@ const Profile: React.FC = () => {
         loadSubscribedEvents()
         loadNotifications()
         loadUserSections()
+        loadSectionInvites()
       }
     }
   }, [user, authLoading, router.isReady, router.query.id, viewingUserId, isOwnProfile])
@@ -202,7 +216,71 @@ const Profile: React.FC = () => {
       // Remove id parameter from URL when viewing own profile
       router.replace('/profile', undefined, { shallow: true })
     }
-  }, [router.isReady, user, id, router.pathname])
+
+    // Check for onboarding query parameter
+    if (router.isReady && router.query.onboarding === 'true' && isOwnProfile) {
+      setShowEditForm(true)
+      setSuccess('Welcome to Tomorrow People! Please complete your profile to get started.')
+      // Remove onboarding parameter after showing message
+      const { onboarding, ...restQuery } = router.query
+      router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true })
+    }
+  }, [router.isReady, user, id, router.pathname, router.query.onboarding, isOwnProfile])
+
+  const loadSectionInvites = async () => {
+    if (!user || !isOwnProfile) return
+
+    try {
+      const { data, error } = await (supabase
+        .from('section_invitations') as any)
+        .select(`
+          *,
+          section:sections(name, image_url)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+
+      if (error) throw error
+      setSectionInvites((data as any[]) || [])
+    } catch (err) {
+      console.error('Error loading section invites:', err)
+    }
+  }
+
+  const handleAcceptSectionInvite = async (inviteId: string) => {
+    try {
+      const { error } = await (supabase
+        .from('section_invitations') as any)
+        .update({ status: 'accepted' })
+        .eq('id', inviteId)
+
+      if (error) throw error
+
+      setSuccess('Invitation accepted!')
+      loadSectionInvites()
+      loadUserSections()
+    } catch (err: any) {
+      console.error('Error accepting invite:', err)
+      setError('Failed to accept invitation: ' + (err.message || 'Unknown error'))
+    }
+  }
+
+  const handleDeclineSectionInvite = async (inviteId: string) => {
+    try {
+      const { error } = await (supabase
+        .from('section_invitations') as any)
+        .update({ status: 'declined' })
+        .eq('id', inviteId)
+
+      if (error) throw error
+
+      setSuccess('Invitation declined')
+      loadSectionInvites()
+    } catch (err: any) {
+      console.error('Error declining invite:', err)
+      setError('Failed to decline invitation: ' + (err.message || 'Unknown error'))
+    }
+  }
 
   const loadUserProfile = async () => {
     if (!user || !viewingUserId) return
@@ -336,18 +414,18 @@ const Profile: React.FC = () => {
       const fieldsMap = new Map<string, any[]>()
       const profileDataMap = new Map<string, Record<string, string>>()
 
-      // Group fields by section
-      ;(fieldsData || []).forEach((field: any) => {
-        const existing = fieldsMap.get(field.section_id) || []
-        fieldsMap.set(field.section_id, [...existing, field])
-      })
+        // Group fields by section
+        ; (fieldsData || []).forEach((field: any) => {
+          const existing = fieldsMap.get(field.section_id) || []
+          fieldsMap.set(field.section_id, [...existing, field])
+        })
 
-      // Group profile data by section
-      ;(profileDataResults || []).forEach((data: any) => {
-        const existing = profileDataMap.get(data.section_id) || {}
-        existing[data.field_id] = data.value
-        profileDataMap.set(data.section_id, existing)
-      })
+        // Group profile data by section
+        ; (profileDataResults || []).forEach((data: any) => {
+          const existing = profileDataMap.get(data.section_id) || {}
+          existing[data.field_id] = data.value
+          profileDataMap.set(data.section_id, existing)
+        })
 
       const sectionsWithData: SectionWithMembership[] = (sectionsData || []).map((section: any) => ({
         ...section,
@@ -685,42 +763,42 @@ const Profile: React.FC = () => {
 
     // Check which badges are earned
     const earnedBadges = allBadges.map((badge) => {
-        let earned = false
-        let earnedAt: string | undefined
+      let earned = false
+      let earnedAt: string | undefined
 
-        switch (badge.id) {
-          case 'first_rsvp':
-            if (rsvpEvents.length > 0) {
-              earned = true
-              earnedAt = rsvpEvents[rsvpEvents.length - 1].date
-            }
-            break
-          case 'first_event':
-            if (userEvents.length > 0) {
-              earned = true
-              earnedAt = userEvents[userEvents.length - 1].created_at
-            }
-            break
-          case 'event_sharer':
-            // Check if user has shared events (we'll use a simple check for now)
-            earned = userEvents.some(e => e.published)
-            break
-          case 'five_events':
-            if (userEvents.length >= 5) {
-              earned = true
-              earnedAt = userEvents[4]?.created_at
-            }
-            break
-          case 'ten_rsvps':
-            if (rsvpEvents.length >= 10) {
-              earned = true
-              earnedAt = rsvpEvents[9]?.date
-            }
-            break
-        }
+      switch (badge.id) {
+        case 'first_rsvp':
+          if (rsvpEvents.length > 0) {
+            earned = true
+            earnedAt = rsvpEvents[rsvpEvents.length - 1].date
+          }
+          break
+        case 'first_event':
+          if (userEvents.length > 0) {
+            earned = true
+            earnedAt = userEvents[userEvents.length - 1].created_at
+          }
+          break
+        case 'event_sharer':
+          // Check if user has shared events (we'll use a simple check for now)
+          earned = userEvents.some(e => e.published)
+          break
+        case 'five_events':
+          if (userEvents.length >= 5) {
+            earned = true
+            earnedAt = userEvents[4]?.created_at
+          }
+          break
+        case 'ten_rsvps':
+          if (rsvpEvents.length >= 10) {
+            earned = true
+            earnedAt = rsvpEvents[9]?.date
+          }
+          break
+      }
 
-        return { ...badge, earned, earnedAt }
-      })
+      return { ...badge, earned, earnedAt }
+    })
 
     setBadges(earnedBadges)
   }
@@ -765,7 +843,7 @@ const Profile: React.FC = () => {
       }
 
       // Sort by date and limit
-      notificationsList.sort((a, b) => 
+      notificationsList.sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
 
@@ -864,10 +942,10 @@ const Profile: React.FC = () => {
 
       // Sign out the user
       await signOut()
-      
+
       // Redirect to home page
       router.push('/')
-      
+
       // Show success message (though user won't see it since they're signed out)
       setSuccess('Your account has been deleted successfully')
     } catch (error: any) {
@@ -950,12 +1028,12 @@ const Profile: React.FC = () => {
       setProfileData((prev) =>
         prev
           ? {
-              ...prev,
-              full_name: editForm.full_name.trim(),
-              bio: editForm.bio.trim(),
-              interests: editForm.interests.trim(),
-              phone: editForm.phone.trim() || undefined,
-            }
+            ...prev,
+            full_name: editForm.full_name.trim(),
+            bio: editForm.bio.trim(),
+            interests: editForm.interests.trim(),
+            phone: editForm.phone.trim() || undefined,
+          }
           : null
       )
 
@@ -974,13 +1052,13 @@ const Profile: React.FC = () => {
 
     try {
       const eventIds = Array.from(selectedEvents)
-      
+
       if (action === 'delete') {
         const { error } = await supabase
           .from('events')
           .delete()
           .in('id', eventIds)
-        
+
         if (error) throw error
       } else {
         const { error } = await supabase
@@ -988,7 +1066,7 @@ const Profile: React.FC = () => {
           // @ts-expect-error - Supabase types don't include all event fields
           .update({ published: action === 'publish' })
           .in('id', eventIds)
-        
+
         if (error) throw error
       }
 
@@ -1044,38 +1122,38 @@ const Profile: React.FC = () => {
   const groupedUpcomingEvents = useMemo(() => {
     const now = new Date()
     now.setHours(0, 0, 0, 0)
-    
+
     // Get end of today
     const endOfToday = new Date(now)
     endOfToday.setHours(23, 59, 59, 999)
-    
+
     // Get next Sunday (end of this week)
     const nextSunday = new Date(now)
     const daysUntilSunday = (7 - now.getDay()) % 7 || 7
     nextSunday.setDate(now.getDate() + daysUntilSunday)
     nextSunday.setHours(23, 59, 59, 999)
-    
+
     // Get end of current month
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
     endOfMonth.setHours(23, 59, 59, 999)
-    
+
     // Filter to only upcoming, published events
     const upcoming = userEvents.filter((e) => {
       const eventDate = new Date(e.date)
       return eventDate >= now && e.published
     })
-    
+
     // Sort by date
     upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    
+
     const today: UserEvent[] = []
     const thisWeek: UserEvent[] = []
     const thisMonth: UserEvent[] = []
     const future: UserEvent[] = []
-    
+
     upcoming.forEach((event) => {
       const eventDate = new Date(event.date)
-      
+
       if (eventDate <= endOfToday) {
         today.push(event)
       } else if (eventDate <= nextSunday) {
@@ -1086,7 +1164,7 @@ const Profile: React.FC = () => {
         future.push(event)
       }
     })
-    
+
     return { today, thisWeek, thisMonth, future }
   }, [userEvents])
 
@@ -1102,7 +1180,7 @@ const Profile: React.FC = () => {
       maybe_count: e.maybe_count,
       max_capacity: e.max_capacity
     }))
-    
+
     const attending = rsvpEvents.map(e => ({
       id: e.id,
       title: e.title,
@@ -1115,33 +1193,33 @@ const Profile: React.FC = () => {
       maybe_count: e.maybe_count,
       max_capacity: e.max_capacity
     }))
-    
+
     const combined: (typeof myEvents[0] | typeof attending[0])[] = [...myEvents]
     attending.forEach(a => {
       if (!combined.find(e => e.id === a.id)) {
         combined.push(a)
       }
     })
-    
+
     return combined
   }, [userEvents, rsvpEvents])
 
   // Show loading while auth is initializing
   if (authLoading) {
     return (
-      <div className="profile-v2-container" style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center' 
+      <div className="profile-v2-container" style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
         <div style={{ textAlign: 'center' }}>
-          <div className="spinner" style={{ 
-            width: '48px', 
-            height: '48px', 
-            border: '4px solid var(--border)', 
-            borderTop: '4px solid var(--primary)', 
-            borderRadius: '50%', 
+          <div className="spinner" style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid var(--border)',
+            borderTop: '4px solid var(--primary)',
+            borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 1rem'
           }}></div>
@@ -1158,19 +1236,19 @@ const Profile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="profile-v2-container" style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center' 
+      <div className="profile-v2-container" style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
         <div style={{ textAlign: 'center' }}>
-          <div className="spinner" style={{ 
-            width: '48px', 
-            height: '48px', 
-            border: '4px solid var(--border)', 
-            borderTop: '4px solid var(--primary)', 
-            borderRadius: '50%', 
+          <div className="spinner" style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid var(--border)',
+            borderTop: '4px solid var(--primary)',
+            borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 1rem'
           }}></div>
@@ -1253,8 +1331,8 @@ const Profile: React.FC = () => {
             {/* Avatar */}
             <div style={{ position: 'relative' }}>
               {profileData?.profile_picture_url ? (
-                <img 
-                  src={profileData.profile_picture_url} 
+                <img
+                  src={profileData.profile_picture_url}
                   alt="Profile"
                   style={{
                     width: '120px',
@@ -1296,8 +1374,8 @@ const Profile: React.FC = () => {
                 border: '3px solid var(--card)',
                 transition: 'transform 0.2s',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
                 <input
                   type="file"
@@ -1311,8 +1389,8 @@ const Profile: React.FC = () => {
 
             {/* Profile Info */}
             <div>
-              <h1 style={{ 
-                fontSize: '2rem', 
+              <h1 style={{
+                fontSize: '2rem',
                 marginBottom: '0.5rem',
                 fontWeight: '700',
                 color: 'var(--text)',
@@ -1320,8 +1398,8 @@ const Profile: React.FC = () => {
                 {profileData?.full_name || 'User'}
               </h1>
               {isOwnProfile && (
-                <p style={{ 
-                  color: 'var(--text-muted)', 
+                <p style={{
+                  color: 'var(--text-muted)',
                   marginBottom: '0.5rem',
                   fontSize: '1rem',
                 }}>
@@ -1329,8 +1407,8 @@ const Profile: React.FC = () => {
                 </p>
               )}
               {profileData?.bio && (
-                <p style={{ 
-                  color: 'var(--text)', 
+                <p style={{
+                  color: 'var(--text)',
                   marginTop: '0.5rem',
                   fontSize: '0.95rem',
                   lineHeight: '1.6',
@@ -1340,9 +1418,9 @@ const Profile: React.FC = () => {
               )}
               {/* Social Links as Chips */}
               {socialLinks.length > 0 && (
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '0.5rem', 
+                <div style={{
+                  display: 'flex',
+                  gap: '0.5rem',
                   marginTop: '1rem',
                   flexWrap: 'wrap',
                 }}>
@@ -1392,46 +1470,46 @@ const Profile: React.FC = () => {
                 </div>
               )}
               {/* Social Stats */}
-              <div style={{ 
-                display: 'flex', 
-                gap: '2rem', 
+              <div style={{
+                display: 'flex',
+                gap: '2rem',
                 marginTop: '1.5rem',
                 flexWrap: 'wrap',
               }}>
                 <div>
-                  <div style={{ 
-                    fontSize: '1.5rem', 
+                  <div style={{
+                    fontSize: '1.5rem',
                     fontWeight: 'bold',
                     color: 'var(--primary)',
                   }}>
                     {socialStats.eventsCreated}
                   </div>
-                  <div style={{ 
-                    fontSize: '0.875rem', 
+                  <div style={{
+                    fontSize: '0.875rem',
                     color: 'var(--text-muted)',
                   }}>
                     Events Hosted
                   </div>
                 </div>
                 <div>
-                  <div style={{ 
-                    fontSize: '1.5rem', 
+                  <div style={{
+                    fontSize: '1.5rem',
                     fontWeight: 'bold',
                     color: 'var(--success)',
                   }}>
                     {socialStats.eventsAttended}
                   </div>
-                  <div style={{ 
-                    fontSize: '0.875rem', 
+                  <div style={{
+                    fontSize: '0.875rem',
                     color: 'var(--text-muted)',
                   }}>
                     Events Attended
                   </div>
                 </div>
               </div>
-              <div style={{ 
-                display: 'flex', 
-                gap: '1rem', 
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
                 marginTop: '1rem',
                 flexWrap: 'wrap',
               }}>
@@ -1470,18 +1548,6 @@ const Profile: React.FC = () => {
                     >
                       🚪 Sign Out
                     </Button>
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        color: 'var(--danger)',
-                        borderColor: 'var(--danger)',
-                      }}
-                    >
-                      🗑️ Delete Account
-                    </Button>
                   </>
                 )}
               </div>
@@ -1498,18 +1564,13 @@ const Profile: React.FC = () => {
           flexWrap: 'wrap',
         }}>
           {(['events', 'calendar', ...(isOwnProfile ? ['sections', 'notifications'] : [])] as const).map((tab) => (
-            <button
+            <Button
               key={tab}
+              variant={activeTab === tab ? 'primary' : 'secondary'}
               onClick={() => setActiveTab(tab as 'events' | 'calendar' | 'sections' | 'notifications')}
               style={{
-                padding: '0.75rem 1.5rem',
                 borderRadius: '12px',
-                border: 'none',
-                background: activeTab === tab ? 'var(--primary)' : 'var(--card)',
-                color: activeTab === tab ? 'white' : 'var(--text)',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
+                padding: '0.75rem 1.5rem',
                 fontSize: '0.95rem',
                 textTransform: 'capitalize',
               }}
@@ -1518,27 +1579,27 @@ const Profile: React.FC = () => {
               {tab === 'calendar' && '📅 Calendar'}
               {tab === 'sections' && `📁 My Sections ${sections.length > 0 ? `(${sections.length})` : ''}`}
               {tab === 'notifications' && `🔔 Notifications ${notifications.filter(n => !n.read).length > 0 ? `(${notifications.filter(n => !n.read).length})` : ''}`}
-            </button>
+            </Button>
           ))}
         </div>
 
         {/* Events Tab */}
         {activeTab === 'events' && (
-            <div className="profile-v2-card" style={{
-              background: 'var(--card)',
-              borderRadius: '20px',
-              padding: '2rem',
-              border: '1px solid var(--border)',
-              boxShadow: 'var(--shadow)',
-            }}>
+          <div className="profile-v2-card" style={{
+            background: 'var(--card)',
+            borderRadius: '20px',
+            padding: '2rem',
+            border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow)',
+          }}>
             {/* Action Buttons and Search */}
             <div style={{
-                    display: 'flex',
+              display: 'flex',
               justifyContent: 'space-between',
-                    alignItems: 'center',
+              alignItems: 'center',
               marginBottom: '2rem',
               flexWrap: 'wrap',
-                    gap: '1rem',
+              gap: '1rem',
             }}>
               {isOwnProfile && (
                 <Button
@@ -1555,10 +1616,10 @@ const Profile: React.FC = () => {
               >
                 🔍 Search
               </Button>
-                      </div>
+            </div>
 
             {/* Filter Chips */}
-                      <div style={{ 
+            <div style={{
               display: 'flex',
               gap: '0.5rem',
               marginBottom: '2rem',
@@ -1566,30 +1627,28 @@ const Profile: React.FC = () => {
             }}>
               {[
                 { key: 'upcoming', label: 'Upcoming', count: groupedUpcomingEvents.today.length + groupedUpcomingEvents.thisWeek.length + groupedUpcomingEvents.thisMonth.length + groupedUpcomingEvents.future.length },
-                { key: 'invites', label: 'Invites', count: 0 }, // TODO: Load invites count
+                { key: 'invites', label: 'Invites', count: sectionInvites.length },
                 { key: 'hosting', label: 'Hosting', count: userEvents.length },
                 { key: 'attended', label: 'Attended', count: rsvpEvents.filter(e => e.rsvp_status === 'going').length },
-                { key: 'past', label: 'All past events', count: (() => {
-                  const now = new Date()
-                  const pastUserEvents = userEvents.filter(e => new Date(e.date) < now)
-                  const pastRsvpEvents = rsvpEvents.filter(e => new Date(e.date) < now)
-                  const allPastIds = new Set([...pastUserEvents.map(e => e.id), ...pastRsvpEvents.map(e => e.id)])
-                  return allPastIds.size
-                })() },
+                {
+                  key: 'past', label: 'All past events', count: (() => {
+                    const now = new Date()
+                    const pastUserEvents = userEvents.filter(e => new Date(e.date) < now)
+                    const pastRsvpEvents = rsvpEvents.filter(e => new Date(e.date) < now)
+                    const allPastIds = new Set([...pastUserEvents.map(e => e.id), ...pastRsvpEvents.map(e => e.id)])
+                    return allPastIds.size
+                  })()
+                },
               ].map((filter) => (
-                <button
+                <Button
                   key={filter.key}
+                  variant={eventsViewFilter === filter.key ? 'primary' : 'secondary'}
+                  size="small"
                   onClick={() => setEventsViewFilter(filter.key as any)}
                   style={{
                     padding: '0.5rem 1rem',
                     borderRadius: '20px',
-                    border: 'none',
-                    background: eventsViewFilter === filter.key ? 'var(--primary)' : 'var(--bg-2)',
-                    color: eventsViewFilter === filter.key ? 'white' : 'var(--text)',
-                        fontSize: '0.875rem', 
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    fontSize: '0.875rem',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
@@ -1606,20 +1665,20 @@ const Profile: React.FC = () => {
                       {filter.count}
                     </span>
                   )}
-                </button>
-                ))}
-              </div>
+                </Button>
+              ))}
+            </div>
 
             {/* Events List - Filtered by View */}
             {eventsLoading ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                 Loading events...
-            </div>
+              </div>
             ) : (() => {
               // Filter events based on selected view
               let filteredEvents: UserEvent[] = []
               const now = new Date()
-              
+
               switch (eventsViewFilter) {
                 case 'upcoming':
                   filteredEvents = [...groupedUpcomingEvents.today, ...groupedUpcomingEvents.thisWeek, ...groupedUpcomingEvents.thisMonth, ...groupedUpcomingEvents.future]
@@ -1683,334 +1742,334 @@ const Profile: React.FC = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                     {/* Today */}
                     {groupedUpcomingEvents.today.length > 0 && (
-                  <div>
-              <h3 style={{ 
-                      fontSize: '1.25rem',
-                fontWeight: '700',
-                color: 'var(--text)',
-                      marginBottom: '1rem',
-              }}>
-                      Today
-              </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {groupedUpcomingEvents.today.map((event) => (
-                        <div
-                          key={event.id}
-                          onClick={() => router.push(`/events/${event.id}`)}
-                    style={{
-                            background: 'var(--bg-2)',
-                      borderRadius: '12px',
-                            padding: '1rem 1.25rem',
-                            border: '1px solid var(--border)',
-                      cursor: 'pointer',
-                            transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--card)'
-                            e.currentTarget.style.borderColor = 'var(--primary)'
-                            e.currentTarget.style.transform = 'translateX(4px)'
-                    }}
-                    onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-2)'
-                            e.currentTarget.style.borderColor = 'var(--border)'
-                            e.currentTarget.style.transform = 'translateX(0)'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                            <div style={{ flex: 1 }}>
-                              <h4 style={{ 
-                                fontSize: '1rem', 
-                      fontWeight: '600',
-                                color: 'var(--text)',
-                                margin: '0 0 0.25rem 0',
-                              }}>
-                                {event.title}
-                              </h4>
-                              <div style={{ 
-                                display: 'flex', 
-                                gap: '1rem',
-                                fontSize: '0.875rem',
-                                color: 'var(--text-muted)',
-                                flexWrap: 'wrap',
-                              }}>
-                                {event.time && <span>⏰ {event.time}</span>}
-                                {event.location && <span>📍 {event.location}</span>}
-                                {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
-                    </div>
-                  </div>
-                            {isOwnProfile && (
-                <Button
-                  variant="secondary"
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  router.push(`/edit-event/${event.id}`)
-                                }}
-                              >
-                                Edit
-                </Button>
-                            )}
-              </div>
-            </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* This Week */}
-                {groupedUpcomingEvents.thisWeek.length > 0 && (
-                  <div>
-                <h3 style={{ 
-                      fontSize: '1.25rem',
-                  fontWeight: '700',
-                  color: 'var(--text)',
-                      marginBottom: '1rem',
-                }}>
-                      This Week
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {groupedUpcomingEvents.thisWeek.map((event) => (
-                        <div
-                          key={event.id}
-                          onClick={() => router.push(`/events/${event.id}`)}
-                        style={{
-                          background: 'var(--bg-2)',
-                          borderRadius: '12px',
-                            padding: '1rem 1.25rem',
-                            border: '1px solid var(--border)',
-                            cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--card)'
-                            e.currentTarget.style.borderColor = 'var(--primary)'
-                            e.currentTarget.style.transform = 'translateX(4px)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'var(--bg-2)'
-                            e.currentTarget.style.borderColor = 'var(--border)'
-                          e.currentTarget.style.transform = 'translateX(0)'
-                        }}
-                      >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                            <div style={{ flex: 1 }}>
-                              <h4 style={{ 
-                                fontSize: '1rem', 
-                                fontWeight: '600',
-                                color: 'var(--text)',
-                                margin: '0 0 0.25rem 0',
-                              }}>
-                                {event.title}
-                              </h4>
-                              <div style={{ 
-                                display: 'flex', 
-                                gap: '1rem',
-                                fontSize: '0.875rem',
-                                color: 'var(--text-muted)',
-                                flexWrap: 'wrap',
-                              }}>
-                                <span>📅 {new Date(event.date).toLocaleDateString()}</span>
-                                {event.time && <span>⏰ {event.time}</span>}
-                                {event.location && <span>📍 {event.location}</span>}
-                                {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
-                </div>
-              </div>
-                            {isOwnProfile && (
-                              <Button
-                                variant="secondary"
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  router.push(`/edit-event/${event.id}`)
-                                }}
-                              >
-                                Edit
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-          </div>
-        )}
-
-                {/* This Month */}
-                {groupedUpcomingEvents.thisMonth.length > 0 && (
-                  <div>
-                    <h3 style={{ 
-                      fontSize: '1.25rem',
-                      fontWeight: '700',
-                      color: 'var(--text)',
-                      marginBottom: '1rem',
-                    }}>
-                      This Month
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {groupedUpcomingEvents.thisMonth.map((event) => (
-                        <div
-                          key={event.id}
-                          onClick={() => router.push(`/events/${event.id}`)}
-                style={{
-                  background: 'var(--bg-2)',
-                  borderRadius: '12px',
-                            padding: '1rem 1.25rem',
-                  border: '1px solid var(--border)',
-                  cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--card)'
-                            e.currentTarget.style.borderColor = 'var(--primary)'
-                            e.currentTarget.style.transform = 'translateX(4px)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-2)'
-                            e.currentTarget.style.borderColor = 'var(--border)'
-                            e.currentTarget.style.transform = 'translateX(0)'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                            <div style={{ flex: 1 }}>
-                              <h4 style={{ 
-                                fontSize: '1rem', 
-                                fontWeight: '600',
-                                color: 'var(--text)',
-                                margin: '0 0 0.25rem 0',
-                              }}>
-                                {event.title}
-                              </h4>
-              <div style={{
-                display: 'flex',
-                gap: '1rem',
-                                fontSize: '0.875rem',
-                                color: 'var(--text-muted)',
-                flexWrap: 'wrap',
-              }}>
-                                <span>📅 {new Date(event.date).toLocaleDateString()}</span>
-                                {event.time && <span>⏰ {event.time}</span>}
-                                {event.location && <span>📍 {event.location}</span>}
-                                {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
+                      <div>
+                        <h3 style={{
+                          fontSize: '1.25rem',
+                          fontWeight: '700',
+                          color: 'var(--text)',
+                          marginBottom: '1rem',
+                        }}>
+                          Today
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {groupedUpcomingEvents.today.map((event) => (
+                            <div
+                              key={event.id}
+                              onClick={() => router.push(`/events/${event.id}`)}
+                              style={{
+                                background: 'var(--bg-2)',
+                                borderRadius: '12px',
+                                padding: '1rem 1.25rem',
+                                border: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--card)'
+                                e.currentTarget.style.borderColor = 'var(--primary)'
+                                e.currentTarget.style.transform = 'translateX(4px)'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'var(--bg-2)'
+                                e.currentTarget.style.borderColor = 'var(--border)'
+                                e.currentTarget.style.transform = 'translateX(0)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                <div style={{ flex: 1 }}>
+                                  <h4 style={{
+                                    fontSize: '1rem',
+                                    fontWeight: '600',
+                                    color: 'var(--text)',
+                                    margin: '0 0 0.25rem 0',
+                                  }}>
+                                    {event.title}
+                                  </h4>
+                                  <div style={{
+                                    display: 'flex',
+                                    gap: '1rem',
+                                    fontSize: '0.875rem',
+                                    color: 'var(--text-muted)',
+                                    flexWrap: 'wrap',
+                                  }}>
+                                    {event.time && <span>⏰ {event.time}</span>}
+                                    {event.location && <span>📍 {event.location}</span>}
+                                    {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
+                                  </div>
+                                </div>
+                                {isOwnProfile && (
+                                  <Button
+                                    variant="secondary"
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      router.push(`/edit-event/${event.id}`)
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                )}
                               </div>
                             </div>
-                            {isOwnProfile && (
-                <Button
-                  variant="secondary"
-                  size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  router.push(`/edit-event/${event.id}`)
-                                }}
-                              >
-                                Edit
-                </Button>
-                            )}
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-              </div>
-            )}
-
-                {/* Future Events */}
-                {groupedUpcomingEvents.future.length > 0 && (
-                  <div>
-                    <h3 style={{ 
-                      fontSize: '1.25rem',
-                      fontWeight: '700',
-                      color: 'var(--text)',
-                      marginBottom: '1rem',
-                    }}>
-                      Future Events
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {groupedUpcomingEvents.future.map((event) => (
-                  <div
-                    key={event.id}
-                          onClick={() => router.push(`/events/${event.id}`)}
-                    style={{
-                      background: 'var(--bg-2)',
-                            borderRadius: '12px',
-                            padding: '1rem 1.25rem',
-                            border: '1px solid var(--border)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--card)'
-                            e.currentTarget.style.borderColor = 'var(--primary)'
-                            e.currentTarget.style.transform = 'translateX(4px)'
-                    }}
-                    onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-2)'
-                            e.currentTarget.style.borderColor = 'var(--border)'
-                            e.currentTarget.style.transform = 'translateX(0)'
-                    }}
-                  >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                            <div style={{ flex: 1 }}>
-                      <h4 style={{ 
-                                fontSize: '1rem', 
-                        fontWeight: '600',
-                        color: 'var(--text)',
-                                margin: '0 0 0.25rem 0',
-                      }}>
-                        {event.title}
-                      </h4>
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '1rem',
-                      fontSize: '0.875rem',
-                      color: 'var(--text-muted)',
-                                flexWrap: 'wrap',
-                    }}>
-                      <span>📅 {new Date(event.date).toLocaleDateString()}</span>
-                      {event.time && <span>⏰ {event.time}</span>}
-                                {event.location && <span>📍 {event.location}</span>}
-                                {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
-                    </div>
                       </div>
-                            {isOwnProfile && (
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          router.push(`/edit-event/${event.id}`)
-                        }}
-                      >
-                        Edit
-                      </Button>
-                            )}
-                    </div>
-                  </div>
-                ))}
-                    </div>
-              </div>
-            )}
+                    )}
+
+                    {/* This Week */}
+                    {groupedUpcomingEvents.thisWeek.length > 0 && (
+                      <div>
+                        <h3 style={{
+                          fontSize: '1.25rem',
+                          fontWeight: '700',
+                          color: 'var(--text)',
+                          marginBottom: '1rem',
+                        }}>
+                          This Week
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {groupedUpcomingEvents.thisWeek.map((event) => (
+                            <div
+                              key={event.id}
+                              onClick={() => router.push(`/events/${event.id}`)}
+                              style={{
+                                background: 'var(--bg-2)',
+                                borderRadius: '12px',
+                                padding: '1rem 1.25rem',
+                                border: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--card)'
+                                e.currentTarget.style.borderColor = 'var(--primary)'
+                                e.currentTarget.style.transform = 'translateX(4px)'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'var(--bg-2)'
+                                e.currentTarget.style.borderColor = 'var(--border)'
+                                e.currentTarget.style.transform = 'translateX(0)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                <div style={{ flex: 1 }}>
+                                  <h4 style={{
+                                    fontSize: '1rem',
+                                    fontWeight: '600',
+                                    color: 'var(--text)',
+                                    margin: '0 0 0.25rem 0',
+                                  }}>
+                                    {event.title}
+                                  </h4>
+                                  <div style={{
+                                    display: 'flex',
+                                    gap: '1rem',
+                                    fontSize: '0.875rem',
+                                    color: 'var(--text-muted)',
+                                    flexWrap: 'wrap',
+                                  }}>
+                                    <span>📅 {new Date(event.date).toLocaleDateString()}</span>
+                                    {event.time && <span>⏰ {event.time}</span>}
+                                    {event.location && <span>📍 {event.location}</span>}
+                                    {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
+                                  </div>
+                                </div>
+                                {isOwnProfile && (
+                                  <Button
+                                    variant="secondary"
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      router.push(`/edit-event/${event.id}`)
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* This Month */}
+                    {groupedUpcomingEvents.thisMonth.length > 0 && (
+                      <div>
+                        <h3 style={{
+                          fontSize: '1.25rem',
+                          fontWeight: '700',
+                          color: 'var(--text)',
+                          marginBottom: '1rem',
+                        }}>
+                          This Month
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {groupedUpcomingEvents.thisMonth.map((event) => (
+                            <div
+                              key={event.id}
+                              onClick={() => router.push(`/events/${event.id}`)}
+                              style={{
+                                background: 'var(--bg-2)',
+                                borderRadius: '12px',
+                                padding: '1rem 1.25rem',
+                                border: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--card)'
+                                e.currentTarget.style.borderColor = 'var(--primary)'
+                                e.currentTarget.style.transform = 'translateX(4px)'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'var(--bg-2)'
+                                e.currentTarget.style.borderColor = 'var(--border)'
+                                e.currentTarget.style.transform = 'translateX(0)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                <div style={{ flex: 1 }}>
+                                  <h4 style={{
+                                    fontSize: '1rem',
+                                    fontWeight: '600',
+                                    color: 'var(--text)',
+                                    margin: '0 0 0.25rem 0',
+                                  }}>
+                                    {event.title}
+                                  </h4>
+                                  <div style={{
+                                    display: 'flex',
+                                    gap: '1rem',
+                                    fontSize: '0.875rem',
+                                    color: 'var(--text-muted)',
+                                    flexWrap: 'wrap',
+                                  }}>
+                                    <span>📅 {new Date(event.date).toLocaleDateString()}</span>
+                                    {event.time && <span>⏰ {event.time}</span>}
+                                    {event.location && <span>📍 {event.location}</span>}
+                                    {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
+                                  </div>
+                                </div>
+                                {isOwnProfile && (
+                                  <Button
+                                    variant="secondary"
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      router.push(`/edit-event/${event.id}`)
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Future Events */}
+                    {groupedUpcomingEvents.future.length > 0 && (
+                      <div>
+                        <h3 style={{
+                          fontSize: '1.25rem',
+                          fontWeight: '700',
+                          color: 'var(--text)',
+                          marginBottom: '1rem',
+                        }}>
+                          Future Events
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {groupedUpcomingEvents.future.map((event) => (
+                            <div
+                              key={event.id}
+                              onClick={() => router.push(`/events/${event.id}`)}
+                              style={{
+                                background: 'var(--bg-2)',
+                                borderRadius: '12px',
+                                padding: '1rem 1.25rem',
+                                border: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--card)'
+                                e.currentTarget.style.borderColor = 'var(--primary)'
+                                e.currentTarget.style.transform = 'translateX(4px)'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'var(--bg-2)'
+                                e.currentTarget.style.borderColor = 'var(--border)'
+                                e.currentTarget.style.transform = 'translateX(0)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                <div style={{ flex: 1 }}>
+                                  <h4 style={{
+                                    fontSize: '1rem',
+                                    fontWeight: '600',
+                                    color: 'var(--text)',
+                                    margin: '0 0 0.25rem 0',
+                                  }}>
+                                    {event.title}
+                                  </h4>
+                                  <div style={{
+                                    display: 'flex',
+                                    gap: '1rem',
+                                    fontSize: '0.875rem',
+                                    color: 'var(--text-muted)',
+                                    flexWrap: 'wrap',
+                                  }}>
+                                    <span>📅 {new Date(event.date).toLocaleDateString()}</span>
+                                    {event.time && <span>⏰ {event.time}</span>}
+                                    {event.location && <span>📍 {event.location}</span>}
+                                    {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
+                                  </div>
+                                </div>
+                                {isOwnProfile && (
+                                  <Button
+                                    variant="secondary"
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      router.push(`/edit-event/${event.id}`)
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Empty State */}
-                    {groupedUpcomingEvents.today.length === 0 && 
-                     groupedUpcomingEvents.thisWeek.length === 0 && 
-                     groupedUpcomingEvents.thisMonth.length === 0 && 
-                     groupedUpcomingEvents.future.length === 0 && (
-              <div style={{ 
-                        textAlign: 'center', 
-                        padding: '3rem',
-                        color: 'var(--text-muted)',
-                      }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎪</div>
-                        <p>No upcoming events</p>
-              </div>
-                    )}
-                </div>
+                    {groupedUpcomingEvents.today.length === 0 &&
+                      groupedUpcomingEvents.thisWeek.length === 0 &&
+                      groupedUpcomingEvents.thisMonth.length === 0 &&
+                      groupedUpcomingEvents.future.length === 0 && (
+                        <div style={{
+                          textAlign: 'center',
+                          padding: '3rem',
+                          color: 'var(--text-muted)',
+                        }}>
+                          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎪</div>
+                          <p>No upcoming events</p>
+                        </div>
+                      )}
+                  </div>
                 )
               } else {
                 // Render filtered list for other views
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {filteredEvents.length === 0 ? (
-                <div style={{ 
-                  textAlign: 'center', 
+                      <div style={{
+                        textAlign: 'center',
                         padding: '3rem',
                         color: 'var(--text-muted)',
                       }}>
@@ -2026,54 +2085,54 @@ const Profile: React.FC = () => {
                           {eventsViewFilter === 'past' && 'No past events'}
                           {eventsViewFilter === 'invites' && 'No invites'}
                         </p>
-                </div>
-              ) : (
+                      </div>
+                    ) : (
                       filteredEvents.map((event) => (
-                    <div 
-                      key={event.id} 
+                        <div
+                          key={event.id}
                           onClick={() => router.push(`/events/${event.id}`)}
-                      style={{
-                        background: 'var(--bg-2)',
+                          style={{
+                            background: 'var(--bg-2)',
                             borderRadius: '12px',
                             padding: '1rem 1.25rem',
-                        border: '1px solid var(--border)',
+                            border: '1px solid var(--border)',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                           }}
-                      onMouseEnter={(e) => {
+                          onMouseEnter={(e) => {
                             e.currentTarget.style.background = 'var(--card)'
-                        e.currentTarget.style.borderColor = 'var(--primary)'
+                            e.currentTarget.style.borderColor = 'var(--primary)'
                             e.currentTarget.style.transform = 'translateX(4px)'
-                      }}
-                      onMouseLeave={(e) => {
+                          }}
+                          onMouseLeave={(e) => {
                             e.currentTarget.style.background = 'var(--bg-2)'
-                        e.currentTarget.style.borderColor = 'var(--border)'
+                            e.currentTarget.style.borderColor = 'var(--border)'
                             e.currentTarget.style.transform = 'translateX(0)'
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                             <div style={{ flex: 1 }}>
-                              <h4 style={{ 
-                                fontSize: '1rem', 
+                              <h4 style={{
+                                fontSize: '1rem',
                                 fontWeight: '600',
                                 color: 'var(--text)',
                                 margin: '0 0 0.25rem 0',
                               }}>
-                          {event.title}
-                        </h4>
-                      <div style={{ 
-                        display: 'flex', 
-                        gap: '1rem',
-                        fontSize: '0.875rem',
-                        color: 'var(--text-muted)',
+                                {event.title}
+                              </h4>
+                              <div style={{
+                                display: 'flex',
+                                gap: '1rem',
+                                fontSize: '0.875rem',
+                                color: 'var(--text-muted)',
                                 flexWrap: 'wrap',
                               }}>
                                 <span>📅 {new Date(event.date).toLocaleDateString()}</span>
                                 {event.time && <span>⏰ {event.time}</span>}
                                 {event.location && <span>📍 {event.location}</span>}
                                 {event.rsvp_count !== undefined && <span>✅ {event.rsvp_count} going</span>}
-                        </div>
-                          </div>
+                              </div>
+                            </div>
                             {isOwnProfile && eventsViewFilter === 'hosting' && (
                               <Button
                                 variant="secondary"
@@ -2089,8 +2148,8 @@ const Profile: React.FC = () => {
                           </div>
                         </div>
                       ))
-                        )}
-                      </div>
+                    )}
+                  </div>
                 )
               }
             })()}
@@ -2107,7 +2166,7 @@ const Profile: React.FC = () => {
                   background: 'rgba(0, 0, 0, 0.7)',
                   backdropFilter: 'blur(4px)',
                   zIndex: 1000,
-                        display: 'flex',
+                  display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'center',
                   padding: '2rem',
@@ -2128,46 +2187,45 @@ const Profile: React.FC = () => {
                     maxWidth: '600px',
                     maxHeight: '80vh',
                     overflow: 'hidden',
-                          display: 'flex', 
+                    display: 'flex',
                     flexDirection: 'column',
                     boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Modal Header */}
-                          <div style={{ 
+                  <div style={{
                     padding: '1.5rem',
                     borderBottom: '1px solid var(--border)',
-                            display: 'flex', 
-                            alignItems: 'center', 
-                justifyContent: 'space-between', 
-              }}>
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
                     <h2 style={{
-                  fontSize: '1.5rem',
-                  fontWeight: '700',
-                  color: 'var(--text)',
-                  margin: 0,
-                }}>
+                      fontSize: '1.5rem',
+                      fontWeight: '700',
+                      color: 'var(--text)',
+                      margin: 0,
+                    }}>
                       Search Events
                     </h2>
-                          <button
-                            onClick={() => {
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => {
                         setShowSearchModal(false)
                         setSearchModalQuery('')
-                            }}
-                            style={{
-                        background: 'transparent',
-                        border: 'none',
-                        fontSize: '1.5rem',
-                        color: 'var(--text-muted)',
-                              cursor: 'pointer',
+                      }}
+                      style={{
                         padding: '0.25rem',
                         lineHeight: 1,
-                            }}
-                          >
-                            ✕
-                          </button>
-                        </div>
+                        fontSize: '1.2rem',
+                        minWidth: 'auto',
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  </div>
 
                   {/* Search Input */}
                   <div style={{
@@ -2198,7 +2256,7 @@ const Profile: React.FC = () => {
                     overflowY: 'auto',
                     padding: '1rem',
                   }}>
-                  {(() => {
+                    {(() => {
                       const allEvents = [...userEvents, ...rsvpEvents.map(e => ({
                         id: e.id,
                         title: e.title,
@@ -2217,28 +2275,28 @@ const Profile: React.FC = () => {
 
                       const filtered = searchModalQuery
                         ? allEvents.filter(e =>
-                            e.title.toLowerCase().includes(searchModalQuery.toLowerCase()) ||
-                            e.description?.toLowerCase().includes(searchModalQuery.toLowerCase()) ||
-                            e.location?.toLowerCase().includes(searchModalQuery.toLowerCase())
-                          )
+                          e.title.toLowerCase().includes(searchModalQuery.toLowerCase()) ||
+                          e.description?.toLowerCase().includes(searchModalQuery.toLowerCase()) ||
+                          e.location?.toLowerCase().includes(searchModalQuery.toLowerCase())
+                        )
                         : []
 
                       if (!searchModalQuery) {
-                      return (
-                        <div style={{ 
-                          textAlign: 'center', 
+                        return (
+                          <div style={{
+                            textAlign: 'center',
                             padding: '3rem 2rem',
                             color: 'var(--text-muted)',
-                        }}>
+                          }}>
                             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
                             <p>Start typing to search for events...</p>
-                        </div>
-                      )
-                    }
+                          </div>
+                        )
+                      }
 
                       if (filtered.length === 0) {
-                    return (
-                      <div style={{ 
+                        return (
+                          <div style={{
                             textAlign: 'center',
                             padding: '3rem 2rem',
                             color: 'var(--text-muted)',
@@ -2264,30 +2322,30 @@ const Profile: React.FC = () => {
                               .filter(e => new Date(e.date) >= new Date())
                               .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                               .map((event) => (
-                          <div 
-                            key={event.id} 
+                                <div
+                                  key={event.id}
                                   onClick={() => {
                                     router.push(`/events/${event.id}`)
                                     setShowSearchModal(false)
                                     setSearchModalQuery('')
                                   }}
-                            style={{
-                              background: 'var(--bg-2)',
+                                  style={{
+                                    background: 'var(--bg-2)',
                                     borderRadius: '12px',
                                     padding: '1rem',
-                              border: '1px solid var(--border)',
+                                    border: '1px solid var(--border)',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s',
                                     display: 'flex',
                                     gap: '1rem',
                                   }}
-                            onMouseEnter={(e) => {
+                                  onMouseEnter={(e) => {
                                     e.currentTarget.style.background = 'var(--card)'
-                              e.currentTarget.style.borderColor = 'var(--primary)'
-                            }}
-                            onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--primary)'
+                                  }}
+                                  onMouseLeave={(e) => {
                                     e.currentTarget.style.background = 'var(--bg-2)'
-                              e.currentTarget.style.borderColor = 'var(--border)'
+                                    e.currentTarget.style.borderColor = 'var(--border)'
                                   }}
                                 >
                                   {event.image_url && (
@@ -2309,25 +2367,25 @@ const Profile: React.FC = () => {
                                       color: 'var(--text)',
                                       margin: '0 0 0.25rem 0',
                                     }}>
-                                {event.title}
-                              </h4>
-                            <div style={{ 
-                              fontSize: '0.875rem',
-                              color: 'var(--text-muted)',
-                            }}>
+                                      {event.title}
+                                    </h4>
+                                    <div style={{
+                                      fontSize: '0.875rem',
+                                      color: 'var(--text-muted)',
+                                    }}>
                                       {new Date(event.date).toLocaleDateString()} {event.time && `· ${event.time}`}
-                              </div>
-                                </div>
+                                    </div>
+                                  </div>
                                 </div>
                               ))}
-                            </div>
-                            </div>
+                          </div>
+                        </div>
                       )
                     })()}
-                            </div>
-                          </div>
-                      </div>
-              )}
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
         )}
@@ -2341,8 +2399,8 @@ const Profile: React.FC = () => {
             border: '1px solid var(--border)',
             boxShadow: 'var(--shadow)',
           }}>
-            <h3 style={{ 
-              fontSize: '1.5rem', 
+            <h3 style={{
+              fontSize: '1.5rem',
               marginBottom: '1.5rem',
               fontWeight: '700',
               color: 'var(--text)',
@@ -2350,8 +2408,8 @@ const Profile: React.FC = () => {
               📅 Your Calendar
             </h3>
             {allCalendarEvents.length === 0 ? (
-              <div style={{ 
-                textAlign: 'center', 
+              <div style={{
+                textAlign: 'center',
                 padding: '3rem',
                 color: 'var(--text-muted)',
               }}>
@@ -2416,8 +2474,8 @@ const Profile: React.FC = () => {
                           show_membership: show
                         })
                       if (!error) {
-                        setSections(prev => prev.map(s => 
-                          s.id === sectionId 
+                        setSections(prev => prev.map(s =>
+                          s.id === sectionId
                             ? { ...s, visibility: { ...s.visibility, show_membership: show, id: s.visibility?.id || '' } }
                             : s
                         ) as SectionWithMembership[])
@@ -2429,7 +2487,7 @@ const Profile: React.FC = () => {
                     isPreviewMode={false}
                   />
                 ))}
-                
+
                 <div style={{ textAlign: 'center', paddingTop: '1rem' }}>
                   <Button variant="secondary" onClick={() => router.push('/sections')}>
                     + Join More Sections
@@ -2449,8 +2507,8 @@ const Profile: React.FC = () => {
             border: '1px solid var(--border)',
             boxShadow: 'var(--shadow)',
           }}>
-            <h3 style={{ 
-              fontSize: '1.5rem', 
+            <h3 style={{
+              fontSize: '1.5rem',
               marginBottom: '1.5rem',
               fontWeight: '700',
               color: 'var(--text)',
@@ -2458,8 +2516,8 @@ const Profile: React.FC = () => {
               🔔 Notifications
             </h3>
             {notifications.length === 0 ? (
-              <div style={{ 
-                textAlign: 'center', 
+              <div style={{
+                textAlign: 'center',
                 padding: '3rem',
                 color: 'var(--text-muted)',
               }}>
@@ -2491,27 +2549,27 @@ const Profile: React.FC = () => {
                       e.currentTarget.style.transform = 'translateX(0)'
                     }}
                   >
-                    <div style={{ 
-                      display: 'flex', 
+                    <div style={{
+                      display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'flex-start',
                     }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ 
-                          fontSize: '1.1rem', 
+                        <div style={{
+                          fontSize: '1.1rem',
                           fontWeight: '600',
                           color: 'var(--text)',
                           marginBottom: '0.5rem',
                         }}>
                           {notification.title}
                         </div>
-                        <div style={{ 
+                        <div style={{
                           color: 'var(--text-muted)',
                           fontSize: '0.9rem',
                         }}>
                           {notification.message}
                         </div>
-                        <div style={{ 
+                        <div style={{
                           color: 'var(--text-muted)',
                           fontSize: '0.75rem',
                           marginTop: '0.5rem',
@@ -2550,7 +2608,7 @@ const Profile: React.FC = () => {
             zIndex: 1000,
             padding: '1rem',
           }}
-          onClick={() => setShowEditForm(false)}
+            onClick={() => setShowEditForm(false)}
           >
             <div style={{
               background: 'var(--card)',
@@ -2561,10 +2619,10 @@ const Profile: React.FC = () => {
               border: '1px solid var(--border)',
               boxShadow: 'var(--shadow)',
             }}
-            onClick={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
             >
-              <h3 style={{ 
-                fontSize: '1.5rem', 
+              <h3 style={{
+                fontSize: '1.5rem',
                 marginBottom: '1.5rem',
                 fontWeight: '700',
                 color: 'var(--text)',
@@ -2573,8 +2631,8 @@ const Profile: React.FC = () => {
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
+                  <label style={{
+                    display: 'block',
                     marginBottom: '0.5rem',
                     color: 'var(--text)',
                     fontWeight: '600',
@@ -2597,8 +2655,8 @@ const Profile: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
+                  <label style={{
+                    display: 'block',
                     marginBottom: '0.5rem',
                     color: 'var(--text)',
                     fontWeight: '600',
@@ -2622,8 +2680,8 @@ const Profile: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
+                  <label style={{
+                    display: 'block',
                     marginBottom: '0.5rem',
                     color: 'var(--text)',
                     fontWeight: '600',
@@ -2646,11 +2704,11 @@ const Profile: React.FC = () => {
                     }}
                   />
                 </div>
-                
+
                 {/* Social Links */}
                 <div>
-                  <label style={{ 
-                    display: 'block', 
+                  <label style={{
+                    display: 'block',
                     marginBottom: '0.75rem',
                     color: 'var(--text)',
                     fontWeight: '600',
@@ -2725,45 +2783,38 @@ const Profile: React.FC = () => {
                             fontSize: '0.875rem',
                           }}
                         />
-                        <button
-                          type="button"
+                        <Button
+                          variant="secondary"
+                          size="small"
                           onClick={() => {
                             setSocialLinks(socialLinks.filter((_, i) => i !== index))
                           }}
                           style={{
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: '8px',
-                            border: 'none',
                             background: 'var(--danger)',
                             color: 'white',
-                            cursor: 'pointer',
-                            fontSize: '0.875rem',
+                            borderColor: 'transparent',
                           }}
                         >
                           Remove
-                        </button>
+                        </Button>
                       </div>
                     ))}
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      fullWidth
                       onClick={() => {
                         setSocialLinks([...socialLinks, { platform: 'website', url: '' }])
                       }}
                       style={{
-                        padding: '0.5rem',
-                        borderRadius: '8px',
-                        border: '1px dashed var(--border)',
-                        background: 'transparent',
-                        color: 'var(--text)',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
+                        borderStyle: 'dashed',
                       }}
                     >
                       + Add Link
-                    </button>
+                    </Button>
                   </div>
                 </div>
-                
+
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2782,12 +2833,58 @@ const Profile: React.FC = () => {
                       cursor: 'pointer',
                     }}
                   />
-                  <label style={{ 
+                  <label style={{
                     color: 'var(--text)',
                     cursor: 'pointer',
                   }}>
                     Make my profile private
                   </label>
+                </div>
+
+                {/* Danger Zone - Delete Account */}
+                <div style={{
+                  marginTop: '1.5rem',
+                  paddingTop: '1.5rem',
+                  borderTop: '1px solid var(--border)',
+                }}>
+                  <div style={{
+                    padding: '1.25rem',
+                    background: 'rgba(239, 68, 68, 0.05)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    borderRadius: '12px',
+                  }}>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <h3 style={{
+                        margin: 0,
+                        fontSize: '0.95rem',
+                        fontWeight: '700',
+                        color: 'var(--danger)',
+                        marginBottom: '0.25rem'
+                      }}>
+                        ⚠️ Danger Zone
+                      </h3>
+                      <p style={{
+                        margin: 0,
+                        fontSize: '0.85rem',
+                        color: 'var(--text-muted)',
+                        lineHeight: '1.4'
+                      }}>
+                        Once you delete your account, there is no going back. All your data will be permanently removed.
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: 'var(--danger)',
+                        borderColor: 'var(--danger)',
+                      }}
+                    >
+                      🗑️ Delete Account
+                    </Button>
+                  </div>
                 </div>
                 {error && (
                   <div style={{
