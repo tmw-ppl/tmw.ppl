@@ -243,7 +243,7 @@ const CreateProject: React.FC = () => {
       <div className="container">
         <h1>Create New Project</h1>
         <p className="lead">
-          Share your project with the Tomorrow People community and find collaborators.
+          Share your project with the Section community and find collaborators.
         </p>
 
         <div className="create-project-form" style={{ maxWidth: '800px', margin: '0 auto' }}>

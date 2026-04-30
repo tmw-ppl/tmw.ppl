@@ -220,7 +220,7 @@ const Profile: React.FC = () => {
     // Check for onboarding query parameter
     if (router.isReady && router.query.onboarding === 'true' && isOwnProfile) {
       setShowEditForm(true)
-      setSuccess('Welcome to Tomorrow People! Please complete your profile to get started.')
+      setSuccess('Welcome to Section! Please complete your profile to get started.')
       // Remove onboarding parameter after showing message
       const { onboarding, ...restQuery } = router.query
       router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true })

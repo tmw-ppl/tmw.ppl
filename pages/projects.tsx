@@ -151,7 +151,12 @@ const Projects: React.FC = () => {
       console.log('📊 Loaded projects:', projectsWithCounts.length)
     } catch (err: any) {
       console.error('Error loading projects:', err)
-      setError(err.message || 'Failed to load projects')
+      const message = (err?.message || '').toLowerCase()
+      if (message.includes('infinite recursion detected in policy')) {
+        setError('Projects is temporarily unavailable due to a database policy configuration issue. Please update the Supabase RLS policy for the projects table.')
+      } else {
+        setError(err.message || 'Failed to load projects')
+      }
     } finally {
       setLoading(false)
     }
@@ -257,7 +262,7 @@ const Projects: React.FC = () => {
         <div className="container">
           <h1>Community Projects</h1>
           <p className="lead">
-            Discover amazing projects built by the Tomorrow People community.
+            Discover amazing projects built by the Section community.
           </p>
           <Loading message="Loading projects..." />
         </div>
@@ -271,7 +276,7 @@ const Projects: React.FC = () => {
         <div className="container">
           <h1>Community Projects</h1>
           <p className="lead">
-            Discover amazing projects built by the Tomorrow People community.
+            Discover amazing projects built by the Section community.
           </p>
           <div className="error-message">
             <p>{error}</p>
@@ -299,7 +304,7 @@ const Projects: React.FC = () => {
           </span>
         </div>
         <p className="lead">
-          Discover amazing projects built by the Tomorrow People community.
+          Discover amazing projects built by the Section community.
         </p>
 
         {/* Create Project Button */}

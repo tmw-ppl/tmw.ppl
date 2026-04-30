@@ -82,12 +82,14 @@ const PublicProfilePage: React.FC = () => {
   const [subscribedGroups, setSubscribedGroups] = useState<Set<string>>(new Set())
   const [subscribingGroup, setSubscribingGroup] = useState<string | null>(null)
 
-  // Redirect to canonical profile URL so all profile views use /profile?id=...
+  // Keep /members/[id] as canonical public member route while preserving old links.
   useEffect(() => {
     if (router.isReady && id && typeof id === 'string') {
-      router.replace(`/profile?id=${encodeURIComponent(id)}`)
+      if (router.pathname === '/profiles/[id]') {
+        router.replace(`/members/${encodeURIComponent(id)}`)
+      }
     }
-  }, [router.isReady, id])
+  }, [router.isReady, router.pathname, id, router])
 
   // Require authentication
   useEffect(() => {
@@ -457,8 +459,8 @@ const PublicProfilePage: React.FC = () => {
             <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
               This profile may be private or doesn't exist.
             </p>
-            <Button onClick={() => router.push('/profiles')}>
-              ← Back to Profiles
+            <Button onClick={() => router.push('/members')}>
+              ← Back to Members
             </Button>
           </div>
         </div>
@@ -473,7 +475,7 @@ const PublicProfilePage: React.FC = () => {
       <div className="container">
         {/* Back Button */}
         <button
-          onClick={() => router.push('/profiles')}
+          onClick={() => router.push('/members')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -490,7 +492,7 @@ const PublicProfilePage: React.FC = () => {
           onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
           onMouseLeave={(e) => e.currentTarget.style.color = 'var(--muted)'}
         >
-          ← Back to Profiles
+          ← Back to Members
         </button>
 
         {/* Profile Header Card */}

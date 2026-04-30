@@ -31,6 +31,13 @@ const Profiles: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Keep /members as canonical list route while preserving old /profiles links.
+  useEffect(() => {
+    if (router.isReady && router.pathname === '/profiles') {
+      router.replace('/members')
+    }
+  }, [router.isReady, router.pathname, router])
+
   // Redirect to auth if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
@@ -178,7 +185,7 @@ const Profiles: React.FC = () => {
       <section className="hero">
         <div className="container">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <h1>Community Profiles</h1>
+            <h1>Community Members</h1>
           </div>
           <p className="lead">
             Discover creative minds, connect with collaborators, and find your
@@ -195,7 +202,7 @@ const Profiles: React.FC = () => {
       <section className="hero">
         <div className="container">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <h1>Community Profiles</h1>
+            <h1>Community Members</h1>
             {profiles.length > 0 && (
               <span style={{
                 background: 'var(--primary)',
@@ -213,7 +220,7 @@ const Profiles: React.FC = () => {
             Discover creative minds, connect with collaborators, and find your
             next project partner to add to your Section.
           </p>
-          <Loading message="Loading community profiles..." />
+          <Loading message="Loading community members..." />
         </div>
       </section>
     )
@@ -224,7 +231,7 @@ const Profiles: React.FC = () => {
       <section className="hero">
         <div className="container">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <h1>Community Profiles</h1>
+            <h1>Community Members</h1>
             {profiles.length > 0 && (
               <span style={{
                 background: 'var(--primary)',
@@ -255,7 +262,7 @@ const Profiles: React.FC = () => {
     <section className="hero">
       <div className="container">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <h1>Community Profiles</h1>
+          <h1>Community Members</h1>
           <span style={{
             background: 'var(--primary)',
             color: 'white',
@@ -380,7 +387,7 @@ const Profiles: React.FC = () => {
             <div className="no-results">
               <h3>No profiles found</h3>
               <p>
-                Try adjusting your search or filters to find community members.
+                Try adjusting your search or filters to find members.
               </p>
             </div>
           )}
