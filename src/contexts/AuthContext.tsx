@@ -17,6 +17,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const isAbortLikeError = (err: unknown) => {
+  if (!err || typeof err !== 'object') return false
+  const maybeError = err as { name?: string; message?: string }
+  const name = (maybeError.name || '').toLowerCase()
+  const message = (maybeError.message || '').toLowerCase()
+  return name === 'aborterror' || message.includes('aborted')
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (context === undefined) {
@@ -63,7 +71,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setLoading(false)
         }
       } catch (error) {
-        console.error('Error in getInitialSession:', error)
+        if (!isAbortLikeError(error)) {
+          console.error('Error in getInitialSession:', error)
+        }
         if (mounted) {
           setLoading(false)
         }
@@ -105,7 +115,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   .from('profiles')
                   .insert(profileData)
                 if (insertError) {
-                  console.error('Error creating profile from OAuth:', insertError)
+                  if (!isAbortLikeError(insertError)) {
+                    console.error('Error creating profile from OAuth:', insertError)
+                  }
                 }
               } else {
                 // Update existing profile with latest OAuth data (only if fields are missing)
@@ -115,11 +127,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   .eq('id', session.user.id)
                 if (updateError) {
                   // Ignore errors where profile might have been updated by another process
-                  console.warn('Error updating profile from OAuth (may already be updated):', updateError)
+                  if (!isAbortLikeError(updateError)) {
+                    console.warn('Error updating profile from OAuth (may already be updated):', updateError)
+                  }
                 }
               }
             } catch (profileError) {
-              console.error('Error ensuring profile exists from OAuth:', profileError)
+              if (!isAbortLikeError(profileError)) {
+                console.error('Error ensuring profile exists from OAuth:', profileError)
+              }
             }
           }
         }

@@ -42,6 +42,14 @@ type SortOption = 'date' | 'popularity' | 'recently_added'
 type DateRange = 'all' | 'this_week' | 'this_month' | 'next_3_months'
 type PaginationMode = 'pagination' | 'infinite_scroll'
 
+const isAbortLikeError = (err: unknown) => {
+  if (!err || typeof err !== 'object') return false
+  const maybeError = err as { name?: string; message?: string }
+  const name = (maybeError.name || '').toLowerCase()
+  const message = (maybeError.message || '').toLowerCase()
+  return name === 'aborterror' || message.includes('aborted')
+}
+
 const Events: React.FC = () => {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -247,7 +255,9 @@ const Events: React.FC = () => {
       
       setFeaturedGroups(sortedGroups)
     } catch (err) {
-      console.error('Error loading featured groups:', err)
+      if (!isAbortLikeError(err)) {
+        console.error('Error loading featured groups:', err)
+      }
     }
   }
 
@@ -266,7 +276,9 @@ const Events: React.FC = () => {
         .order('date', { ascending: true })
 
       if (error) {
-        console.error('Error loading events:', error)
+        if (!isAbortLikeError(error)) {
+          console.error('Error loading events:', error)
+        }
         setError(`Failed to load events: ${error.message || 'Please try again.'}`)
         return
       }
@@ -375,6 +387,9 @@ const Events: React.FC = () => {
       setEvents(eventsWithRSVP)
       filterEventsDirectly(eventsWithRSVP, activeFilter)
     } catch (error) {
+      if (isAbortLikeError(error)) {
+        return
+      }
       setError('Failed to load events. Please try again.')
     } finally {
       setLoading(false)
