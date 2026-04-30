@@ -32,7 +32,7 @@ In Supabase Dashboard → **Authentication** → **URL Configuration**:
 
 1. Go to **Authentication** → **Email Templates**
 2. Customize the templates with your branding
-3. See `docs/SUPABASE_EMAIL_CUSTOMIZATION.md` for detailed guide
+3. See [SUPABASE_EMAIL_CUSTOMIZATION.md](./SUPABASE_EMAIL_CUSTOMIZATION.md) for detailed guide
 
 ### 3. Test the Flow
 
@@ -63,15 +63,15 @@ In Supabase Dashboard → **Authentication** → **URL Configuration**:
 
 ## Documentation Files
 
-- `docs/SUPABASE_EMAIL_CUSTOMIZATION.md` - How to customize Supabase emails
-- `docs/SMS_AUTHENTICATION_SETUP.md` - How to set up SMS authentication (requires Twilio)
+- [SUPABASE_EMAIL_CUSTOMIZATION.md](./SUPABASE_EMAIL_CUSTOMIZATION.md) — customize Supabase emails
+- [SMS_AUTHENTICATION_SETUP.md](./SMS_AUTHENTICATION_SETUP.md) — SMS authentication (requires Twilio)
 
 ## SMS Authentication
 
 SMS authentication is **optional** and requires:
 - Twilio account (paid service, ~$0.0075 per SMS)
 - Supabase SMS provider configuration
-- Frontend implementation (see `docs/SMS_AUTHENTICATION_SETUP.md`)
+- Frontend implementation (see [SMS_AUTHENTICATION_SETUP.md](./SMS_AUTHENTICATION_SETUP.md))
 
 **Recommendation:** Start with email authentication, add SMS later if needed.
 

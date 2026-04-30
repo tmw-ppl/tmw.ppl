@@ -86,5 +86,5 @@
 
 ## Need More Details?
 
-See the full guide: [docs/OAUTH_SETUP.md](./OAUTH_SETUP.md)
+See the full guide: [OAUTH_SETUP.md](./OAUTH_SETUP.md)
 

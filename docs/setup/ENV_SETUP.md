@@ -46,6 +46,8 @@ Set these environment variables in your deployment platform (Vercel, etc.):
 - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key (for server-side operations)
 - `NEXT_PUBLIC_SITE_URL` - Your site URL (e.g., `https://mysection.vercel.app`) - **Recommended for password reset links**
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` - Google Maps API key (optional, for location autocomplete)
+- `NEXT_PUBLIC_PLASMIC_PROJECT_ID` - Plasmic project ID (optional; see [development/PLASMIC_SETUP.md](../development/PLASMIC_SETUP.md))
+- `NEXT_PUBLIC_PLASMIC_PREVIEW_TOKEN` - Plasmic API token (optional; for visual editor)
 
 ### URL Configuration
 

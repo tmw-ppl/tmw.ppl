@@ -20,7 +20,7 @@ if ((!supabaseUrl || !supabaseKey) && process.env.NODE_ENV !== 'production') {
     '⚠️  Using fallback Supabase credentials. For local development, create .env.local with:\n' +
     `  NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321\n` +
     `  NEXT_PUBLIC_SUPABASE_ANON_KEY=<from 'supabase start' output>\n` +
-    'See docs/ENV_SETUP.md for details.'
+    'See docs/setup/ENV_SETUP.md for details.'
   )
 }
 
@@ -76,6 +76,12 @@ export interface Profile {
   id: string
   full_name: string
   email: string
+  bio?: string
+  interests?: string
+  phone?: string
+  profile_picture_url?: string
+  avatar_url?: string // OAuth providers often use avatar_url
+  private?: boolean
   created_at?: string
   updated_at?: string
 }

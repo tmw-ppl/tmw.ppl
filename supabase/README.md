@@ -93,7 +93,7 @@ supabase db push
 # Or: npm run supabase:push
 ```
 
-📖 **See [../docs/PUSHING_TO_REMOTE.md](../docs/PUSHING_TO_REMOTE.md) for detailed guide**
+📖 **See [../docs/supabase/PUSHING_TO_REMOTE.md](../docs/supabase/PUSHING_TO_REMOTE.md) for detailed guide**
 
 ### Syncing from Remote
 

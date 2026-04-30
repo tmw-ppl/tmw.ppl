@@ -9,7 +9,7 @@ A comprehensive group chat channels system with real-time messaging, file sharin
 Execute the SQL schema file to create all necessary tables:
 ```bash
 # In Supabase SQL Editor, run:
-/docs/database-queries/schema/create-channels-schema.sql
+# docs/database-queries/schema/create-channels-schema.sql
 ```
 
 This creates:
@@ -33,7 +33,7 @@ In Supabase Dashboard > Database > Replication, enable replication for:
 ### 3. Set Up Storage
 Run or manually create storage bucket:
 ```bash
-/docs/database-queries/schema/setup-channel-storage.sql
+# docs/database-queries/schema/setup-channel-storage.sql
 ```
 
 Or create bucket in Supabase Dashboard:
