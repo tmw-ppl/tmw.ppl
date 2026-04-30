@@ -42,6 +42,14 @@ interface Group {
   membership_status?: 'pending' | 'approved' | 'rejected'
 }
 
+const isAbortLikeError = (err: unknown) => {
+  if (!err || typeof err !== 'object') return false
+  const maybeError = err as { name?: string; message?: string }
+  const name = (maybeError.name || '').toLowerCase()
+  const message = (maybeError.message || '').toLowerCase()
+  return name === 'aborterror' || message.includes('aborted')
+}
+
 const Sections: React.FC = () => {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -223,6 +231,9 @@ const Sections: React.FC = () => {
       setGroups(groupsList)
       setError(null)
     } catch (err: any) {
+      if (isAbortLikeError(err)) {
+        return
+      }
       console.error('Error loading groups:', err)
       setError(err.message || 'Failed to load sections. Please refresh the page.')
     } finally {
