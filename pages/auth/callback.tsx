@@ -11,7 +11,7 @@ const AuthCallback: React.FC = () => {
         // Supabase automatically handles the OAuth callback
         // We just need to wait for the session to be established
         const { data: { session }, error } = await supabase.auth.getSession()
-        
+
         if (error) {
           console.error('Error getting session:', error)
           router.push('/auth?error=oauth_failed')
@@ -19,8 +19,26 @@ const AuthCallback: React.FC = () => {
         }
 
         if (session) {
-          // Successfully authenticated, redirect to events
-          router.push('/events')
+          // Check if this is a new user or if they need to complete their profile
+          // We look for a profile record for this user
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, bio')
+            .eq('id', session.user.id)
+            .single()
+
+          const userProfile = profile as { full_name: string | null; bio: string | null } | null
+
+          // If no profile or missing bio, assume they haven't completed onboarding
+          // Redirect to profile page to encourage them to fill it out
+          if (!userProfile || !userProfile.full_name || !userProfile.bio) {
+            console.log('New user or incomplete profile detected, redirecting to onboarding (/profile)...')
+            router.push('/profile?onboarding=true')
+          } else {
+            // Successfully authenticated and has profile, redirect to events
+            console.log('Existing user with profile detected, redirecting to events...')
+            router.push('/events')
+          }
         } else {
           // No session yet, wait a bit for Supabase to process the callback
           setTimeout(() => {
@@ -45,12 +63,12 @@ const AuthCallback: React.FC = () => {
             <p>Please wait while we finish setting up your account</p>
           </div>
           <div className="loading-spinner" style={{ textAlign: 'center', padding: '2rem' }}>
-            <div style={{ 
-              width: '40px', 
-              height: '40px', 
-              border: '3px solid var(--border)', 
-              borderTopColor: 'var(--primary)', 
-              borderRadius: '50%', 
+            <div style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid var(--border)',
+              borderTopColor: 'var(--primary)',
+              borderRadius: '50%',
               margin: '0 auto',
               animation: 'spin 1s linear infinite'
             }} />

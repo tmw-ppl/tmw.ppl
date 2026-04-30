@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setLoading(false)
 
           // Create/update profile when user signs in (including OAuth)
-          if (event === 'SIGNED_IN' && session?.user) {
+          if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
             try {
               const { data: existingProfile } = await supabase
                 .from('profiles')
@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 id: session.user.id,
                 email: session.user.email || userMetadata.email,
                 full_name: userMetadata.full_name || userMetadata.name || userMetadata.display_name || '',
-                avatar_url: userMetadata.avatar_url || userMetadata.picture || null,
+                profile_picture_url: userMetadata.avatar_url || userMetadata.picture || userMetadata.profile_picture_url || null,
                 updated_at: new Date().toISOString(),
               }
 
@@ -108,13 +108,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   console.error('Error creating profile from OAuth:', insertError)
                 }
               } else {
-                // Update existing profile with latest OAuth data
+                // Update existing profile with latest OAuth data (only if fields are missing)
                 const { error: updateError } = await (supabase
                   .from('profiles') as any)
                   .update(profileData)
                   .eq('id', session.user.id)
                 if (updateError) {
-                  console.error('Error updating profile from OAuth:', updateError)
+                  // Ignore errors where profile might have been updated by another process
+                  console.warn('Error updating profile from OAuth (may already be updated):', updateError)
                 }
               }
             } catch (profileError) {
@@ -201,8 +202,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signInWithGoogle = async () => {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ||
-      (typeof window !== 'undefined' ? window.location.origin : 'https://mysection.vercel.app')
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const baseUrl = origin || process.env.NEXT_PUBLIC_SITE_URL || 'https://mysection.vercel.app'
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -218,8 +219,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signInWithFacebook = async () => {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ||
-      (typeof window !== 'undefined' ? window.location.origin : 'https://mysection.vercel.app')
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const baseUrl = origin || process.env.NEXT_PUBLIC_SITE_URL || 'https://mysection.vercel.app'
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
@@ -237,8 +238,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const resetPassword = async (email: string) => {
     // Get the base URL dynamically based on environment
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ||
-      (typeof window !== 'undefined' ? window.location.origin : 'https://mysection.vercel.app')
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const baseUrl = origin || process.env.NEXT_PUBLIC_SITE_URL || 'https://mysection.vercel.app'
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${baseUrl}/reset-password`,

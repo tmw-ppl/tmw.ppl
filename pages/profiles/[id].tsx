@@ -82,6 +82,13 @@ const PublicProfilePage: React.FC = () => {
   const [subscribedGroups, setSubscribedGroups] = useState<Set<string>>(new Set())
   const [subscribingGroup, setSubscribingGroup] = useState<string | null>(null)
 
+  // Redirect to canonical profile URL so all profile views use /profile?id=...
+  useEffect(() => {
+    if (router.isReady && id && typeof id === 'string') {
+      router.replace(`/profile?id=${encodeURIComponent(id)}`)
+    }
+  }, [router.isReady, id])
+
   // Require authentication
   useEffect(() => {
     if (!authLoading && !user) {

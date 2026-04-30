@@ -1,8 +1,23 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import AnimatedSection from '@/components/AnimatedSection'
+import { useAuth } from '@/contexts/AuthContext'
 
 const Home: React.FC = () => {
+  const router = useRouter()
+  const { isAuthenticated, loading } = useAuth()
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.replace('/profile')
+    }
+  }, [isAuthenticated, loading, router])
+
+  if (loading || isAuthenticated) {
+    return null
+  }
+
   return (
     <>
       {/* Hero */}

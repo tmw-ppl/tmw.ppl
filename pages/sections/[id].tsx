@@ -585,7 +585,7 @@ export default function SectionPage() {
             <p style={{ margin: '0.5rem 0 0', color: 'var(--muted)', fontSize: '0.95rem' }}>
               Created by{' '}
               <Link
-                href={`/profiles/${creator.id}`}
+                href={`/profile?id=${encodeURIComponent(creator.id)}`}
                 style={{ color: 'var(--primary)', textDecoration: 'none' }}
               >
                 {creator.full_name}
@@ -947,7 +947,7 @@ export default function SectionPage() {
               {members.map(member => (
                 <Link
                   key={member.id}
-                  href={`/profiles/${member.profile.id}`}
+                  href={`/profile?id=${encodeURIComponent(member.profile.id)}`}
                   style={{ textDecoration: 'none', color: 'inherit' }}
                 >
                   <Card style={{

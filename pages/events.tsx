@@ -8,6 +8,7 @@ import Chip from '@/components/ui/Chip'
 import Card from '@/components/ui/Card'
 import AnimatedSection from '@/components/AnimatedSection'
 import EventCalendar from '@/components/EventCalendar'
+import EventLocationMap from '@/components/EventLocationMap'
 import { isEventUpcoming, formatEventDateTime, migrateLegacyDateTime } from '@/utils/dateTime'
 
 type EventStatus = 'draft' | 'scheduled' | 'pending' | 'active' | 'live' | 'completed' | 'cancelled' | 'postponed'
@@ -891,6 +892,16 @@ const Events: React.FC = () => {
                 <span>{creatorName}</span>
               )}
             </div>
+
+            {/* Location + map preview when set (skip virtual/online) */}
+            {event.location && (
+              <div style={{ marginTop: '0.5rem', width: '100%' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>
+                  📍 {event.location}
+                </div>
+                <EventLocationMap address={event.location} height={200} />
+              </div>
+            )}
           </div>
 
           {/* Vertical Ellipsis */}

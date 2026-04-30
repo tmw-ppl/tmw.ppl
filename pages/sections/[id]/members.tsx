@@ -322,7 +322,7 @@ const SectionMembersPage: React.FC = () => {
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
-                onClick={() => router.push(`/profiles/${member.user_id}`)}
+                onClick={() => router.push(`/profile?id=${encodeURIComponent(member.user_id)}`)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = 'var(--primary)'
                   e.currentTarget.style.transform = 'translateY(-2px)'

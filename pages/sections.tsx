@@ -473,7 +473,7 @@ const Sections: React.FC = () => {
                               )}
                             </div>
                             <Link
-                              href={`/profiles/${group.creator.id}`}
+                              href={`/profile?id=${encodeURIComponent(group.creator.id)}`}
                               style={{ color: 'var(--muted)', textDecoration: 'none', fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}
                             >
                               by {group.creator.full_name}
@@ -560,7 +560,7 @@ const Sections: React.FC = () => {
                               {group.members.map((member) => (
                                 <Link
                                   key={member.id}
-                                  href={`/profiles/${member.profile.id}`}
+                                  href={`/profile?id=${encodeURIComponent(member.profile.id)}`}
                                   style={{ textDecoration: 'none' }}
                                 >
                                   <div
