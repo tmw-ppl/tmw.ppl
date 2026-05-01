@@ -1032,7 +1032,7 @@ const Events: React.FC = () => {
               <h2 style={styles.sectionTitle}>All Events</h2>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 {user && (
-                  <Link href="/create-event" className="btn primary" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
+                  <Link href="/create-event" className="btn primary small">
                     + Create
                   </Link>
                 )}

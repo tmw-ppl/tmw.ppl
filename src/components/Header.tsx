@@ -184,10 +184,10 @@ const Header: React.FC = () => {
 
           {/* Desktop Nav */}
           <nav style={desktopNavStyles}>
-            <Link href="/about" style={navLinkStyle('/about')}>About</Link>
             <Link href="/events" style={navLinkStyle('/events')}>Events</Link>
             <Link href="/sections" style={navLinkStyle('/sections')}>Sections</Link>
             <Link href="/members" style={navLinkStyle('/members')}>Members</Link>
+            <Link href="/about" style={navLinkStyle('/about')}>About</Link>
             
             <div style={{ position: 'relative' }} ref={betaDropdownRef}>
               <button 
@@ -247,10 +247,10 @@ const Header: React.FC = () => {
         style={mobileMenuStyles}
         className={`mobile-nav-menu ${mobileMenuOpen ? 'open' : ''}`}
       >
-        <Link href="/about" style={navLinkStyle('/about')} onClick={handleLinkClick}>About</Link>
         <Link href="/events" style={navLinkStyle('/events')} onClick={handleLinkClick}>Events</Link>
         <Link href="/sections" style={navLinkStyle('/sections')} onClick={handleLinkClick}>Sections</Link>
         <Link href="/members" style={navLinkStyle('/members')} onClick={handleLinkClick}>Members</Link>
+        <Link href="/about" style={navLinkStyle('/about')} onClick={handleLinkClick}>About</Link>
         
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
           <p style={{ color: 'var(--muted)', fontSize: '0.8rem', padding: '0 1rem 0.5rem' }}>BETA FEATURES</p>

@@ -7,6 +7,17 @@ import Card from '@/components/ui/Card'
 import Chip from '@/components/ui/Chip'
 import Avatar from '@/components/ui/Avatar'
 import Loading from '@/components/ui/Loading'
+import {
+  CheckCircle2,
+  ClipboardList,
+  Heart,
+  MessageCircle,
+  PauseCircle,
+  Rocket,
+  Search,
+  Users,
+  XCircle,
+} from 'lucide-react'
 
 interface Project {
   id: string
@@ -226,14 +237,20 @@ const Projects: React.FC = () => {
     }
   }
 
-  const getStatusEmoji = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'active': return '🚀'
-      case 'completed': return '✅'
-      case 'planning': return '📋'
-      case 'paused': return '⏸️'
-      case 'cancelled': return '❌'
-      default: return '📋'
+      case 'active':
+        return <Rocket className="status-icon" aria-hidden="true" />
+      case 'completed':
+        return <CheckCircle2 className="status-icon" aria-hidden="true" />
+      case 'planning':
+        return <ClipboardList className="status-icon" aria-hidden="true" />
+      case 'paused':
+        return <PauseCircle className="status-icon" aria-hidden="true" />
+      case 'cancelled':
+        return <XCircle className="status-icon" aria-hidden="true" />
+      default:
+        return <ClipboardList className="status-icon" aria-hidden="true" />
     }
   }
 
@@ -290,16 +307,9 @@ const Projects: React.FC = () => {
   return (
     <section className="hero">
       <div className="container">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+        <div className="page-title-row">
           <h1>Community Projects</h1>
-          <span style={{
-            background: 'var(--primary)',
-            color: 'white',
-            padding: '0.25rem 0.75rem',
-            borderRadius: '20px',
-            fontSize: '0.875rem',
-            fontWeight: '600'
-          }}>
+          <span className="count-badge">
             {projects.length} {projects.length === 1 ? 'Project' : 'Projects'}
           </span>
         </div>
@@ -309,7 +319,7 @@ const Projects: React.FC = () => {
 
         {/* Create Project Button */}
         {user && (
-          <div style={{ marginBottom: '2rem' }}>
+          <div className="page-cta-row">
             <Button variant="primary" onClick={() => { window.location.href = '/create-project' }}>
               + Create Project
             </Button>
@@ -317,8 +327,8 @@ const Projects: React.FC = () => {
         )}
 
         {/* Search and Filter Section */}
-        <div className="search-section" style={{ marginBottom: '2rem' }}>
-          <div className="search-bar" style={{ marginBottom: '1rem' }}>
+        <div className="search-section search-section-spacious">
+          <div className="search-bar search-bar-gap">
             <input
               type="text"
               placeholder="Search projects..."
@@ -326,15 +336,17 @@ const Projects: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
-            <button className="search-btn">🔍</button>
+            <button type="button" className="search-btn" aria-label="Search projects">
+              <Search className="search-icon" aria-hidden="true" />
+            </button>
           </div>
 
-          <div className="filters" style={{ marginBottom: '1rem' }}>
+          <div className="filters filters-row">
             {filters.map((filter) => (
               <Chip
                 key={filter.key}
                 onClick={() => setActiveFilter(filter.key)}
-                className={activeFilter === filter.key ? 'active' : 'inactive'}
+                active={activeFilter === filter.key}
               >
                 {filter.label}
               </Chip>
@@ -342,30 +354,24 @@ const Projects: React.FC = () => {
           </div>
 
           {/* Sort Options */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '1rem',
-            fontSize: '0.875rem',
-            color: 'var(--text-muted)'
-          }}>
+          <div className="sort-row">
             <span>Sort by:</span>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div className="chip-row">
               <Chip
                 onClick={() => setSortBy('newest')}
-                className={sortBy === 'newest' ? 'active' : 'inactive'}
+                active={sortBy === 'newest'}
               >
                 Newest
               </Chip>
               <Chip
                 onClick={() => setSortBy('popular')}
-                className={sortBy === 'popular' ? 'active' : 'inactive'}
+                active={sortBy === 'popular'}
               >
                 Popular
               </Chip>
               <Chip
                 onClick={() => setSortBy('funded')}
-                className={sortBy === 'funded' ? 'active' : 'inactive'}
+                active={sortBy === 'funded'}
               >
                 Well Funded
               </Chip>
@@ -375,16 +381,12 @@ const Projects: React.FC = () => {
 
         {/* Projects Grid */}
         {filteredProjects.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '4rem 2rem',
-            background: 'var(--card)',
-            borderRadius: '12px',
-            border: '1px solid var(--border)'
-          }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🚀</div>
-            <h3 style={{ marginBottom: '1rem' }}>No projects found</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
+          <div className="empty-panel">
+            <div className="empty-emoji" aria-hidden="true">
+              <Rocket className="empty-icon" />
+            </div>
+            <h3 className="empty-title">No projects found</h3>
+            <p className="empty-description">
               {searchTerm || activeFilter !== 'all' 
                 ? 'Try adjusting your search or filters'
                 : 'Be the first to create a project!'
@@ -397,191 +399,84 @@ const Projects: React.FC = () => {
             )}
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-            gap: '2rem',
-            marginTop: '2rem'
-          }}>
+          <div className="projects">
             {filteredProjects.map((project) => {
               const fundingProgress = formatFundingProgress(project.funds_raised, project.fundraising_goal)
               
               return (
-                <div
+                <article
                   key={project.id}
-                  style={{
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    height: 'fit-content',
-                    background: 'var(--card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '12px',
-                    padding: '1.5rem'
-                  }}
+                  className="project"
                   onClick={() => { window.location.href = `/projects/${project.id}` }}
-                  onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)'
-                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.1)'
-                  }}
-                  onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
                 >
                   {/* Project Image */}
                   {project.image_url && (
-                    <div style={{
-                      width: '100%',
-                      height: '200px',
-                      backgroundImage: `url(${project.image_url})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      borderRadius: '8px',
-                      marginBottom: '1rem'
-                    }} />
-                  )}
-
-                  {/* Project Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', lineHeight: '1.3' }}>
-                      {project.title}
-                    </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '1.2rem' }}>{getStatusEmoji(project.status)}</span>
-                      <span style={{
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        color: 'white',
-                        backgroundColor: getStatusColor(project.status)
-                      }}>
-                        {project.status.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Project Summary */}
-                  {project.summary && (
-                    <p style={{
-                      color: 'var(--text-muted)',
-                      fontSize: '0.9rem',
-                      lineHeight: '1.4',
-                      marginBottom: '1rem',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}>
-                      {project.summary}
-                    </p>
-                  )}
-
-                  {/* Funding Progress */}
-                  {project.fundraising_enabled && fundingProgress && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                          Funding Progress
-                        </span>
-                        <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>
-                          {fundingProgress.percentage}%
-                        </span>
-                      </div>
-                      <div style={{
-                        width: '100%',
-                        height: '8px',
-                        backgroundColor: 'var(--border)',
-                        borderRadius: '4px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{
-                          width: `${Math.min(fundingProgress.percentage, 100)}%`,
-                          height: '100%',
-                          backgroundColor: 'var(--success)',
-                          transition: 'width 0.3s ease'
-                        }} />
-                      </div>
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        marginTop: '0.25rem',
-                        fontSize: '0.75rem',
-                        color: 'var(--text-muted)'
-                      }}>
-                        <span>${fundingProgress.raised.toLocaleString()}</span>
-                        <span>${fundingProgress.goal.toLocaleString()}</span>
-                      </div>
+                    <div className="project-image">
+                      <img src={project.image_url} alt={`${project.title} cover`} />
                     </div>
                   )}
 
-                  {/* Tags */}
-                  {project.tags.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-                      {project.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          style={{
-                            padding: '0.25rem 0.5rem',
-                            backgroundColor: 'var(--bg)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '12px',
-                            fontSize: '0.75rem',
-                            color: 'var(--text-muted)'
-                          }}
-                        >
-                          #{tag}
+                  <div className="project-content">
+                    {/* Project Header */}
+                    <div className="project-header">
+                      <h3 className="project-title">{project.title}</h3>
+                      <div className="project-status-row">
+                        <span className="status-icon-wrap">{getStatusIcon(project.status)}</span>
+                        <span className="project-status-pill" style={{ backgroundColor: getStatusColor(project.status) }}>
+                          {project.status.toUpperCase()}
                         </span>
-                      ))}
-                      {project.tags.length > 3 && (
-                        <span style={{
-                          padding: '0.25rem 0.5rem',
-                          fontSize: '0.75rem',
-                          color: 'var(--text-muted)'
-                        }}>
-                          +{project.tags.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Project Footer */}
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    paddingTop: '1rem',
-                    borderTop: '1px solid var(--border)'
-                  }}>
-                    {/* Creator */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Avatar 
-                        src={project.creator?.profile_picture_url}
-                        alt={project.creator?.full_name || 'Creator'}
-                        size={32}
-                      />
-                      <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                        {project.creator?.full_name || 'Unknown Creator'}
-                      </span>
+                      </div>
                     </div>
 
-                    {/* Stats */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <span>👥</span>
-                        <span>{project.contributor_count}</span>
+                    {/* Project Summary */}
+                    {project.summary && <p className="project-summary">{project.summary}</p>}
+
+                    {/* Funding Progress */}
+                    {project.fundraising_enabled && fundingProgress && (
+                      <div className="project-funding">
+                        <div className="project-funding-header">
+                          <span>Funding Progress</span>
+                          <span>{fundingProgress.percentage}%</span>
+                        </div>
+                        <div className="progress-bar">
+                          <div className="progress-fill" style={{ width: `${Math.min(fundingProgress.percentage, 100)}%` }} />
+                        </div>
+                        <div className="project-funding-footer">
+                          <span>${fundingProgress.raised.toLocaleString()}</span>
+                          <span>${fundingProgress.goal.toLocaleString()}</span>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <span>❤️</span>
-                        <span>{project.likes_count}</span>
+                    )}
+
+                    {/* Tags */}
+                    {project.tags.length > 0 && (
+                      <div className="project-tags">
+                        {project.tags.slice(0, 3).map((tag) => (
+                          <span key={tag} className="project-tag">#{tag}</span>
+                        ))}
+                        {project.tags.length > 3 && <span className="project-tag-more">+{project.tags.length - 3} more</span>}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <span>💬</span>
-                        <span>{project.comments_count}</span>
+                    )}
+
+                    {/* Project Footer */}
+                    <div className="project-footer">
+                      <div className="project-creator">
+                        <Avatar 
+                          src={project.creator?.profile_picture_url}
+                          alt={project.creator?.full_name || 'Creator'}
+                          size={32}
+                        />
+                        <span>{project.creator?.full_name || 'Unknown Creator'}</span>
+                      </div>
+
+                      <div className="project-stats-inline">
+                        <div><Users className="inline-stat-icon" aria-hidden="true" /><span>{project.contributor_count}</span></div>
+                        <div><Heart className="inline-stat-icon" aria-hidden="true" /><span>{project.likes_count}</span></div>
+                        <div><MessageCircle className="inline-stat-icon" aria-hidden="true" /><span>{project.comments_count}</span></div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </article>
               )
             })}
           </div>
