@@ -1,4 +1,5 @@
 // Section Components
+export { FieldTypeIcon } from './FieldTypeIcon'
 export { default as SectionCard } from './SectionCard'
 export { default as SectionProfileEditor } from './SectionProfileEditor'
 export { default as FieldBuilder } from './FieldBuilder'

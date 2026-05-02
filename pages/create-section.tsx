@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
+import { Camera, Lightbulb, Loader2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 
 const CreateSection: React.FC = () => {
@@ -309,12 +310,12 @@ const CreateSection: React.FC = () => {
                 >
                   {uploadingImage ? (
                     <div>
-                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏳</div>
+                      <Loader2 size={32} aria-hidden style={{ display: 'block', margin: '0 auto 0.5rem', color: 'var(--muted)' }} />
                       <p style={{ color: 'var(--muted)', margin: 0 }}>Uploading...</p>
                     </div>
                   ) : (
                     <div>
-                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📸</div>
+                      <Camera size={32} aria-hidden style={{ display: 'block', margin: '0 auto 0.5rem', color: 'var(--muted)' }} />
                       <p style={{ color: 'var(--muted)', margin: 0 }}>
                         Click to upload an image
                       </p>
@@ -462,8 +463,9 @@ const CreateSection: React.FC = () => {
             borderRadius: '12px',
             border: '1px solid var(--border)'
           }}>
-            <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1rem' }}>
-              💡 How it works
+            <h3 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Lightbulb size={18} aria-hidden style={{ flexShrink: 0, color: 'var(--muted)' }} />
+              How it works
             </h3>
             <ul style={{ 
               margin: 0, 

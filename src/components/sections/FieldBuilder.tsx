@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
+import { ChevronDown, ClipboardList, FileText, GripVertical, Trash2 } from 'lucide-react'
 import { 
   SectionProfileField, 
   FieldType, 
   FieldOption,
   FIELD_TYPE_LABELS, 
-  FIELD_TYPE_ICONS 
 } from '@/types/sections'
 import Button from '@/components/ui/Button'
+import { FieldTypeIcon } from './FieldTypeIcon'
 
 interface FieldBuilderProps {
   fields: SectionProfileField[]
@@ -142,8 +143,9 @@ const FieldBuilder: React.FC<FieldBuilderProps> = ({
         background: 'var(--bg-2)',
         borderBottom: '1px solid var(--border)'
       }}>
-        <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)' }}>
-          📋 Profile Fields for {sectionName}
+        <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <ClipboardList size={22} aria-hidden />
+          Profile Fields for {sectionName}
         </h2>
         <p style={{ margin: '0.5rem 0 0', fontSize: '0.9rem', color: 'var(--muted)' }}>
           Define what information members should share in their section profile. 
@@ -161,7 +163,7 @@ const FieldBuilder: React.FC<FieldBuilderProps> = ({
             borderRadius: '12px',
             border: '2px dashed var(--border)'
           }}>
-            <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '1rem' }}>📝</span>
+            <FileText size={40} strokeWidth={1.5} aria-hidden style={{ display: 'block', margin: '0 auto 1rem', color: 'var(--muted)' }} />
             <h3 style={{ margin: '0 0 0.5rem', color: 'var(--text)' }}>No fields yet</h3>
             <p style={{ color: 'var(--muted)', marginBottom: '1rem' }}>
               Add fields to collect information from your members
@@ -280,17 +282,16 @@ const FieldItem: React.FC<FieldItemProps> = ({
           style={{ 
             cursor: 'grab', 
             color: 'var(--muted)',
-            fontSize: '1.2rem'
+            display: 'flex',
           }}
           onClick={(e) => e.stopPropagation()}
+          aria-hidden
         >
-          ⋮⋮
+          <GripVertical size={20} />
         </div>
         
         {/* Field Icon */}
-        <span style={{ fontSize: '1.25rem' }}>
-          {FIELD_TYPE_ICONS[fieldType]}
-        </span>
+        <FieldTypeIcon type={fieldType} size={20} />
         
         {/* Field Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -319,6 +320,8 @@ const FieldItem: React.FC<FieldItemProps> = ({
         
         {/* Delete Button */}
         <button
+          type="button"
+          aria-label="Delete field"
           onClick={(e) => {
             e.stopPropagation()
             if (confirm('Delete this field?')) onDelete()
@@ -336,16 +339,17 @@ const FieldItem: React.FC<FieldItemProps> = ({
           onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
           onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
         >
-          🗑️
+          <Trash2 size={18} aria-hidden />
         </button>
         
         {/* Expand Arrow */}
         <div style={{
           color: 'var(--muted)',
           transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-          transition: 'transform 0.2s'
+          transition: 'transform 0.2s',
+          display: 'flex',
         }}>
-          ▼
+          <ChevronDown size={18} aria-hidden />
         </div>
       </div>
       
@@ -403,7 +407,7 @@ const FieldItem: React.FC<FieldItemProps> = ({
               >
                 {(Object.keys(FIELD_TYPE_LABELS) as FieldType[]).map(type => (
                   <option key={type} value={type}>
-                    {FIELD_TYPE_ICONS[type]} {FIELD_TYPE_LABELS[type]}
+                    {FIELD_TYPE_LABELS[type]}
                   </option>
                 ))}
               </select>

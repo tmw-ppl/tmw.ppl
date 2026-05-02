@@ -1,7 +1,18 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/router'
-import { SectionWithMembership, SectionProfileField, FIELD_TYPE_ICONS } from '@/types/sections'
+import {
+  ChevronDown,
+  ClipboardList,
+  Crown,
+  Eye,
+  EyeOff,
+  Pencil,
+  Settings,
+  Users,
+} from 'lucide-react'
+import { SectionWithMembership, SectionProfileField } from '@/types/sections'
 import Button from '@/components/ui/Button'
+import { FieldTypeIcon } from './FieldTypeIcon'
 
 interface SectionCardProps {
   section: SectionWithMembership
@@ -121,7 +132,10 @@ const SectionCard: React.FC<SectionCardProps> = ({
                 alignItems: 'center',
                 gap: '0.25rem'
               }}>
-                👑 Admin
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Crown size={12} aria-hidden />
+                  Admin
+                </span>
               </span>
             )}
             
@@ -136,7 +150,10 @@ const SectionCard: React.FC<SectionCardProps> = ({
                 alignItems: 'center',
                 gap: '0.25rem'
               }}>
-                👁️‍🗨️ Hidden
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <EyeOff size={12} aria-hidden />
+                  Hidden
+                </span>
               </span>
             )}
           </div>
@@ -193,7 +210,7 @@ const SectionCard: React.FC<SectionCardProps> = ({
           transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
           transition: 'transform 0.2s'
         }}>
-          ▼
+          <ChevronDown size={18} aria-hidden />
         </div>
       </div>
       
@@ -236,9 +253,7 @@ const SectionCard: React.FC<SectionCardProps> = ({
                           : '1px solid transparent'
                       }}
                     >
-                      <span style={{ fontSize: '1.1rem' }}>
-                        {FIELD_TYPE_ICONS[field.field_type]}
-                      </span>
+                      <FieldTypeIcon type={field.field_type} size={18} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ 
                           fontSize: '0.8rem', 
@@ -273,7 +288,7 @@ const SectionCard: React.FC<SectionCardProps> = ({
               color: 'var(--muted)',
               fontSize: '0.9rem'
             }}>
-              <span style={{ fontSize: '1.5rem', display: 'block', marginBottom: '0.5rem' }}>📋</span>
+              <ClipboardList size={32} strokeWidth={1.5} aria-hidden style={{ display: 'block', margin: '0 auto 0.5rem', color: 'var(--muted)' }} />
               No profile fields defined for this section yet
               {isAdmin && (
                 <div style={{ marginTop: '0.5rem' }}>
@@ -299,7 +314,10 @@ const SectionCard: React.FC<SectionCardProps> = ({
                   size="small" 
                   onClick={() => router.push(`/sections/${section.id}/edit-profile`)}
                 >
-                  ✏️ Edit My Info
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Pencil size={16} aria-hidden />
+                    Edit My Info
+                  </span>
                 </Button>
                 
                 <Button 
@@ -307,7 +325,10 @@ const SectionCard: React.FC<SectionCardProps> = ({
                   variant="secondary"
                   onClick={() => onToggleVisibility?.(section.id, !isVisible)}
                 >
-                  {isVisible ? '👁️ Hide from Profile' : '👁️ Show on Profile'}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    {isVisible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+                    {isVisible ? 'Hide from Profile' : 'Show on Profile'}
+                  </span>
                 </Button>
               </>
             )}
@@ -317,7 +338,10 @@ const SectionCard: React.FC<SectionCardProps> = ({
               variant="secondary"
               onClick={() => onViewMembers?.(section.id)}
             >
-              👥 {section.member_count ?? 0} Members
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Users size={16} aria-hidden />
+                {section.member_count ?? 0} Members
+              </span>
             </Button>
             
             {isAdmin && (
@@ -326,7 +350,10 @@ const SectionCard: React.FC<SectionCardProps> = ({
                 variant="secondary"
                 onClick={() => router.push(`/sections/${section.id}/settings`)}
               >
-                ⚙️ Settings
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Settings size={16} aria-hidden />
+                  Settings
+                </span>
               </Button>
             )}
             

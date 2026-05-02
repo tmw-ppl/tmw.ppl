@@ -7,6 +7,15 @@ import { supabase } from '@/lib/supabase'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
+import {
+  CalendarDays,
+  Check,
+  Loader2,
+  Lock,
+  RefreshCw,
+  Target,
+  Users,
+} from 'lucide-react'
 
 interface SectionMember {
   id: string
@@ -330,7 +339,14 @@ const Sections: React.FC = () => {
               onClick={() => loadGroups()}
               disabled={loading}
             >
-              {loading ? 'Loading...' : '🔄 Refresh'}
+              {loading ? (
+                'Loading...'
+              ) : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <RefreshCw size={16} aria-hidden />
+                  Refresh
+                </span>
+              )}
             </Button>
             {user && (
               <Link 
@@ -479,7 +495,10 @@ const Sections: React.FC = () => {
                                   borderRadius: '4px',
                                   flexShrink: 0
                                 }}>
-                                  🔒 Private
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <Lock size={12} aria-hidden />
+                                    Private
+                                  </span>
                                 </span>
                               )}
                             </div>
@@ -537,7 +556,10 @@ const Sections: React.FC = () => {
                                     }
                                   }}
                                 >
-                                  ✓ Member
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    <Check size={16} aria-hidden />
+                                    Member
+                                  </span>
                                 </button>
                               ) : (
                                 <Button
@@ -556,7 +578,12 @@ const Sections: React.FC = () => {
                                   {isJoining
                                     ? '...'
                                     : showPending
-                                    ? '⏳ Pending'
+                                    ? (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                          <Loader2 size={16} aria-hidden />
+                                          Pending
+                                        </span>
+                                      )
                                     : 'Join'}
                                 </Button>
                               )}
@@ -639,16 +666,19 @@ const Sections: React.FC = () => {
                           fontSize: '0.9rem',
                           flexWrap: 'wrap'
                         }}>
-                          <span>
-                            📅 {group.event_count} {group.event_count === 1 ? 'event' : 'events'}
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <CalendarDays size={16} aria-hidden />
+                            {group.event_count} {group.event_count === 1 ? 'event' : 'events'}
                           </span>
                           {group.upcoming_count > 0 && (
-                            <span>
-                              🎯 {group.upcoming_count} upcoming
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Target size={16} aria-hidden />
+                              {group.upcoming_count} upcoming
                             </span>
                           )}
-                          <span>
-                            👥 {group.member_count} {group.member_count === 1 ? 'member' : 'members'}
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <Users size={16} aria-hidden />
+                            {group.member_count} {group.member_count === 1 ? 'member' : 'members'}
                           </span>
                         </div>
                       </div>

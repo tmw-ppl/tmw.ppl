@@ -215,15 +215,3 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   phone: 'Phone Number'
 }
 
-export const FIELD_TYPE_ICONS: Record<FieldType, string> = {
-  text: '📝',
-  textarea: '📄',
-  select: '📋',
-  multiselect: '☑️',
-  checkbox: '✓',
-  number: '#️⃣',
-  date: '📅',
-  url: '🔗',
-  email: '✉️',
-  phone: '📞'
-}

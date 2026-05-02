@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { SectionProfileField, SectionProfileData, validateFieldValue, FIELD_TYPE_ICONS } from '@/types/sections'
+import { Check, ClipboardList } from 'lucide-react'
+import { SectionProfileField, SectionProfileData, validateFieldValue } from '@/types/sections'
 import Button from '@/components/ui/Button'
+import { FieldTypeIcon } from './FieldTypeIcon'
 
 interface SectionProfileEditorProps {
   sectionName: string
@@ -141,10 +143,14 @@ const SectionProfileEditor: React.FC<SectionProfileEditorProps> = ({
                     color: isSelected ? 'white' : 'var(--text)',
                     cursor: 'pointer',
                     fontSize: '0.9rem',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
                   }}
                 >
-                  {isSelected && '✓ '}{opt.label}
+                  {isSelected && <Check size={16} aria-hidden />}
+                  {opt.label}
                 </button>
               )
             })}
@@ -312,7 +318,7 @@ const SectionProfileEditor: React.FC<SectionProfileEditorProps> = ({
             padding: '2rem',
             color: 'var(--muted)'
           }}>
-            <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>📋</span>
+            <ClipboardList size={36} strokeWidth={1.75} aria-hidden style={{ display: 'block', margin: '0 auto 0.5rem', color: 'var(--muted)' }} />
             <p>This section hasn't set up any profile fields yet.</p>
           </div>
         ) : (
@@ -331,7 +337,7 @@ const SectionProfileEditor: React.FC<SectionProfileEditorProps> = ({
                     fontWeight: '500',
                     color: 'var(--text)'
                   }}>
-                    <span>{FIELD_TYPE_ICONS[field.field_type]}</span>
+                    <FieldTypeIcon type={field.field_type} size={18} />
                     {field.field_label}
                     {field.is_required && (
                       <span style={{ color: 'var(--danger)' }}>*</span>
