@@ -12,6 +12,9 @@ out/
 build/
 dist/
 
+# TypeScript
+*.tsbuildinfo
+
 # Production
 *.log
 npm-debug.log*
