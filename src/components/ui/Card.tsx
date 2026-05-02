@@ -10,20 +10,10 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({ children, className = '', style, onClick, onMouseEnter, onMouseLeave }) => {
-  // Using inline styles to match the exact CSS for pixel-perfect rendering
-  const cardStyles: React.CSSProperties = {
-    background: 'var(--card)',     // background: var(--card)
-    border: '1px solid var(--border)', // border: 1px solid var(--border)
-    borderRadius: 'var(--radius)', // border-radius: var(--radius) (18px)
-    padding: '18px',               // padding: 18px
-    boxShadow: 'var(--shadow)',    // box-shadow: var(--shadow)
-    ...style,                       // Merge any custom styles
-  }
-
   return (
     <div 
-      className={className} 
-      style={cardStyles}
+      className={`card ${className}`.trim()} 
+      style={style}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

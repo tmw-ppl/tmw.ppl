@@ -1,6 +1,6 @@
 import React from 'react'
+import { Eye, X } from 'lucide-react'
 import { Section } from '@/types/sections'
-import Button from '@/components/ui/Button'
 
 interface PreviewModeBarProps {
   sections: Section[]
@@ -44,7 +44,7 @@ const PreviewModeBar: React.FC<PreviewModeBarProps> = ({
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            👁️
+            <Eye size={22} color="white" aria-hidden />
           </div>
           
           <div>
@@ -100,7 +100,7 @@ const PreviewModeBar: React.FC<PreviewModeBarProps> = ({
               fontSize: '0.9rem',
               cursor: 'pointer',
               transition: 'all 0.2s',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem'
             }}
@@ -111,7 +111,8 @@ const PreviewModeBar: React.FC<PreviewModeBarProps> = ({
               e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
             }}
           >
-            ✕ Exit Preview
+            <X size={16} aria-hidden />
+            Exit Preview
           </button>
         </div>
       </div>

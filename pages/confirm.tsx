@@ -120,7 +120,7 @@ const Confirm: React.FC = () => {
               }}>
                 <p style={{ margin: 0, color: 'var(--text)', fontSize: '0.9375rem', lineHeight: '1.6' }}>
                   {user 
-                    ? "You're all set! You can now access all features of Tomorrow People."
+                    ? "You're all set! You can now access all features of Section."
                     : "Your account has been verified. Please sign in below to get started."
                   }
                 </p>
@@ -145,7 +145,7 @@ const Confirm: React.FC = () => {
                   </Button>
                   <div className="auth-footer" style={{ marginTop: '1.5rem' }}>
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                      Welcome to Tomorrow People! 🚀
+                      Welcome to Section! 🚀
                     </p>
                   </div>
                 </>

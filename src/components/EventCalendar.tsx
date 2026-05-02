@@ -25,6 +25,27 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
+const getLocalDateKey = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const parseEventDateTime = (event: CalendarEvent): Date | null => {
+  // ISO timestamps are parsed correctly by Date and then converted to local time.
+  if (event.date.includes('T')) {
+    const parsed = new Date(event.date)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  // Legacy date-only values should stay on their intended local day.
+  // Use event time when available; otherwise midday avoids DST edge ambiguity.
+  const fallbackTime = event.time || '12:00'
+  const parsed = new Date(`${event.date}T${fallbackTime}`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
 const EventCalendar: React.FC<EventCalendarProps> = ({ 
   events, 
   onEventClick,
@@ -50,13 +71,9 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
     const map = new Map<string, CalendarEvent[]>()
     
     events.forEach(event => {
-      // Extract date from ISO string or legacy format
-      let dateStr: string
-      if (event.date.includes('T')) {
-        dateStr = event.date.split('T')[0]
-      } else {
-        dateStr = event.date
-      }
+      const parsedDate = parseEventDateTime(event)
+      if (!parsedDate) return
+      const dateStr = getLocalDateKey(parsedDate)
       
       const existing = map.get(dateStr) || []
       map.set(dateStr, [...existing, event])
@@ -69,7 +86,7 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return []
     
-    const dateStr = selectedDate.toISOString().split('T')[0]
+    const dateStr = getLocalDateKey(selectedDate)
     return eventsByDate.get(dateStr) || []
   }, [selectedDate, eventsByDate])
 
@@ -113,7 +130,7 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
     const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
     setSelectedDate(clickedDate)
     
-    const dateStr = clickedDate.toISOString().split('T')[0]
+    const dateStr = getLocalDateKey(clickedDate)
     const dayEvents = eventsByDate.get(dateStr) || []
     
     if (onDayClick) {
@@ -123,9 +140,9 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
 
   // Format time for display
   const formatEventTime = (event: CalendarEvent) => {
-    if (event.date.includes('T')) {
-      const date = new Date(event.date)
-      return date.toLocaleTimeString('en-US', { 
+    const parsedDate = parseEventDateTime(event)
+    if (parsedDate) {
+      return parsedDate.toLocaleTimeString('en-US', { 
         hour: 'numeric', 
         minute: '2-digit',
         hour12: true 
@@ -137,9 +154,12 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
   // Sort events by time for a given day
   const sortEventsByTime = (events: CalendarEvent[]): CalendarEvent[] => {
     return [...events].sort((a, b) => {
-      const timeA = a.time || '00:00'
-      const timeB = b.time || '00:00'
-      return timeA.localeCompare(timeB)
+      const dateA = parseEventDateTime(a)
+      const dateB = parseEventDateTime(b)
+      if (!dateA && !dateB) return 0
+      if (!dateA) return 1
+      if (!dateB) return -1
+      return dateA.getTime() - dateB.getTime()
     })
   }
 
@@ -157,7 +177,7 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
     // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
-      const dateStr = date.toISOString().split('T')[0]
+      const dateStr = getLocalDateKey(date)
       const dayEvents = sortEventsByTime(eventsByDate.get(dateStr) || [])
       const hasEvents = dayEvents.length > 0
       const eventsToShow = dayEvents.slice(0, 3)

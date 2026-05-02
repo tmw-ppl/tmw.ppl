@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
+import { FileText, Lock } from 'lucide-react'
 import SectionProfileEditor from '@/components/sections/SectionProfileEditor'
 import { SectionProfileField, Section } from '@/types/sections'
 
@@ -140,7 +141,7 @@ const EditSectionProfilePage: React.FC = () => {
       <section className="profile-section">
         <div className="container" style={{ maxWidth: '700px' }}>
           <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📝</div>
+            <FileText size={40} strokeWidth={1.5} aria-hidden style={{ display: 'block', margin: '0 auto 1rem', color: 'var(--muted)' }} />
             <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
           </div>
         </div>
@@ -153,7 +154,7 @@ const EditSectionProfilePage: React.FC = () => {
       <section className="profile-section">
         <div className="container" style={{ maxWidth: '700px' }}>
           <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+            <Lock size={48} strokeWidth={1.5} aria-hidden style={{ display: 'block', margin: '0 auto 1rem', color: 'var(--muted)' }} />
             <h2 style={{ marginBottom: '1rem', color: 'var(--text)' }}>
               {error || 'Section not found'}
             </h2>

@@ -11,7 +11,26 @@ import EventCalendar from '@/components/EventCalendar'
 import Avatar from '@/components/ui/Avatar'
 import MessageItem from '@/components/channels/MessageItem'
 import MessageInput from '@/components/channels/MessageInput'
-import { FIELD_TYPE_ICONS } from '@/types/sections'
+import {
+  AlertTriangle,
+  CalendarDays,
+  Check,
+  ChevronRight,
+  CircleHelp,
+  ClipboardList,
+  Crown,
+  DoorOpen,
+  List,
+  MapPin,
+  MessageSquare,
+  Pencil,
+  ScrollText,
+  Shield,
+  ThumbsUp,
+  Trash2,
+  UserPlus,
+  Users,
+} from 'lucide-react'
 
 interface Creator {
   id: string
@@ -606,28 +625,40 @@ export default function SectionPage() {
                   size="small"
                   onClick={() => setShowEditModal(true)}
                 >
-                  ✏️ Edit
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Pencil size={16} aria-hidden />
+                    Edit
+                  </span>
                 </Button>
                 <Button
                   variant="secondary"
                   size="small"
                   onClick={() => router.push(`/sections/${id}/fields`)}
                 >
-                  📋 Profile Fields
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <ClipboardList size={16} aria-hidden />
+                    Profile Fields
+                  </span>
                 </Button>
                 <Button
                   variant="secondary"
                   size="small"
                   onClick={() => setShowAdminModal(true)}
                 >
-                  👥 Manage Admins
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Users size={16} aria-hidden />
+                    Manage Admins
+                  </span>
                 </Button>
                 <Button
                   variant="primary"
                   size="small"
                   onClick={() => setShowInviteModal(true)}
                 >
-                  ➕ Invite Members
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <UserPlus size={16} aria-hidden />
+                    Invite Members
+                  </span>
                 </Button>
               </>
             )}
@@ -640,7 +671,17 @@ export default function SectionPage() {
                 fontSize: '0.85rem',
                 fontWeight: '600'
               }}>
-                {isCreator ? '👑 Creator' : '🛡️ Admin'}
+                {isCreator ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Crown size={14} aria-hidden />
+                    Creator
+                  </span>
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Shield size={14} aria-hidden />
+                    Admin
+                  </span>
+                )}
               </span>
             )}
             {isMember && !isCreator && (
@@ -674,7 +715,10 @@ export default function SectionPage() {
                   e.currentTarget.style.boxShadow = 'none'
                 }}
               >
-                🚪 Leave Section
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <DoorOpen size={16} aria-hidden />
+                  Leave Section
+                </span>
               </button>
             )}
           </div>
@@ -723,8 +767,9 @@ export default function SectionPage() {
             alignItems: 'center',
             marginBottom: '1rem'
           }}>
-            <h2 style={{ margin: 0, fontSize: '1.25rem' }}>
-              📅 Upcoming Events
+            <h2 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <CalendarDays size={22} aria-hidden />
+              Upcoming Events
             </h2>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {canManage && (
@@ -745,7 +790,10 @@ export default function SectionPage() {
                 size="small"
                 onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
               >
-                {viewMode === 'list' ? '📅' : '📋'} {viewMode === 'list' ? 'Calendar' : 'List'}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  {viewMode === 'list' ? <CalendarDays size={16} aria-hidden /> : <List size={16} aria-hidden />}
+                  {viewMode === 'list' ? 'Calendar' : 'List'}
+                </span>
               </Button>
             </div>
           </div>
@@ -781,8 +829,9 @@ export default function SectionPage() {
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{event.title}</h3>
-                        <p style={{ margin: '0.25rem 0', color: 'var(--muted)', fontSize: '0.9rem' }}>
-                          📅 {new Date(event.date).toLocaleDateString('en-US', {
+                        <p style={{ margin: '0.25rem 0', color: 'var(--muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <CalendarDays size={14} aria-hidden />
+                          {new Date(event.date).toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric'
@@ -790,8 +839,9 @@ export default function SectionPage() {
                           {event.time && ` at ${event.time}`}
                         </p>
                         {event.location && (
-                          <p style={{ margin: '0.25rem 0', color: 'var(--muted)', fontSize: '0.85rem' }}>
-                            📍 {event.location}
+                          <p style={{ margin: '0.25rem 0', color: 'var(--muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <MapPin size={14} aria-hidden />
+                            {event.location}
                           </p>
                         )}
                         <div style={{
@@ -801,19 +851,25 @@ export default function SectionPage() {
                           color: 'var(--muted)',
                           marginTop: '0.5rem'
                         }}>
-                          <span style={{ color: (event.rsvp_count || 0) > 0 ? 'var(--success)' : 'var(--muted)' }}>
-                            ✅ {event.rsvp_count || 0} going
+                          <span style={{ color: (event.rsvp_count || 0) > 0 ? 'var(--success)' : 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <ThumbsUp size={14} aria-hidden />
+                            {event.rsvp_count || 0} going
                           </span>
                           {(event.maybe_count || 0) > 0 && (
-                            <span style={{ color: 'var(--warning)' }}>
-                              🤔 {event.maybe_count} maybe
+                            <span style={{ color: 'var(--warning)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <CircleHelp size={14} aria-hidden />
+                              {event.maybe_count} maybe
                             </span>
                           )}
                           {event.max_capacity && (
                             <span style={{
-                              color: (event.rsvp_count || 0) >= event.max_capacity ? 'var(--danger)' : 'var(--muted)'
+                              color: (event.rsvp_count || 0) >= event.max_capacity ? 'var(--danger)' : 'var(--muted)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
                             }}>
-                              👥 {(event.rsvp_count || 0) >= event.max_capacity
+                              <Users size={14} aria-hidden />
+                              {(event.rsvp_count || 0) >= event.max_capacity
                                 ? 'FULL'
                                 : `${event.max_capacity - (event.rsvp_count || 0)} spots left`}
                             </span>
@@ -870,13 +926,19 @@ export default function SectionPage() {
                 marginBottom: '1rem'
               }}
             >
-              <span style={{
-                transform: showPastEvents ? 'rotate(90deg)' : 'rotate(0)',
-                transition: 'transform 0.2s'
-              }}>
-                ▶
+              <ChevronRight
+                size={20}
+                aria-hidden
+                style={{
+                  transform: showPastEvents ? 'rotate(90deg)' : 'rotate(0)',
+                  transition: 'transform 0.2s',
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <ScrollText size={18} aria-hidden />
+                Past Events ({pastEvents.length})
               </span>
-              📜 Past Events ({pastEvents.length})
             </button>
 
             {showPastEvents && (
@@ -917,8 +979,9 @@ export default function SectionPage() {
               flexWrap: 'wrap',
               gap: '0.75rem'
             }}>
-              <h2 style={{ margin: 0, fontSize: '1.25rem' }}>
-                👥 Members ({members.length})
+              <h2 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users size={22} aria-hidden />
+                Members ({members.length})
               </h2>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 {isMember && (
@@ -927,7 +990,10 @@ export default function SectionPage() {
                     size="small"
                     onClick={() => router.push(`/sections/${id}/edit-profile`)}
                   >
-                    ✏️ Edit My Profile
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Pencil size={16} aria-hidden />
+                      Edit My Profile
+                    </span>
                   </Button>
                 )}
                 <Button
@@ -1022,7 +1088,10 @@ export default function SectionPage() {
                               fontWeight: '600',
                               whiteSpace: 'nowrap'
                             }}>
-                              👑 Admin
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Crown size={12} aria-hidden />
+                                Admin
+                              </span>
                             </span>
                           )}
                         </div>
@@ -1147,8 +1216,9 @@ export default function SectionPage() {
         {/* Section Chat */}
         {sectionChannel && isMember && (
           <div style={{ marginTop: '2rem' }}>
-            <h2 style={{ margin: '0 0 1rem', fontSize: '1.25rem' }}>
-              💬 Group Chat
+            <h2 style={{ margin: '0 0 1rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <MessageSquare size={22} aria-hidden />
+              Group Chat
             </h2>
             <Card style={{ padding: 0, maxHeight: '600px', display: 'flex', flexDirection: 'column' }}>
               {/* Messages */}
@@ -1438,7 +1508,10 @@ function EditSectionModal({ section, onSave, onDelete, onClose }: {
                       color: 'var(--danger)',
                       marginBottom: '0.25rem'
                     }}>
-                      ⚠️ Danger Zone
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <AlertTriangle size={18} aria-hidden />
+                        Danger Zone
+                      </span>
                     </h3>
                     <p style={{
                       margin: 0,
@@ -1454,7 +1527,10 @@ function EditSectionModal({ section, onSave, onDelete, onClose }: {
                     variant="danger"
                     onClick={() => setShowDeleteConfirm(true)}
                   >
-                    🗑️ Delete Section
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Trash2 size={16} aria-hidden />
+                      Delete Section
+                    </span>
                   </Button>
                 </div>
               </div>
@@ -1649,7 +1725,12 @@ function AdminManagementModal({ section, members, pendingMembers, onPromote, onA
                   <div>
                     <div style={{ fontWeight: member.is_admin ? 600 : 400 }}>
                       {member.profile.full_name}
-                      {member.is_admin && <span style={{ marginLeft: '0.5rem', color: 'var(--primary)' }}>👑 Admin</span>}
+                      {member.is_admin && (
+                        <span style={{ marginLeft: '0.5rem', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Crown size={14} aria-hidden />
+                          Admin
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1928,8 +2009,9 @@ function InviteMembersModal({ section, onInvite, onClose }: {
                       </div>
                     </div>
                     {isInvited ? (
-                      <span style={{ color: 'var(--success)', fontSize: '0.875rem' }}>
-                        ✓ Invited
+                      <span style={{ color: 'var(--success)', fontSize: '0.875rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Check size={14} aria-hidden />
+                        Invited
                       </span>
                     ) : (
                       <Button

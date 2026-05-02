@@ -4,9 +4,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
-import Card from '@/components/ui/Card'
 import Avatar from '@/components/ui/Avatar'
 import Loading from '@/components/ui/Loading'
+import { Search } from 'lucide-react'
 
 interface Profile {
   id: string
@@ -30,6 +30,13 @@ const Profiles: React.FC = () => {
   const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Keep /members as canonical list route while preserving old /profiles links.
+  useEffect(() => {
+    if (router.isReady && router.pathname === '/profiles') {
+      router.replace('/members')
+    }
+  }, [router.isReady, router.pathname, router])
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -62,7 +69,7 @@ const Profiles: React.FC = () => {
   const loadProfiles = async () => {
     try {
       setLoading(true)
-      console.log('🔍 Loading profiles from database...')
+      console.log('Loading profiles from database...')
       
       if (!user) {
         setError('You must be logged in to view profiles.')
@@ -75,16 +82,16 @@ const Profiles: React.FC = () => {
         .from('profiles')
         .select('*')
 
-      console.log('📊 Profiles response:', { data, error, count: data?.length })
+      console.log('Profiles response:', { data, error, count: data?.length })
 
       if (error) {
-        console.error('❌ Error loading profiles:', error)
+        console.error('Error loading profiles:', error)
         setError('Failed to load profiles. Please try again.')
         return
       }
 
-      console.log('✅ Profiles loaded successfully:', data)
-      console.log('📊 Profile details:', data?.map((p: any) => ({ 
+      console.log('Profiles loaded successfully:', data)
+      console.log('Profile details:', data?.map((p: any) => ({ 
         id: p.id, 
         name: p.full_name, 
         email: p.email,
@@ -92,21 +99,12 @@ const Profiles: React.FC = () => {
       })))
       setProfiles(data || [])
     } catch (error) {
-      console.error('❌ Exception loading profiles:', error)
+      console.error('Exception loading profiles:', error)
       setError('Failed to load profiles. Please try again.')
     } finally {
       setLoading(false)
     }
   }
-
-  const filters = [
-    { key: 'all', label: 'All Members' },
-    { key: 'designer', label: 'Designers' },
-    { key: 'developer', label: 'Developers' },
-    { key: 'artist', label: 'Artists' },
-    { key: 'entrepreneur', label: 'Entrepreneurs' },
-    { key: 'mentor', label: 'Mentors' },
-  ]
 
   useEffect(() => {
     filterProfiles()
@@ -115,8 +113,8 @@ const Profiles: React.FC = () => {
   const filterProfiles = () => {
     let filtered = [...profiles]
 
-    console.log(`🔍 Filtering profiles with search: "${searchTerm}", filter: ${activeFilter}`)
-    console.log(`📊 Total profiles before filtering: ${profiles.length}`)
+    console.log(`Filtering profiles with search: "${searchTerm}", filter: ${activeFilter}`)
+    console.log(`Total profiles before filtering: ${profiles.length}`)
 
     // Apply search filter
     if (searchTerm.trim()) {
@@ -125,7 +123,7 @@ const Profiles: React.FC = () => {
         // Only search by name and bio, not email or phone
         const searchableText = `${profile.full_name || ''} ${profile.bio || ''}`.toLowerCase()
         const matches = searchableText.includes(searchLower)
-        console.log(`👤 Profile ${profile.full_name}: ${matches ? 'MATCH' : 'NO MATCH'}`)
+        console.log(`Profile ${profile.full_name}: ${matches ? 'MATCH' : 'NO MATCH'}`)
         return matches
       })
     }
@@ -150,7 +148,7 @@ const Profiles: React.FC = () => {
       }
     })
 
-    console.log(`✅ Profiles after filtering: ${filtered.length}`)
+    console.log(`Profiles after filtering: ${filtered.length}`)
     setFilteredProfiles(filtered)
   }
 
@@ -178,13 +176,13 @@ const Profiles: React.FC = () => {
       <section className="hero">
         <div className="container">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <h1>Community Profiles</h1>
+            <h1>Community Members</h1>
           </div>
           <p className="lead">
             Discover creative minds, connect with collaborators, and find your
             next project partner to add to your Section.
           </p>
-          <Loading message={authLoading ? "Loading..." : "Redirecting to sign in..."} />
+          <Loading message={authLoading ? 'Loading...' : 'Redirecting to sign in...'} />
         </div>
       </section>
     )
@@ -194,17 +192,10 @@ const Profiles: React.FC = () => {
     return (
       <section className="hero">
         <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <h1>Community Profiles</h1>
+          <div className="page-title-row">
+            <h1>Community Members</h1>
             {profiles.length > 0 && (
-              <span style={{
-                background: 'var(--primary)',
-                color: 'white',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '20px',
-                fontSize: '0.875rem',
-                fontWeight: '600'
-              }}>
+              <span className="count-badge">
                 {profiles.length} {profiles.length === 1 ? 'Member' : 'Members'}
               </span>
             )}
@@ -213,7 +204,7 @@ const Profiles: React.FC = () => {
             Discover creative minds, connect with collaborators, and find your
             next project partner to add to your Section.
           </p>
-          <Loading message="Loading community profiles..." />
+          <Loading message="Loading community members..." />
         </div>
       </section>
     )
@@ -223,17 +214,10 @@ const Profiles: React.FC = () => {
     return (
       <section className="hero">
         <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <h1>Community Profiles</h1>
+          <div className="page-title-row">
+            <h1>Community Members</h1>
             {profiles.length > 0 && (
-              <span style={{
-                background: 'var(--primary)',
-                color: 'white',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '20px',
-                fontSize: '0.875rem',
-                fontWeight: '600'
-              }}>
+              <span className="count-badge">
                 {profiles.length} {profiles.length === 1 ? 'Member' : 'Members'}
               </span>
             )}
@@ -254,16 +238,9 @@ const Profiles: React.FC = () => {
   return (
     <section className="hero">
       <div className="container">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <h1>Community Profiles</h1>
-          <span style={{
-            background: 'var(--primary)',
-            color: 'white',
-            padding: '0.5rem 1rem',
-            borderRadius: '20px',
-            fontSize: '1rem',
-            fontWeight: '600'
-          }}>
+        <div className="page-title-row">
+          <h1>Community Members</h1>
+          <span className="count-badge">
             {profiles.length} {profiles.length === 1 ? 'Member' : 'Members'}
           </span>
         </div>
@@ -273,17 +250,8 @@ const Profiles: React.FC = () => {
         </p>
 
         {/* Search and Sort Section */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          gap: '1rem', 
-          marginTop: '1.5rem',
-          marginBottom: '1.5rem',
-          flexWrap: 'wrap',
-          padding: 0
-        }}>
-          <div className="search-bar" style={{ flex: 1, minWidth: '200px', margin: 0 }}>
+        <div className="members-toolbar">
+          <div className="search-bar members-search">
             <input
               type="text"
               value={searchTerm}
@@ -291,20 +259,15 @@ const Profiles: React.FC = () => {
               placeholder="Search by name..."
               className="search-input"
             />
-            <button className="search-btn">🔍</button>
+            <button type="button" className="search-btn" aria-label="Search members">
+              <Search className="search-icon" aria-hidden="true" />
+            </button>
           </div>
 
           {/* Sort Options */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.75rem',
-            fontSize: '0.875rem',
-            color: 'var(--text-muted)',
-            marginLeft: 'auto'
-          }}>
-            <span style={{ whiteSpace: 'nowrap' }}>Sort by:</span>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className="sort-row members-sort">
+            <span className="nowrap">Sort by:</span>
+            <div className="chip-row">
               <Chip
                 onClick={() => setSortBy('alphabetical')}
                 active={sortBy === 'alphabetical'}
@@ -329,58 +292,33 @@ const Profiles: React.FC = () => {
 
         <div className="profiles" id="profiles-container">
           {filteredProfiles.map((profile) => (
-            <Card 
+            <button
               key={profile.id} 
-              className="profile-card"
-              style={{ 
-                cursor: 'pointer', 
-                transition: 'all 0.2s'
-              }}
+              type="button"
+              className="profile-card profile-card-button"
               onClick={() => handleViewProfile(profile.id)}
-              onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                e.currentTarget.style.borderColor = 'var(--primary)'
-                e.currentTarget.style.transform = 'translateY(-2px)'
-              }}
-              onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                e.currentTarget.style.borderColor = 'var(--border)'
-                e.currentTarget.style.transform = 'translateY(0)'
-              }}
             >
               <Avatar 
                 src={profile.profile_picture_url} 
                 name={profile.full_name} 
                 size={60}
               />
-              <h3 className="profile-name" style={{ 
-                marginTop: '0.5rem', 
-                marginBottom: 0,
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                wordBreak: 'break-word'
-              }}>
+              <h3 className="profile-name compact">
                 {profile.full_name}
                 {user && profile.id === user.id && (
-                  <span style={{ 
-                    marginLeft: '0.5rem', 
-                    padding: '2px 6px', 
-                    background: 'var(--primary)', 
-                    color: 'white', 
-                    borderRadius: '4px', 
-                    fontSize: '0.75rem',
-                    fontWeight: '600'
-                  }}>
+                  <span className="you-pill">
                     YOU
                   </span>
                 )}
               </h3>
-            </Card>
+            </button>
           ))}
 
           {filteredProfiles.length === 0 && (
             <div className="no-results">
-              <h3>No profiles found</h3>
+              <h3>No members found</h3>
               <p>
-                Try adjusting your search or filters to find community members.
+                Try adjusting your search or filters to find members.
               </p>
             </div>
           )}

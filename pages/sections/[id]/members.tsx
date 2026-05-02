@@ -4,7 +4,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
-import { SectionProfileField, FIELD_TYPE_ICONS } from '@/types/sections'
+import { Crown, Lock, Search, Users } from 'lucide-react'
+import { SectionProfileField } from '@/types/sections'
+import { FieldTypeIcon } from '@/components/sections/FieldTypeIcon'
 
 interface MemberWithProfile {
   id: string
@@ -174,7 +176,7 @@ const SectionMembersPage: React.FC = () => {
       <section className="profile-section">
         <div className="container" style={{ maxWidth: '900px' }}>
           <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>👥</div>
+            <Users size={40} strokeWidth={1.5} aria-hidden style={{ display: 'block', margin: '0 auto 1rem', color: 'var(--muted)' }} />
             <p style={{ color: 'var(--text-muted)' }}>Loading members...</p>
           </div>
         </div>
@@ -187,7 +189,7 @@ const SectionMembersPage: React.FC = () => {
       <section className="profile-section">
         <div className="container" style={{ maxWidth: '900px' }}>
           <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+            <Lock size={48} strokeWidth={1.5} aria-hidden style={{ display: 'block', margin: '0 auto 1rem', color: 'var(--muted)' }} />
             <h2 style={{ marginBottom: '1rem', color: 'var(--text)' }}>
               {error || 'Section not found'}
             </h2>
@@ -297,7 +299,7 @@ const SectionMembersPage: React.FC = () => {
             borderRadius: '16px',
             border: '1px solid var(--border)'
           }}>
-            <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>🔍</span>
+            <Search size={48} strokeWidth={1.5} aria-hidden style={{ display: 'block', margin: '0 auto 1rem', color: 'var(--muted)' }} />
             <h3 style={{ margin: '0 0 0.5rem', color: 'var(--text)' }}>
               {searchTerm ? 'No members found' : 'No members yet'}
             </h3>
@@ -360,7 +362,10 @@ const SectionMembersPage: React.FC = () => {
                           fontSize: '0.7rem',
                           fontWeight: '600'
                         }}>
-                          👑 Admin
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Crown size={12} aria-hidden />
+                            Admin
+                          </span>
                         </span>
                       )}
                       {member.user_id === user?.id && (
@@ -434,7 +439,7 @@ const SectionMembersPage: React.FC = () => {
                             gap: '0.5rem',
                             fontSize: '0.85rem'
                           }}>
-                            <span>{FIELD_TYPE_ICONS[field.field_type]}</span>
+                            <FieldTypeIcon type={field.field_type} size={16} />
                             <span style={{ color: 'var(--muted)' }}>{field.field_label}:</span>
                             <span style={{ 
                               color: 'var(--text)',

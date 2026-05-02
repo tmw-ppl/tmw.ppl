@@ -84,7 +84,7 @@ const Header: React.FC = () => {
   }
 
   const isBetaActive = () => {
-    return ['/projects', '/ideas', '/section', '/wins', '/gallery', '/tomorrow-people', '/chats'].includes(router.pathname)
+    return ['/projects', '/ideas'].includes(router.pathname)
   }
 
   // Header styles
@@ -184,12 +184,10 @@ const Header: React.FC = () => {
 
           {/* Desktop Nav */}
           <nav style={desktopNavStyles}>
-            <Link href="/about" style={navLinkStyle('/about')}>About</Link>
             <Link href="/events" style={navLinkStyle('/events')}>Events</Link>
             <Link href="/sections" style={navLinkStyle('/sections')}>Sections</Link>
-            <Link href="/profiles" style={navLinkStyle('/profiles')}>Profiles</Link>
-            <Link href="/leaderboard" style={navLinkStyle('/leaderboard')}>🏆 Leaderboard</Link>
-            <Link href="/funding" style={navLinkStyle('/funding')}>💰 Funding</Link>
+            <Link href="/members" style={navLinkStyle('/members')}>Members</Link>
+            <Link href="/about" style={navLinkStyle('/about')}>About</Link>
             
             <div style={{ position: 'relative' }} ref={betaDropdownRef}>
               <button 
@@ -222,13 +220,8 @@ const Header: React.FC = () => {
                   flexDirection: 'column',
                   gap: '0.25rem'
                 }}>
-                  <Link href="/chats" style={navLinkStyle('/chats')} onClick={() => setBetaDropdownOpen(false)}>Chats</Link>
                   <Link href="/projects" style={navLinkStyle('/projects')} onClick={() => setBetaDropdownOpen(false)}>Projects</Link>
                   <Link href="/ideas" style={navLinkStyle('/ideas')} onClick={() => setBetaDropdownOpen(false)}>Ideas</Link>
-                  <Link href="/section" style={navLinkStyle('/section')} onClick={() => setBetaDropdownOpen(false)}>Section</Link>
-                  <Link href="/wins" style={navLinkStyle('/wins')} onClick={() => setBetaDropdownOpen(false)}>Wins</Link>
-                  <Link href="/gallery" style={navLinkStyle('/gallery')} onClick={() => setBetaDropdownOpen(false)}>Gallery</Link>
-                  <Link href="/tomorrow-people" style={navLinkStyle('/tomorrow-people')} onClick={() => setBetaDropdownOpen(false)}>The Tomorrow People</Link>
                 </div>
               )}
             </div>
@@ -254,22 +247,15 @@ const Header: React.FC = () => {
         style={mobileMenuStyles}
         className={`mobile-nav-menu ${mobileMenuOpen ? 'open' : ''}`}
       >
-        <Link href="/about" style={navLinkStyle('/about')} onClick={handleLinkClick}>About</Link>
         <Link href="/events" style={navLinkStyle('/events')} onClick={handleLinkClick}>Events</Link>
         <Link href="/sections" style={navLinkStyle('/sections')} onClick={handleLinkClick}>Sections</Link>
-        <Link href="/profiles" style={navLinkStyle('/profiles')} onClick={handleLinkClick}>Profiles</Link>
-        <Link href="/leaderboard" style={navLinkStyle('/leaderboard')} onClick={handleLinkClick}>🏆 Leaderboard</Link>
-        <Link href="/funding" style={navLinkStyle('/funding')} onClick={handleLinkClick}>💰 Funding</Link>
+        <Link href="/members" style={navLinkStyle('/members')} onClick={handleLinkClick}>Members</Link>
+        <Link href="/about" style={navLinkStyle('/about')} onClick={handleLinkClick}>About</Link>
         
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
           <p style={{ color: 'var(--muted)', fontSize: '0.8rem', padding: '0 1rem 0.5rem' }}>BETA FEATURES</p>
-          <Link href="/chats" style={navLinkStyle('/chats')} onClick={handleLinkClick}>Chats</Link>
           <Link href="/projects" style={navLinkStyle('/projects')} onClick={handleLinkClick}>Projects</Link>
           <Link href="/ideas" style={navLinkStyle('/ideas')} onClick={handleLinkClick}>Ideas</Link>
-          <Link href="/section" style={navLinkStyle('/section')} onClick={handleLinkClick}>Section</Link>
-          <Link href="/wins" style={navLinkStyle('/wins')} onClick={handleLinkClick}>Wins</Link>
-          <Link href="/gallery" style={navLinkStyle('/gallery')} onClick={handleLinkClick}>Gallery</Link>
-          <Link href="/tomorrow-people" style={navLinkStyle('/tomorrow-people')} onClick={handleLinkClick}>The Tomorrow People</Link>
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>

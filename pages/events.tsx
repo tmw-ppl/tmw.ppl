@@ -10,6 +10,7 @@ import AnimatedSection from '@/components/AnimatedSection'
 import EventCalendar from '@/components/EventCalendar'
 import EventLocationMap from '@/components/EventLocationMap'
 import { isEventUpcoming, formatEventDateTime, migrateLegacyDateTime } from '@/utils/dateTime'
+import { CalendarDays, Check, CircleHelp, Frown, MapPin, ThumbsUp } from 'lucide-react'
 
 type EventStatus = 'draft' | 'scheduled' | 'pending' | 'active' | 'live' | 'completed' | 'cancelled' | 'postponed'
 
@@ -125,14 +126,14 @@ const Events: React.FC = () => {
   // Utility functions for event status
   const getStatusInfo = (status: EventStatus) => {
     const statusConfig = {
-      draft: { label: 'Draft', color: 'var(--text-muted)', emoji: '📝' },
-      scheduled: { label: 'Scheduled', color: 'var(--primary)', emoji: '📅' },
-      pending: { label: 'Pending', color: 'var(--warning)', emoji: '⏳' },
-      active: { label: 'Open for RSVP', color: 'var(--success)', emoji: '✅' },
-      live: { label: 'Live Now', color: 'var(--danger)', emoji: '🔴' },
-      completed: { label: 'Completed', color: 'var(--text-muted)', emoji: '✓' },
-      cancelled: { label: 'Cancelled', color: 'var(--danger)', emoji: '❌' },
-      postponed: { label: 'Postponed', color: 'var(--warning)', emoji: '⏸️' }
+      draft: { label: 'Draft', color: 'var(--text-muted)' },
+      scheduled: { label: 'Scheduled', color: 'var(--primary)' },
+      pending: { label: 'Pending', color: 'var(--warning)' },
+      active: { label: 'Open for RSVP', color: 'var(--success)' },
+      live: { label: 'Live Now', color: 'var(--danger)' },
+      completed: { label: 'Completed', color: 'var(--text-muted)' },
+      cancelled: { label: 'Cancelled', color: 'var(--danger)' },
+      postponed: { label: 'Postponed', color: 'var(--warning)' }
     }
     return statusConfig[status] || statusConfig.scheduled
   }
@@ -740,7 +741,14 @@ const Events: React.FC = () => {
           border: group.is_subscribed ? '1px solid var(--border)' : 'none'
         }}
       >
-        {group.is_subscribed ? '✓ Subscribed' : 'Subscribe'}
+        {group.is_subscribed ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Check size={14} aria-hidden="true" />
+            <span>Subscribed</span>
+          </span>
+        ) : (
+          'Subscribe'
+        )}
       </button>
     </div>
   )
@@ -754,18 +762,18 @@ const Events: React.FC = () => {
     const creatorName = creator?.full_name || 'Unknown'
     const creatorPicture = creator?.profile_picture_url
     
-    // Get RSVP status text and emoji (only if user has RSVP'd)
+    // Get RSVP status text and icon (only if user has RSVP'd)
     let rsvpStatus = ''
-    let rsvpEmoji = ''
+    let rsvpIcon: React.ReactNode = null
     if (event.user_rsvp_status === 'going') {
       rsvpStatus = 'Going'
-      rsvpEmoji = '👍'
+      rsvpIcon = <ThumbsUp size={14} aria-hidden="true" />
     } else if (event.user_rsvp_status === 'maybe') {
       rsvpStatus = 'Maybe'
-      rsvpEmoji = '🤔'
+      rsvpIcon = <CircleHelp size={14} aria-hidden="true" />
     } else if (event.user_rsvp_status === 'not_going') {
       rsvpStatus = "Can't Go"
-      rsvpEmoji = '😢'
+      rsvpIcon = <Frown size={14} aria-hidden="true" />
     }
 
     return (
@@ -824,9 +832,8 @@ const Events: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
-                fontSize: '2rem',
               }}>
-                📅
+                <CalendarDays size={28} aria-hidden="true" />
               </div>
             )}
           </div>
@@ -900,7 +907,7 @@ const Events: React.FC = () => {
               {event.user_rsvp_status ? (
                 <>
                   <span>{creatorName}</span>
-                  <span>{rsvpEmoji}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>{rsvpIcon}</span>
                   <span>{rsvpStatus}</span>
                 </>
               ) : (
@@ -911,8 +918,9 @@ const Events: React.FC = () => {
             {/* Location + map preview when set (skip virtual/online) */}
             {event.location && (
               <div style={{ marginTop: '0.5rem', width: '100%' }}>
-                <div style={{ fontSize: '0.8125rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>
-                  📍 {event.location}
+                <div style={{ fontSize: '0.8125rem', color: 'var(--muted)', marginBottom: '0.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <MapPin size={14} aria-hidden="true" />
+                  <span>{event.location}</span>
                 </div>
                 <EventLocationMap address={event.location} height={200} />
               </div>
@@ -1032,7 +1040,7 @@ const Events: React.FC = () => {
               <h2 style={styles.sectionTitle}>All Events</h2>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 {user && (
-                  <Link href="/create-event" className="btn primary" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
+                  <Link href="/create-event" className="btn primary small">
                     + Create
                   </Link>
                 )}
