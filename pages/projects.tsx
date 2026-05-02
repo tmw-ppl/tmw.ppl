@@ -159,7 +159,7 @@ const Projects: React.FC = () => {
       }))
 
       setProjects(projectsWithCounts)
-      console.log('📊 Loaded projects:', projectsWithCounts.length)
+      console.log('Loaded projects:', projectsWithCounts.length)
     } catch (err: any) {
       console.error('Error loading projects:', err)
       const message = (err?.message || '').toLowerCase()

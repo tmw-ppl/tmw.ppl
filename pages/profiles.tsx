@@ -69,7 +69,7 @@ const Profiles: React.FC = () => {
   const loadProfiles = async () => {
     try {
       setLoading(true)
-      console.log('🔍 Loading profiles from database...')
+      console.log('Loading profiles from database...')
       
       if (!user) {
         setError('You must be logged in to view profiles.')
@@ -82,16 +82,16 @@ const Profiles: React.FC = () => {
         .from('profiles')
         .select('*')
 
-      console.log('📊 Profiles response:', { data, error, count: data?.length })
+      console.log('Profiles response:', { data, error, count: data?.length })
 
       if (error) {
-        console.error('❌ Error loading profiles:', error)
+        console.error('Error loading profiles:', error)
         setError('Failed to load profiles. Please try again.')
         return
       }
 
-      console.log('✅ Profiles loaded successfully:', data)
-      console.log('📊 Profile details:', data?.map((p: any) => ({ 
+      console.log('Profiles loaded successfully:', data)
+      console.log('Profile details:', data?.map((p: any) => ({ 
         id: p.id, 
         name: p.full_name, 
         email: p.email,
@@ -99,7 +99,7 @@ const Profiles: React.FC = () => {
       })))
       setProfiles(data || [])
     } catch (error) {
-      console.error('❌ Exception loading profiles:', error)
+      console.error('Exception loading profiles:', error)
       setError('Failed to load profiles. Please try again.')
     } finally {
       setLoading(false)
@@ -113,8 +113,8 @@ const Profiles: React.FC = () => {
   const filterProfiles = () => {
     let filtered = [...profiles]
 
-    console.log(`🔍 Filtering profiles with search: "${searchTerm}", filter: ${activeFilter}`)
-    console.log(`📊 Total profiles before filtering: ${profiles.length}`)
+    console.log(`Filtering profiles with search: "${searchTerm}", filter: ${activeFilter}`)
+    console.log(`Total profiles before filtering: ${profiles.length}`)
 
     // Apply search filter
     if (searchTerm.trim()) {
@@ -123,7 +123,7 @@ const Profiles: React.FC = () => {
         // Only search by name and bio, not email or phone
         const searchableText = `${profile.full_name || ''} ${profile.bio || ''}`.toLowerCase()
         const matches = searchableText.includes(searchLower)
-        console.log(`👤 Profile ${profile.full_name}: ${matches ? 'MATCH' : 'NO MATCH'}`)
+        console.log(`Profile ${profile.full_name}: ${matches ? 'MATCH' : 'NO MATCH'}`)
         return matches
       })
     }
@@ -148,7 +148,7 @@ const Profiles: React.FC = () => {
       }
     })
 
-    console.log(`✅ Profiles after filtering: ${filtered.length}`)
+    console.log(`Profiles after filtering: ${filtered.length}`)
     setFilteredProfiles(filtered)
   }
 

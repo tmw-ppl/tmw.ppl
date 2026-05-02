@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button'
 import EventCalendar from '@/components/EventCalendar'
 import SectionCard from '@/components/sections/SectionCard'
 import { SectionWithMembership } from '@/types/sections'
+import { Bell, CalendarDays, Camera, LogOut, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 
 interface ProfileData {
   id: string
@@ -1383,7 +1384,9 @@ const Profile: React.FC = () => {
                   onChange={handleImageUpload}
                   style={{ display: 'none' }}
                 />
-                <span style={{ fontSize: '1.2rem' }}>{uploadingImage ? '⏳' : '📷'}</span>
+                <span style={{ fontSize: '1.2rem', display: 'inline-flex', alignItems: 'center' }}>
+                  {uploadingImage ? <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }} /> : <Camera size={16} aria-hidden="true" />}
+                </span>
               </label>
             </div>
 
@@ -1529,14 +1532,16 @@ const Profile: React.FC = () => {
                         setShowEditForm(true)
                       }}
                     >
-                      ✏️ Edit Profile
+                      <Pencil size={14} aria-hidden="true" />
+                      Edit Profile
                     </Button>
                     <Button
                       variant="primary"
                       size="small"
                       onClick={() => router.push('/create-event')}
                     >
-                      ➕ Create Event
+                      <Plus size={14} aria-hidden="true" />
+                      Create Event
                     </Button>
                     <Button
                       variant="secondary"
@@ -1546,7 +1551,8 @@ const Profile: React.FC = () => {
                         router.push('/')
                       }}
                     >
-                      🚪 Sign Out
+                      <LogOut size={14} aria-hidden="true" />
+                      Sign Out
                     </Button>
                   </>
                 )}
@@ -1575,10 +1581,25 @@ const Profile: React.FC = () => {
                 textTransform: 'capitalize',
               }}
             >
-              {tab === 'events' && '🎪 Events'}
-              {tab === 'calendar' && '📅 Calendar'}
-              {tab === 'sections' && `📁 My Sections ${sections.length > 0 ? `(${sections.length})` : ''}`}
-              {tab === 'notifications' && `🔔 Notifications ${notifications.filter(n => !n.read).length > 0 ? `(${notifications.filter(n => !n.read).length})` : ''}`}
+              {tab === 'events' && (
+                <>
+                  <CalendarDays size={14} aria-hidden="true" />
+                  Events
+                </>
+              )}
+              {tab === 'calendar' && (
+                <>
+                  <CalendarDays size={14} aria-hidden="true" />
+                  Calendar
+                </>
+              )}
+              {tab === 'sections' && `My Sections ${sections.length > 0 ? `(${sections.length})` : ''}`}
+              {tab === 'notifications' && (
+                <>
+                  <Bell size={14} aria-hidden="true" />
+                  Notifications {notifications.filter(n => !n.read).length > 0 ? `(${notifications.filter(n => !n.read).length})` : ''}
+                </>
+              )}
             </Button>
           ))}
         </div>
@@ -1606,7 +1627,8 @@ const Profile: React.FC = () => {
                   variant="primary"
                   onClick={() => router.push('/create-event')}
                 >
-                  ➕ New Event
+                  <Plus size={14} aria-hidden="true" />
+                  New Event
                 </Button>
               )}
               <Button
@@ -1614,7 +1636,8 @@ const Profile: React.FC = () => {
                 onClick={() => setShowSearchModal(true)}
                 style={{ marginLeft: 'auto' }}
               >
-                🔍 Search
+                <Search size={14} aria-hidden="true" />
+                Search
               </Button>
             </div>
 
@@ -2882,7 +2905,8 @@ const Profile: React.FC = () => {
                         borderColor: 'var(--danger)',
                       }}
                     >
-                      🗑️ Delete Account
+                      <Trash2 size={14} aria-hidden="true" />
+                      Delete Account
                     </Button>
                   </div>
                 </div>

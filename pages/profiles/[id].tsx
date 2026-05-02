@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import EventCalendar from '@/components/EventCalendar'
+import { Bell, BellOff, CalendarDays, Check, ClipboardList, MessageCircle, Pencil, Search, UserPlus } from 'lucide-react'
 
 interface PublicProfile {
   id: string
@@ -602,21 +603,28 @@ const PublicProfilePage: React.FC = () => {
               {!isOwnProfile && (
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <Button onClick={handleConnect}>
-                    🤝 Connect
+                    <UserPlus size={14} aria-hidden="true" />
+                    Connect
                   </Button>
                   <Button 
                     variant="secondary" 
                     onClick={handleMessage}
                     disabled={messagingUser}
                   >
-                    {messagingUser ? 'Opening...' : '💬 Message'}
+                    {messagingUser ? 'Opening...' : (
+                      <>
+                        <MessageCircle size={14} aria-hidden="true" />
+                        Message
+                      </>
+                    )}
                   </Button>
                 </div>
               )}
 
               {isOwnProfile && (
                 <Button onClick={() => router.push('/profile')}>
-                  ✏️ Edit Profile
+                  <Pencil size={14} aria-hidden="true" />
+                  Edit Profile
                 </Button>
               )}
             </div>
@@ -657,7 +665,8 @@ const PublicProfilePage: React.FC = () => {
                     transition: 'all 0.2s'
                   }}
                 >
-                  📋 List
+                  <ClipboardList size={14} aria-hidden="true" />
+                  List
                 </button>
                 <button
                   onClick={() => setViewMode('calendar')}
@@ -672,7 +681,8 @@ const PublicProfilePage: React.FC = () => {
                     transition: 'all 0.2s'
                   }}
                 >
-                  📅 Calendar
+                  <CalendarDays size={14} aria-hidden="true" />
+                  Calendar
                 </button>
               </div>
             )}
@@ -718,7 +728,8 @@ const PublicProfilePage: React.FC = () => {
                     gap: '0.375rem'
                   }}
                 >
-                  {showUngrouped ? '✓' : ''} Ungrouped
+                  {showUngrouped && <Check size={12} aria-hidden="true" />}
+                  Ungrouped
                   <span style={{ 
                     background: showUngrouped ? 'rgba(255,255,255,0.2)' : 'var(--border)',
                     padding: '0.125rem 0.375rem',
@@ -762,7 +773,8 @@ const PublicProfilePage: React.FC = () => {
                         gap: '0.375rem'
                       }}
                     >
-                      {isSelected ? '✓' : ''} {groupName}
+                      {isSelected && <Check size={12} aria-hidden="true" />}
+                      {groupName}
                       <span style={{ 
                         background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--border)',
                         padding: '0.125rem 0.375rem',
@@ -797,7 +809,11 @@ const PublicProfilePage: React.FC = () => {
                           opacity: subscribingGroup === groupName ? 0.7 : 1
                         }}
                       >
-                        {subscribingGroup === groupName ? '...' : isSubscribed ? '🔔' : '🔕'}
+                        {subscribingGroup === groupName ? '...' : isSubscribed ? (
+                          <Bell size={14} aria-hidden="true" />
+                        ) : (
+                          <BellOff size={14} aria-hidden="true" />
+                        )}
                       </button>
                     )}
                   </div>
@@ -857,7 +873,9 @@ const PublicProfilePage: React.FC = () => {
               padding: '2rem',
               color: 'var(--text-muted)'
             }}>
-              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <Search size={28} aria-hidden="true" />
+              </div>
               <p>No events match the selected filters</p>
               <button
                 onClick={() => {

@@ -6,6 +6,31 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { createEventDateTime } from '@/utils/dateTime'
 import LocationAutocomplete from '@/components/ui/LocationAutocomplete'
+import {
+  CalendarDays,
+  Camera,
+  Check,
+  Copy,
+  Eye,
+  Film,
+  Gamepad2,
+  Globe,
+  ImagePlus,
+  Laptop,
+  Loader2,
+  Lock,
+  MapPin,
+  Music,
+  PartyPopper,
+  Repeat,
+  Sparkles,
+  Trees,
+  UserRoundPlus,
+  Users,
+  UtensilsCrossed,
+  Wrench,
+  X,
+} from 'lucide-react'
 
 interface CoHost {
   id: string
@@ -47,18 +72,18 @@ interface PreviousEvent {
 }
 
 const quickTags = [
-  { name: 'Party', emoji: '🎉' },
-  { name: 'Dinner', emoji: '🍽️' },
-  { name: 'Hangout', emoji: '✨' },
-  { name: 'Birthday', emoji: '🎂' },
-  { name: 'Drinks', emoji: '🍻' },
-  { name: 'Brunch', emoji: '🥂' },
-  { name: 'Game Night', emoji: '🎮' },
-  { name: 'Movie', emoji: '🎬' },
-  { name: 'Outdoor', emoji: '🌲' },
-  { name: 'Wellness', emoji: '🧘' },
-  { name: 'Workshop', emoji: '🛠️' },
-  { name: 'Music', emoji: '🎵' },
+  { name: 'Party', icon: PartyPopper },
+  { name: 'Dinner', icon: UtensilsCrossed },
+  { name: 'Hangout', icon: Sparkles },
+  { name: 'Birthday', icon: PartyPopper },
+  { name: 'Drinks', icon: UtensilsCrossed },
+  { name: 'Brunch', icon: UtensilsCrossed },
+  { name: 'Game Night', icon: Gamepad2 },
+  { name: 'Movie', icon: Film },
+  { name: 'Outdoor', icon: Trees },
+  { name: 'Wellness', icon: Sparkles },
+  { name: 'Workshop', icon: Wrench },
+  { name: 'Music', icon: Music },
 ]
 
 // Get default date and time (7pm today, or tomorrow if past 7pm)
@@ -651,18 +676,26 @@ const CreateEvent: React.FC = () => {
     setError(null)
 
     try {
-      const { data: profile } = await supabase
+      // Ensure the profile exists before creating events.
+      // Upsert avoids brittle flows where .single() errors block creation.
+      const { error: profileUpsertError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('id', user!.id)
-        .single()
+        .upsert(
+          {
+            id: user!.id,
+            email: user!.email,
+            full_name:
+              (user as any)?.user_metadata?.full_name ||
+              (user as any)?.user_metadata?.name ||
+              user!.email?.split('@')[0] ||
+              'Member',
+            updated_at: new Date().toISOString(),
+          } as any,
+          { onConflict: 'id' }
+        )
 
-      if (!profile) {
-        await supabase.from('profiles').insert({
-          id: user!.id,
-          email: user!.email,
-          created_at: new Date().toISOString()
-        } as any)
+      if (profileUpsertError) {
+        throw profileUpsertError
       }
 
       const startDateTime = createEventDateTime(formData.date, formData.time || '19:00')
@@ -671,6 +704,7 @@ const CreateEvent: React.FC = () => {
         title: formData.title.trim(),
         description: formData.description.trim(),
         date: startDateTime,
+        time: formData.time || '19:00',
         location: formData.is_virtual ? 'Virtual Event' : formData.location.trim(),
         rsvp_url: formData.is_virtual ? formData.virtual_link : null,
         image_url: formData.image_url.trim() || null,
@@ -767,7 +801,7 @@ const CreateEvent: React.FC = () => {
         alignItems: 'center',
         gap: '0.5rem'
       }}>
-        <span>👁️</span>
+        <Eye size={16} aria-hidden="true" />
         <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted)' }}>Live Preview</span>
       </div>
       
@@ -793,7 +827,7 @@ const CreateEvent: React.FC = () => {
                 fontSize: '0.75rem',
                 fontWeight: 500
               }}>
-                {quickTags.find(t => t.name === tag)?.emoji} {tag}
+                {tag}
               </span>
             ))}
           </div>
@@ -827,7 +861,8 @@ const CreateEvent: React.FC = () => {
               fontWeight: 500,
               whiteSpace: 'nowrap'
             }}>
-              🔒 Private
+              <Lock size={12} aria-hidden="true" />
+              Private
             </span>
           )}
         </div>
@@ -841,7 +876,7 @@ const CreateEvent: React.FC = () => {
           color: 'var(--muted)',
           fontSize: '0.9rem'
         }}>
-          <span style={{ fontSize: '1.25rem' }}>📅</span>
+          <CalendarDays size={18} aria-hidden="true" />
           <div>
             {formData.date ? (
               <>
@@ -867,7 +902,11 @@ const CreateEvent: React.FC = () => {
           color: 'var(--muted)',
           fontSize: '0.9rem'
         }}>
-          <span style={{ fontSize: '1.25rem' }}>{formData.is_virtual ? '💻' : '📍'}</span>
+          {formData.is_virtual ? (
+            <Laptop size={18} aria-hidden="true" />
+          ) : (
+            <MapPin size={18} aria-hidden="true" />
+          )}
           <span style={{ color: 'var(--text)' }}>
             {formData.is_virtual 
               ? (formData.virtual_link ? 'Virtual Event' : 'Online location')
@@ -908,7 +947,8 @@ const CreateEvent: React.FC = () => {
           borderTop: '1px solid var(--border)'
         }}>
           <button className="btn primary" style={{ flex: 1, pointerEvents: 'none' }}>
-            ✓ Going
+            <Check size={14} aria-hidden="true" />
+            Going
           </button>
           <button className="btn" style={{ flex: 1, pointerEvents: 'none' }}>
             Maybe
@@ -923,7 +963,8 @@ const CreateEvent: React.FC = () => {
             color: 'var(--muted)',
             textAlign: 'center'
           }}>
-            👥 {formData.max_capacity} spots available
+            <Users size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '0.25rem' }} aria-hidden="true" />
+            {formData.max_capacity} spots available
             {formData.waitlist_enabled && ' • Waitlist enabled'}
           </div>
         )}
@@ -939,7 +980,8 @@ const CreateEvent: React.FC = () => {
             color: 'var(--muted)',
             textAlign: 'center'
           }}>
-            🔄 Repeats {formData.recurrence.frequency} × {formData.recurrence.occurrences}
+            <Repeat size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '0.25rem' }} aria-hidden="true" />
+            Repeats {formData.recurrence.frequency} x {formData.recurrence.occurrences}
           </div>
         )}
       </div>
@@ -965,7 +1007,8 @@ const CreateEvent: React.FC = () => {
                 onClick={() => setShowDuplicateMenu(!showDuplicateMenu)}
                 className="btn"
               >
-                📋 Duplicate Event
+                <Copy size={14} aria-hidden="true" />
+                Duplicate Event
               </button>
               {showDuplicateMenu && (
                 <div className="card" style={{
@@ -1531,7 +1574,7 @@ const CreateEvent: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.875rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--muted)' }}>
-                          <span>🌐</span>
+                          <Globe size={14} aria-hidden="true" />
                           <span>{getTimezoneAbbreviation(timezone)} {getTimezoneOffset(timezone)}</span>
                         </div>
                         <button
@@ -1590,7 +1633,8 @@ const CreateEvent: React.FC = () => {
                   className={`chip ${!formData.is_virtual ? 'active' : ''}`}
                   style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
                 >
-                  📍 In Person
+                  <MapPin size={14} aria-hidden="true" />
+                  In Person
                 </button>
                 <button
                   type="button"
@@ -1598,7 +1642,8 @@ const CreateEvent: React.FC = () => {
                   className={`chip ${formData.is_virtual ? 'active' : ''}`}
                   style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
                 >
-                  💻 Online
+                  <Laptop size={14} aria-hidden="true" />
+                  Online
                 </button>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -1665,7 +1710,17 @@ const CreateEvent: React.FC = () => {
                       className="btn small"
                       style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
                     >
-                      {uploadingImage ? '⏳ Uploading...' : '🔄 Change'}
+                      {uploadingImage ? (
+                        <>
+                          <Loader2 size={14} aria-hidden="true" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Repeat size={14} aria-hidden="true" />
+                          Change
+                        </>
+                      )}
                     </button>
                     <button 
                       type="button"
@@ -1673,7 +1728,8 @@ const CreateEvent: React.FC = () => {
                       className="btn small danger"
                       style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
                     >
-                      ✕ Remove
+                      <X size={14} aria-hidden="true" />
+                      Remove
                     </button>
                   </div>
                 </div>
@@ -1685,7 +1741,17 @@ const CreateEvent: React.FC = () => {
                   disabled={uploadingImage}
                   style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
                 >
-                  {uploadingImage ? '⏳ Uploading...' : '📷 Add Cover Photo'}
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 size={14} aria-hidden="true" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Camera size={14} aria-hidden="true" />
+                      Add Cover Photo
+                    </>
+                  )}
                 </button>
               )}
               
@@ -1720,7 +1786,7 @@ const CreateEvent: React.FC = () => {
                       padding: '0.4rem 0.75rem'
                     }}
                   >
-                    <span>{tag.emoji}</span>
+                    <tag.icon size={14} aria-hidden="true" />
                     <span>{tag.name}</span>
                   </button>
                 ))}
@@ -1746,7 +1812,7 @@ const CreateEvent: React.FC = () => {
 
                 {/* Recurring */}
                 <div className="form-section">
-                  <h3>🔄 Recurring Event</h3>
+                  <h3><Repeat size={16} aria-hidden="true" style={{ marginRight: '0.4rem', verticalAlign: 'text-bottom' }} />Recurring Event</h3>
                   <div className="checkbox-group">
                     <label className="checkbox-label">
                       <input
@@ -1801,7 +1867,7 @@ const CreateEvent: React.FC = () => {
 
                 {/* Capacity */}
                 <div className="form-section">
-                  <h3>👥 Capacity</h3>
+                  <h3><Users size={16} aria-hidden="true" style={{ marginRight: '0.4rem', verticalAlign: 'text-bottom' }} />Capacity</h3>
                   <div className="form-group">
                     <label>Maximum guests</label>
                     <input
@@ -1836,7 +1902,7 @@ const CreateEvent: React.FC = () => {
 
                 {/* Co-hosts */}
                 <div className="form-section">
-                  <h3>👯 Co-hosts</h3>
+                  <h3><UserRoundPlus size={16} aria-hidden="true" style={{ marginRight: '0.4rem', verticalAlign: 'text-bottom' }} />Co-hosts</h3>
                   <div className="form-group">
                     <label>Search co-hosts</label>
                     <input
@@ -1902,7 +1968,7 @@ const CreateEvent: React.FC = () => {
                               marginLeft: '0.25rem'
                             }}
                           >
-                            ✕
+                            <X size={12} aria-hidden="true" />
                           </button>
                         </span>
                       ))}
@@ -1912,7 +1978,7 @@ const CreateEvent: React.FC = () => {
 
                 {/* Private Event */}
                 <div className="form-section">
-                  <h3>🔒 Privacy</h3>
+                  <h3><Lock size={16} aria-hidden="true" style={{ marginRight: '0.4rem', verticalAlign: 'text-bottom' }} />Privacy</h3>
                   <div className="checkbox-group">
                     <label className="checkbox-label">
                       <input
@@ -1931,7 +1997,7 @@ const CreateEvent: React.FC = () => {
 
                 {/* Guest List Visibility */}
                 <div className="form-section" style={{ borderBottom: 'none' }}>
-                  <h3>👁️ Guest List Visibility</h3>
+                  <h3><Eye size={16} aria-hidden="true" style={{ marginRight: '0.4rem', verticalAlign: 'text-bottom' }} />Guest List Visibility</h3>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     {[
                       { value: 'public', label: 'Public', desc: 'Anyone can see' },
@@ -1977,9 +2043,16 @@ const CreateEvent: React.FC = () => {
                 className="btn primary"
                 style={{ padding: '0.875rem 2rem' }}
               >
-                {loading ? '✨ Creating...' : formData.recurrence.enabled 
-                  ? `Create ${formData.recurrence.occurrences} Events` 
-                  : 'Create Event'}
+                {loading ? (
+                  <>
+                    <Loader2 size={14} aria-hidden="true" />
+                    Creating...
+                  </>
+                ) : formData.recurrence.enabled ? (
+                  `Create ${formData.recurrence.occurrences} Events`
+                ) : (
+                  'Create Event'
+                )}
               </button>
             </div>
           </div>

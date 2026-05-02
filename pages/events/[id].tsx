@@ -13,6 +13,28 @@ import Avatar from '@/components/ui/Avatar'
 import EventComments from '@/components/events/EventComments'
 import EventLocationMap from '@/components/EventLocationMap'
 import { formatEventDateTime, isEventUpcoming, migrateLegacyDateTime } from '@/utils/dateTime'
+import {
+  CalendarDays,
+  Camera,
+  Check,
+  CircleHelp,
+  Folder,
+  Frown,
+  Link2,
+  Loader2,
+  Lock,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Pencil,
+  Send,
+  Sparkles,
+  ThumbsUp,
+  Trash2,
+  Upload,
+  UserPlus,
+  X,
+} from 'lucide-react'
 
 // Server-side data for Open Graph meta tags
 interface EventMetaData {
@@ -786,7 +808,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
 
       // Create message content with event info
       const eventUrl = `${window.location.origin}/events/${event.id}`
-      const messageContent = `🎉 Invitation to: ${event.title}\n\n📅 ${eventDateTime}\n📍 ${event.location || 'Location TBD'}\n\n${event.description ? `${event.description}\n\n` : ''}${eventUrl}`
+      const messageContent = `Invitation to: ${event.title}\n\nDate: ${eventDateTime}\nLocation: ${event.location || 'Location TBD'}\n\n${event.description ? `${event.description}\n\n` : ''}${eventUrl}`
 
       // Send message in the DM channel
       const { error: messageError } = await supabase
@@ -901,7 +923,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
-        <div style={styles.loadingSpinner}>✨</div>
+        <div style={styles.loadingSpinner}><Sparkles size={22} aria-hidden="true" /></div>
         <p>Loading event...</p>
       </div>
     )
@@ -910,7 +932,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
   if (error || !event) {
     return (
       <div style={styles.errorContainer}>
-        <h2>😕 {error || 'Event not found'}</h2>
+        <h2>{error || 'Event not found'}</h2>
         <p>This event may have been removed or doesn't exist.</p>
         <Link href="/events">
           <Button variant="primary">← Back to Events</Button>
@@ -959,7 +981,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
           </div>
         ) : (
           <div style={styles.placeholderCover}>
-            <span style={styles.placeholderIcon}>🎉</span>
+            <span style={styles.placeholderIcon}><Sparkles size={26} aria-hidden="true" /></span>
           </div>
         )}
 
@@ -980,7 +1002,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
             onClick={() => setShowCoverEditor(true)}
             style={styles.editCoverButton}
           >
-            📷 {event.image_url ? 'Change Cover' : 'Add Cover'}
+            <Camera size={14} aria-hidden="true" /> {event.image_url ? 'Change Cover' : 'Add Cover'}
           </button>
         )}
 
@@ -999,12 +1021,12 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
         <div style={styles.modalOverlay} onClick={() => setShowCoverEditor(false)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>📷 Cover Image</h3>
+              <h3 style={styles.modalTitle}><Camera size={16} aria-hidden="true" /> Cover Image</h3>
               <button
                 onClick={() => setShowCoverEditor(false)}
                 style={styles.modalClose}
               >
-                ✕
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
 
@@ -1016,7 +1038,15 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                   disabled={coverUploading}
                   style={styles.uploadButton}
                 >
-                  {coverUploading ? '⏳ Uploading...' : '📤 Upload Image'}
+                  {coverUploading ? (
+                    <>
+                      <Loader2 size={14} aria-hidden="true" /> Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={14} aria-hidden="true" /> Upload Image
+                    </>
+                  )}
                 </button>
                 <p style={styles.optionHint}>JPG, PNG, GIF up to 5MB</p>
               </div>
@@ -1045,7 +1075,15 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                     opacity: !coverUrl.trim() || coverUploading ? 0.5 : 1
                   }}
                 >
-                  {coverUploading ? '⏳ Saving...' : '✓ Save URL'}
+                  {coverUploading ? (
+                    <>
+                      <Loader2 size={14} aria-hidden="true" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} aria-hidden="true" /> Save URL
+                    </>
+                  )}
                 </button>
               </div>
 
@@ -1071,7 +1109,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                   disabled={coverUploading}
                   style={styles.removeButton}
                 >
-                  🗑️ Remove Cover Image
+                  <Trash2 size={14} aria-hidden="true" /> Remove Cover Image
                 </button>
               )}
             </div>
@@ -1087,7 +1125,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
 
           {/* Date & Time */}
           <div style={styles.eventMeta}>
-            <span style={styles.metaIcon}>📅</span>
+            <span style={styles.metaIcon}><CalendarDays size={14} aria-hidden="true" /></span>
             <span>{formatDateTime(event.date, event.time)}</span>
           </div>
 
@@ -1095,7 +1133,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
           {event.location && (
             <>
               <div style={styles.eventMeta}>
-                <span style={styles.metaIcon}>📍</span>
+                <span style={styles.metaIcon}><MapPin size={14} aria-hidden="true" /></span>
                 <span>{event.location}</span>
               </div>
               <div style={{ marginTop: '0.75rem', marginBottom: '0.5rem' }}>
@@ -1187,7 +1225,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                 alignItems: 'center',
                 gap: '0.5rem'
               }}>
-                📬 Manage Invitations
+                <Mail size={16} aria-hidden="true" /> Manage Invitations
               </h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
@@ -1217,7 +1255,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                     e.currentTarget.style.transform = 'translateY(0)'
                   }}
                 >
-                  📧 Invite by Email
+                  <Mail size={14} aria-hidden="true" /> Invite by Email
                 </button>
                 <button
                   onClick={() => setShowInviteUserModal(true)}
@@ -1245,7 +1283,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                     e.currentTarget.style.transform = 'translateY(0)'
                   }}
                 >
-                  👤 Invite User
+                  <UserPlus size={14} aria-hidden="true" /> Invite User
                 </button>
                 <button
                   onClick={handleShareLink}
@@ -1278,7 +1316,15 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                   }}
                   title="Copy event link"
                 >
-                  {linkCopied ? '✓ Copied!' : '🔗 Invite w/ Link'}
+                  {linkCopied ? (
+                    <>
+                      <Check size={14} aria-hidden="true" /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Link2 size={14} aria-hidden="true" /> Invite w/ Link
+                    </>
+                  )}
                 </button>
                 <InviteSectionsSection eventId={id as string} onInvite={() => loadInvitedSections(id as string)} />
               </div>
@@ -1302,7 +1348,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                 alignItems: 'center',
                 gap: '0.5rem'
               }}>
-                📁 Invited Sections ({invitedSections.length})
+                <Folder size={16} aria-hidden="true" /> Invited Sections ({invitedSections.length})
               </h3>
               
               <div style={{ 
@@ -1358,7 +1404,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                         justifyContent: 'center',
                         fontSize: '1.2rem'
                       }}>
-                        📁
+                        <Folder size={16} aria-hidden="true" />
                       </div>
                     )}
                     <div>
@@ -1396,7 +1442,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
               borderRadius: '8px',
               border: '1px solid rgba(139, 92, 246, 0.2)'
             }}>
-              <span>🔒</span>
+              <span><Lock size={14} aria-hidden="true" /></span>
               <span style={{ fontSize: '0.9rem', color: 'var(--text)' }}>
                 Private Event • {isInvited ? 'You\'re invited' : user ? 'Invitation only' : 'Sign in to check invitation'}
               </span>
@@ -1425,7 +1471,8 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
               textAlign: 'center'
             }}>
               <p style={{ margin: 0, color: 'var(--muted)' }}>
-                🔒 This is a private event. <Link href="/auth" style={{ color: 'var(--primary)' }}>Sign in</Link> to RSVP.
+                <Lock size={14} aria-hidden="true" style={{ verticalAlign: 'text-bottom', marginRight: '0.25rem' }} />
+                This is a private event. <Link href="/auth" style={{ color: 'var(--primary)' }}>Sign in</Link> to RSVP.
               </p>
             </div>
           )}
@@ -1439,7 +1486,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                 ...(event.user_rsvp_status === 'going' ? { background: 'rgba(16, 185, 129, 0.2)', borderColor: '#10b981' } : {})
               }}
             >
-              <span style={styles.rsvpEmoji}>👍</span>
+              <span style={styles.rsvpEmoji}><ThumbsUp size={16} aria-hidden="true" /></span>
               <span>Going</span>
             </button>
             <button
@@ -1451,7 +1498,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                 ...(event.user_rsvp_status === 'maybe' ? { background: 'rgba(245, 158, 11, 0.2)', borderColor: '#f59e0b' } : {})
               }}
             >
-              <span style={styles.rsvpEmoji}>🤔</span>
+              <span style={styles.rsvpEmoji}><CircleHelp size={16} aria-hidden="true" /></span>
               <span>Maybe</span>
             </button>
             <button
@@ -1463,7 +1510,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                 ...(event.user_rsvp_status === 'not_going' ? { background: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444' } : {})
               }}
             >
-              <span style={styles.rsvpEmoji}>😢</span>
+              <span style={styles.rsvpEmoji}><Frown size={16} aria-hidden="true" /></span>
               <span>Can't Go</span>
             </button>
           </div>
@@ -1872,7 +1919,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
             </div>
           ) : (
             <div style={styles.gatedSection}>
-              <span style={styles.lockIcon}>🔒</span>
+              <span style={styles.lockIcon}><Lock size={16} aria-hidden="true" /></span>
               <p>RSVP to see who's going</p>
             </div>
           )}
@@ -1896,7 +1943,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
               rel="noopener noreferrer"
               style={styles.externalLink}
             >
-              🔗 External RSVP Link
+              <Link2 size={14} aria-hidden="true" /> External RSVP Link
             </a>
           </div>
         )}
@@ -1934,7 +1981,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                   e.currentTarget.style.borderColor = 'var(--border)'
                 }}
               >
-                ✏️ Edit Event
+                <Pencil size={14} aria-hidden="true" /> Edit Event
               </button>
             </Link>
           </div>
@@ -1947,12 +1994,12 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
         <div style={styles.modalOverlay} onClick={() => setShowInviteUserModal(false)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>✉️ Invite via Message</h3>
+              <h3 style={styles.modalTitle}><MessageSquare size={16} aria-hidden="true" /> Invite via Message</h3>
               <button
                 onClick={() => setShowInviteUserModal(false)}
                 style={styles.modalClose}
               >
-                ✕
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
             <div style={styles.modalContent}>
@@ -2058,12 +2105,12 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
         <div style={styles.modalOverlay} onClick={() => setShowInviteModal(false)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>📧 Invite to Event</h3>
+              <h3 style={styles.modalTitle}><Mail size={16} aria-hidden="true" /> Invite to Event</h3>
               <button
                 onClick={() => setShowInviteModal(false)}
                 style={styles.modalClose}
               >
-                ✕
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
             <div style={styles.modalContent}>
@@ -2089,7 +2136,15 @@ const EventDetail: React.FC<EventDetailProps> = ({ eventMeta }) => {
                   marginTop: '1rem'
                 }}
               >
-                {inviteLoading ? '⏳ Sending...' : '📧 Send Invitation'}
+                {inviteLoading ? (
+                  <>
+                    <Loader2 size={14} aria-hidden="true" /> Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send size={14} aria-hidden="true" /> Send Invitation
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -2256,7 +2311,7 @@ const InviteSectionsSection: React.FC<{ eventId: string; onInvite: () => void }>
           e.currentTarget.style.transform = 'translateY(0)'
         }}
       >
-        📁 Invite Section
+        <Folder size={14} aria-hidden="true" /> Invite Section
       </button>
       
       {showSectionDropdown && (
@@ -2349,7 +2404,7 @@ const InviteSectionsSection: React.FC<{ eventId: string; onInvite: () => void }>
                       justifyContent: 'center',
                       fontSize: '1.2rem'
                     }}>
-                      📁
+                      <Folder size={14} aria-hidden="true" />
                     </div>
                   )}
                   <div style={{ flex: 1 }}>
@@ -2361,7 +2416,7 @@ const InviteSectionsSection: React.FC<{ eventId: string; onInvite: () => void }>
                     )}
                   </div>
                   {isInvited && (
-                    <span style={{ color: 'var(--primary)', fontSize: '1.2rem' }}>✓</span>
+                    <span style={{ color: 'var(--primary)', fontSize: '1.2rem' }}><Check size={16} aria-hidden="true" /></span>
                   )}
                 </button>
               )
